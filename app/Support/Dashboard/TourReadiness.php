@@ -10,6 +10,7 @@ use App\Models\Registration;
 use App\Models\Tenant;
 use App\Models\Tour;
 use App\Models\TourHotel;
+use App\Support\Money;
 
 /**
  * Ana paneldeki "tur ne kadar hazır?" özeti: oda, koltuk, uçuş, pasaport, ön kayıt, grupsuz yolcu.
@@ -24,6 +25,7 @@ class TourReadiness
 
     /**
      * @return array{
+     *     collection: array{currency: string, paid: string, total: string}|null,
      *     registered: int,
      *     pending: int,
      *     ungrouped: int,
@@ -37,6 +39,7 @@ class TourReadiness
             ->where('status', '!=', RegistrationStatus::Cancelled)
             ->with('person')
             ->withCount(['seatAssignments', 'flightPassengers'])
+            ->withPaidTotal()
             ->get();
 
         $checks = [];
@@ -65,7 +68,19 @@ class TourReadiness
             ];
         }
 
+        // Tahsilat oranı: turun para birimindeki kayıtlar (farklı para birimleri toplanmaz).
+        $collection = null;
+        if ($tenant?->hasFeature(Feature::Payments)) {
+            $inTourCurrency = $active->where('currency', $tour->currency);
+            $collection = [
+                'currency' => $tour->currency,
+                'paid' => $inTourCurrency->reduce(fn (string $c, Registration $r) => Money::add($c, $r->paidTotal()), '0.00'),
+                'total' => $inTourCurrency->reduce(fn (string $c, Registration $r) => Money::add($c, $r->netPrice()), '0.00'),
+            ];
+        }
+
         return [
+            'collection' => $collection,
             'registered' => $active->count(),
             'pending' => $active->where('status', RegistrationStatus::Pending)->count(),
             'ungrouped' => $active->whereNull('group_id')->count(),

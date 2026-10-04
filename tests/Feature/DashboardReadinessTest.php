@@ -21,6 +21,7 @@ use App\Models\TourHotel;
 use App\Models\User;
 use App\Support\Tenancy\CurrentTenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -97,6 +98,36 @@ class DashboardReadinessTest extends TestCase
                 ->where('payments.overdue_count', 1)
                 ->where('payments.overdue', ['USD' => '500.00'])
                 ->where('payments.due_soon_count', 1));
+    }
+
+    public function test_activity_feed_trend_and_collection_rate(): void
+    {
+        $tour = Tour::factory()->create(['tenant_id' => $this->tenant->id, 'currency' => 'USD']);
+        $person = Person::factory()->create(['tenant_id' => $this->tenant->id, 'first_name' => 'Ayşe', 'last_name' => 'Yılmaz']);
+
+        // Ekrandan yapılan işlemler erişim kaydına düşer → akışa girer.
+        $this->actingAs($this->staff)->post(route('tours.registrations.store', $tour), [
+            'person_id' => $person->id, 'price' => 1000, 'currency' => 'USD', 'status' => 'kesin_kayit', 'room_type' => '4lu',
+        ])->assertSessionHasNoErrors();
+        $registration = Registration::where('person_id', $person->id)->sole();
+        $this->actingAs($this->staff)->post(route('registrations.payments.store', $registration), [
+            'type' => 'tahsilat', 'amount' => 400, 'currency' => 'USD', 'method' => 'nakit', 'paid_at' => now()->toDateString(),
+        ])->assertSessionHasNoErrors();
+
+        // Başka acentenin hareketi akışa girmez (erişim kayıtları acente kapsamı kullanmaz; elle filtrelenmeli).
+        $foreign = Person::factory()->create(['first_name' => 'Yabancı', 'last_name' => 'Kişi']);
+        DB::table('audit_logs')->insert([
+            'tenant_id' => $foreign->tenant_id, 'action' => 'create', 'subject_type' => Person::class,
+            'subject_id' => $foreign->id, 'created_at' => now()->addMinute(),
+        ]);
+
+        $this->actingAs($this->staff)->get(route('dashboard'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('activity.0.text', 'Ayşe Yılmaz için 400,00 USD tahsilat')
+                ->where('activity.1.text', 'Ayşe Yılmaz, '.$tour->name.' turuna eklendi')
+                ->where('activity', fn ($items) => collect($items)->doesntContain(fn ($i) => str_contains($i['text'], 'Yabancı')))
+                ->where('trend.series.USD.5', '400.00')
+                ->where('tours.0.collection', ['currency' => 'USD', 'paid' => '400.00', 'total' => '1000.00']));
     }
 
     public function test_modules_that_are_off_are_not_shown(): void

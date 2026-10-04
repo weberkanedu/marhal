@@ -9,6 +9,8 @@ use App\Models\Installment;
 use App\Models\Person;
 use App\Models\Registration;
 use App\Models\Tour;
+use App\Support\Dashboard\ActivityFeed;
+use App\Support\Dashboard\CollectionTrend;
 use App\Support\Dashboard\TourReadiness;
 use App\Support\Money;
 use App\Support\Tenancy\CurrentTenant;
@@ -24,11 +26,16 @@ use Inertia\Response;
  */
 class DashboardController extends Controller
 {
-    /** Hazırlık kartında gösterilecek en fazla yaklaşan tur. */
-    private const UPCOMING_LIMIT = 4;
+    /** "Turların durumu" tablosunda en fazla bu kadar aktif tur (başlangıç tarihine göre). */
+    private const UPCOMING_LIMIT = 10;
 
-    public function __invoke(Request $request, CurrentTenant $currentTenant, TourReadiness $readiness): Response|RedirectResponse
-    {
+    public function __invoke(
+        Request $request,
+        CurrentTenant $currentTenant,
+        TourReadiness $readiness,
+        ActivityFeed $activity,
+        CollectionTrend $trend,
+    ): Response|RedirectResponse {
         if ($request->user()?->hasRole(UserRole::Guide)) {
             return to_route('tours.index');
         }
@@ -69,6 +76,8 @@ class DashboardController extends Controller
                     ->distinct('registration_id')
                     ->count('registration_id'),
             ] : null,
+            'activity' => $tenant ? $activity->latest($tenant->id) : [],
+            'trend' => $payments ? $trend->lastMonths() : null,
             'tours' => $upcoming->map(fn (Tour $tour) => [
                 'id' => $tour->id,
                 'name' => $tour->name,

@@ -110,8 +110,16 @@ function badgeUrl(registrationId: string): string {
     });
 }
 
-// Grup filtresi: 'all' | 'none' | grup id
-const groupFilter = ref<string>('all');
+// Grup filtresi: 'all' | 'none' | grup id. Adresten açılabilir: ?grup=yok (grupsuzlar) veya ?grup=<id>
+// (ör. ana paneldeki "Gruba ata" düğmesi).
+const initialGroup = new URL(page.url, 'http://x').searchParams.get('grup');
+const groupFilter = ref<string>(
+    initialGroup === 'yok'
+        ? 'none'
+        : initialGroup && props.groups.some((g) => g.id === initialGroup)
+          ? initialGroup
+          : 'all',
+);
 
 // Sekmeler: hangi sekmede olunduğu adreste (?tab=) tutulur; oda / koltuk / uçuş sayfasından
 // "geri" gelince doğru sekme açılır.
