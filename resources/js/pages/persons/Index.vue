@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { AlertTriangle, Plus, Search, UserRound } from '@lucide/vue';
+import {
+    AlertTriangle,
+    FileSpreadsheet,
+    Plus,
+    Search,
+    UserRound,
+} from '@lucide/vue';
 import { useDebounceFn } from '@vueuse/core';
 import { ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ageFrom, formatDate } from '@/lib/format';
+import { show as importPage } from '@/routes/person-import';
 import { create, index, show } from '@/routes/persons';
 import type { Paginated, PersonListItem } from '@/types/person';
 
@@ -47,9 +54,16 @@ const genderLabels: Record<string, string> = { erkek: 'Erkek', kadin: 'Kadın' }
                     Toplam {{ persons.total }} kişi
                 </p>
             </div>
-            <Button as-child>
-                <Link :href="create()"><Plus /> Yeni yolcu</Link>
-            </Button>
+            <div class="flex flex-wrap gap-2">
+                <Button variant="outline" as-child>
+                    <Link :href="importPage()"
+                        ><FileSpreadsheet /> Excel'den aktar</Link
+                    >
+                </Button>
+                <Button as-child>
+                    <Link :href="create()"><Plus /> Yeni yolcu</Link>
+                </Button>
+            </div>
         </div>
 
         <div class="relative max-w-md">

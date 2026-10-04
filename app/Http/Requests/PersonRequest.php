@@ -19,6 +19,26 @@ class PersonRequest extends FormRequest
         /** @var Person|null $person */
         $person = $this->route('person');
 
+        $rules = self::fieldRules($this->input('nationality'));
+
+        $rules['national_id'][] = $this->uniqueSensitive('whereNationalId', $person, 'Bu T.C. Kimlik No ile kayıtlı bir kişi zaten var.');
+        $rules['passport_no'][] = $this->uniqueSensitive('wherePassportNo', $person, 'Bu pasaport numarası ile kayıtlı bir kişi zaten var.');
+
+        return [
+            ...$rules,
+            'kvkk_consent' => ['boolean'],
+            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'remove_photo' => ['boolean'],
+        ];
+    }
+
+    /**
+     * Kişi alanlarının biçim kuralları (tekillik hariç). Elle kayıt ve Excel'den aktarma aynı kuralları kullanır.
+     *
+     * @return array<string, list<mixed>>
+     */
+    public static function fieldRules(mixed $nationality): array
+    {
         return [
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
@@ -27,13 +47,9 @@ class PersonRequest extends FormRequest
             'nationality' => ['required', 'string', 'size:2'],
             'national_id' => [
                 'nullable', 'string', 'max:20',
-                Rule::when($this->input('nationality') === 'TR', [new TcKimlikNo]),
-                $this->uniqueSensitive('whereNationalId', $person, 'Bu T.C. Kimlik No ile kayıtlı bir kişi zaten var.'),
+                Rule::when($nationality === 'TR', [new TcKimlikNo]),
             ],
-            'passport_no' => [
-                'nullable', 'string', 'max:20', 'regex:/^[A-Za-z0-9 ]+$/',
-                $this->uniqueSensitive('wherePassportNo', $person, 'Bu pasaport numarası ile kayıtlı bir kişi zaten var.'),
-            ],
+            'passport_no' => ['nullable', 'string', 'max:20', 'regex:/^[A-Za-z0-9 ]+$/'],
             'passport_issue_date' => ['nullable', 'date', 'before_or_equal:today'],
             'passport_expiry_date' => ['nullable', 'date', 'after:passport_issue_date'],
             'phone' => ['nullable', 'string', 'max:30'],
@@ -42,16 +58,13 @@ class PersonRequest extends FormRequest
             'emergency_contact_name' => ['nullable', 'string', 'max:150'],
             'emergency_contact_phone' => ['nullable', 'string', 'max:30'],
             'notes' => ['nullable', 'string', 'max:5000'],
-            'kvkk_consent' => ['boolean'],
-            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'remove_photo' => ['boolean'],
         ];
     }
 
     /**
      * @return array<string, string>
      */
-    public function attributes(): array
+    public static function fieldAttributes(): array
     {
         return [
             'first_name' => 'ad',
@@ -71,6 +84,14 @@ class PersonRequest extends FormRequest
             'notes' => 'notlar',
             'photo' => 'fotoğraf',
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return self::fieldAttributes();
     }
 
     /**

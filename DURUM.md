@@ -112,7 +112,7 @@ Sıra ve anlatım kullanıcıyla konuşuldu; başlarken bu sırayla, adım adım
 1. ✅ Menü sadeleştirme + Acente ayarları sekmeli + tur sayfası sekmeleri (Çıktılar dahil).
 2. ✅ Ana panel (`TourReadiness`): "bugün neyle ilgilenmeliyim" — vadesi geçen / yaklaşan taksitler, pasaportu eksik / 6 aydan kısa,
    yaklaşan turda odası / koltuğu / uçuşu olmayanlar, kontenjan.
-2b. ✅ Ana panel 2. tur (X'teki SaaS tasarımından uyarlanan fikirler): düğmeli + etiketli uyarılar (45 gün içindeki
+   2b. ✅ Ana panel 2. tur (X'teki SaaS tasarımından uyarlanan fikirler): düğmeli + etiketli uyarılar (45 gün içindeki
    turlarda oda / koltuk / uçuş / ön kayıt eksikleri dahil), "Son hareketler" (audit_logs — **acente elle filtrelenir**,
    AuditLog global scope kullanmaz), "Turların durumu" tablosu (tahsilat %, oda, koltuk, uçuş, pasaport, Hazır / Eksik var),
    aylık tahsilat grafiği (son 6 ay, para birimi başına). İkinci kenar listesi ve yeni tema şimdilik yapılmadı (isteğe bağlı).

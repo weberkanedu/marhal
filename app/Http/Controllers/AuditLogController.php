@@ -28,6 +28,7 @@ class AuditLogController extends Controller
         'login_failed' => 'Hatalı giriş denemesi',
         'view_sensitive' => 'Kimlik / pasaport görüntüleme',
         'export' => 'Rapor indirme',
+        'import' => 'Excel\'den aktarma',
         'create' => 'Oluşturma',
         'update' => 'Güncelleme',
         'delete' => 'Silme',

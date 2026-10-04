@@ -11,6 +11,7 @@ use App\Http\Controllers\GroupController;
 use App\Http\Controllers\HotelController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PersonController;
+use App\Http\Controllers\PersonImportController;
 use App\Http\Controllers\PersonRelationController;
 use App\Http\Controllers\Platform\PlanController;
 use App\Http\Controllers\Platform\TenantController;
@@ -36,6 +37,13 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
 
     // Yolcular
     Route::middleware('feature:passengers')->group(function () {
+        // Excel'den toplu yolcu aktarma (resource'tan önce: "persons/import" bir kişi sanılmasın)
+        Route::get('persons/import', [PersonImportController::class, 'create'])->name('person-import.show');
+        Route::get('persons/import/template', [PersonImportController::class, 'template'])->name('person-import.template');
+        Route::post('persons/import', [PersonImportController::class, 'upload'])
+            ->middleware('throttle:20,1')
+            ->name('person-import.upload');
+        Route::post('persons/import/confirm', [PersonImportController::class, 'store'])->name('person-import.store');
         Route::resource('persons', PersonController::class);
         Route::post('persons/{person}/reveal', [PersonController::class, 'reveal'])
             ->middleware('throttle:30,1')
