@@ -97,7 +97,7 @@ const limitReached = () =>
 
         <p
             v-if="limitReached()"
-            class="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+            class="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm text-warning"
         >
             Paketinizdeki kullanıcı sınırına ulaştınız. Yeni kullanıcı için
             kullanmadığınız bir hesabı pasif yapın veya paketinizi yükseltin.
@@ -145,13 +145,11 @@ const limitReached = () =>
                                 <Badge
                                     v-else-if="user.must_change_password"
                                     variant="outline"
-                                    class="text-amber-700"
+                                    class="text-warning"
                                 >
                                     İlk giriş bekleniyor
                                 </Badge>
-                                <span v-else class="text-emerald-700"
-                                    >Aktif</span
-                                >
+                                <span v-else class="text-success">Aktif</span>
                             </td>
                             <td class="px-4 py-2 text-muted-foreground">
                                 {{

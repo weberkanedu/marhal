@@ -61,11 +61,11 @@ const handleCancel = () => {
 
 <template>
     <div v-if="!isSupported" class="text-sm text-muted-foreground">
-        Passkeys are not supported in this browser.
+        Bu tarayıcı geçiş anahtarlarını desteklemiyor.
     </div>
 
     <Button v-else-if="!showForm" variant="outline" @click="showForm = true">
-        Add passkey
+        Geçiş anahtarı ekle
     </Button>
 
     <form
@@ -74,7 +74,7 @@ const handleCancel = () => {
         class="space-y-4 rounded-lg border border-border bg-muted/50 p-4"
     >
         <div class="grid gap-2">
-            <Label for="passkey-name">Passkey name</Label>
+            <Label for="passkey-name">Anahtar adı</Label>
             <Input
                 id="passkey-name"
                 type="text"
@@ -84,7 +84,7 @@ const handleCancel = () => {
                 v-focus
             />
             <p class="text-xs text-muted-foreground">
-                A name helps you identify this passkey later.
+                Örn. "İş bilgisayarı" — sonra tanımanızı kolaylaştırır.
             </p>
         </div>
 
@@ -92,10 +92,10 @@ const handleCancel = () => {
 
         <div class="flex gap-2">
             <Button type="submit" :disabled="isLoading || !name.trim()">
-                {{ isLoading ? 'Registering...' : 'Register passkey' }}
+                {{ isLoading ? 'Kaydediliyor...' : 'Kaydet' }}
             </Button>
             <Button type="button" variant="ghost" @click="handleCancel">
-                Cancel
+                Vazgeç
             </Button>
         </div>
     </form>

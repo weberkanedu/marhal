@@ -125,7 +125,7 @@ watch(search, (value) => runSearch(value));
                         class="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2 text-sm"
                     >
                         <span class="flex items-center gap-2 font-medium">
-                            <Check class="size-4 text-emerald-600" />
+                            <Check class="size-4 text-success" />
                             {{ selected.full_name }}
                         </span>
                         <Button

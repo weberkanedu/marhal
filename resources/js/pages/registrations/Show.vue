@@ -170,7 +170,7 @@ const installmentStatus = computed(() => {
             <Card>
                 <CardHeader>
                     <CardDescription>Ödenen</CardDescription>
-                    <CardTitle class="text-2xl text-emerald-600">
+                    <CardTitle class="text-2xl text-success">
                         {{
                             formatMoney(
                                 registration.paid,
@@ -185,9 +185,7 @@ const installmentStatus = computed(() => {
                     <CardDescription>Kalan borç</CardDescription>
                     <CardTitle
                         class="text-2xl"
-                        :class="
-                            isPaidOff ? 'text-emerald-600' : 'text-amber-600'
-                        "
+                        :class="isPaidOff ? 'text-success' : 'text-warning'"
                     >
                         {{
                             isPaidOff
@@ -372,8 +370,7 @@ const installmentStatus = computed(() => {
                                     }}
                                     <Badge
                                         v-if="installmentStatus[i] === 'paid'"
-                                        variant="secondary"
-                                        class="text-emerald-700"
+                                        variant="success"
                                     >
                                         Ödendi
                                     </Badge>
@@ -381,7 +378,7 @@ const installmentStatus = computed(() => {
                                         v-else-if="
                                             installmentStatus[i] === 'overdue'
                                         "
-                                        variant="destructive"
+                                        variant="danger"
                                     >
                                         <AlertTriangle /> Gecikti
                                     </Badge>

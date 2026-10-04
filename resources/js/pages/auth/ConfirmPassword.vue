@@ -14,23 +14,23 @@ import PasskeyVerify from '@/components/PasskeyVerify.vue';
 
 defineOptions({
     layout: {
-        title: 'Confirm password',
+        title: 'Şifrenizi doğrulayın',
         description:
-            'This is a secure area of the application. Please confirm your password before continuing.',
+            'Bu alan güvenlik gerektirir. Devam etmek için şifrenizi girin.',
     },
 });
 </script>
 
 <template>
-    <Head title="Confirm password" />
+    <Head title="Şifre doğrulama" />
 
     <PasskeyVerify
         :routes="{
             options: confirmOptions(),
             submit: confirmStore(),
         }"
-        label="Confirm with passkey"
-        loading-label="Confirming..."
+        label="Geçiş anahtarı ile doğrula"
+        loading-label="Doğrulanıyor..."
         separator="Or confirm with password"
     />
 
@@ -41,7 +41,7 @@ defineOptions({
     >
         <div class="space-y-6">
             <div class="grid gap-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Şifre</Label>
                 <PasswordInput
                     id="password"
                     name="password"
@@ -61,7 +61,7 @@ defineOptions({
                     data-test="confirm-password-button"
                 >
                     <Spinner v-if="processing" />
-                    Confirm password
+                    Doğrula
                 </Button>
             </div>
         </div>

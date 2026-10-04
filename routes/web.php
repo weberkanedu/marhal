@@ -13,7 +13,8 @@ use App\Http\Controllers\TourController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'Welcome')->name('home');
+// Ana adres: giriş yapmışsa panele, değilse giriş ekranına.
+Route::get('/', fn () => auth()->check() ? to_route('dashboard') : to_route('login'))->name('home');
 
 // Acente ekranları
 Route::middleware(['auth', 'verified', 'tenant'])->group(function () {

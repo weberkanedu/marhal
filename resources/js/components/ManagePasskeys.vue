@@ -33,8 +33,8 @@ const handleRegisterSuccess = () => {
     <div v-if="canManagePasskeys" class="space-y-6">
         <Heading
             variant="small"
-            title="Passkeys"
-            description="Manage your passkeys for passwordless sign-in"
+            title="Geçiş anahtarları (passkey)"
+            description="Şifresiz giriş için parmak izi / yüz tanıma"
         />
 
         <div class="overflow-hidden rounded-lg border border-border">
@@ -53,9 +53,9 @@ const handleRegisterSuccess = () => {
                 >
                     <KeyRound class="h-7 w-7 text-muted-foreground" />
                 </div>
-                <p class="font-medium">No passkeys yet</p>
+                <p class="font-medium">Henüz geçiş anahtarı yok</p>
                 <p class="mt-1 text-sm text-muted-foreground">
-                    Add a passkey to sign in without a password
+                    Şifre yazmadan giriş için bir geçiş anahtarı ekleyin
                 </p>
             </div>
         </div>

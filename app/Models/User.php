@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ColorTheme;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -27,6 +28,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property UserRole $role
  * @property bool $is_active
  * @property bool $must_change_password
+ * @property ColorTheme $theme
  * @property Carbon|null $last_login_at
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
@@ -51,6 +53,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     protected $attributes = [
         'is_active' => true,
         'must_change_password' => false,
+        'theme' => 'haremeyn',
     ];
 
     /**
@@ -66,6 +69,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'role' => UserRole::class,
             'is_active' => 'boolean',
             'must_change_password' => 'boolean',
+            'theme' => ColorTheme::class,
             'last_login_at' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
         ];

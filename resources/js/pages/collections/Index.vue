@@ -168,7 +168,7 @@ const asPayments = (items: unknown) => items as PaymentItem[];
                         <p class="text-sm text-muted-foreground">
                             Net tahsilat ({{ total.count }} işlem)
                         </p>
-                        <CardTitle class="text-2xl text-emerald-600">
+                        <CardTitle class="text-2xl text-success">
                             {{ formatMoney(total.net, String(currency)) }}
                         </CardTitle>
                     </template>
@@ -176,7 +176,7 @@ const asPayments = (items: unknown) => items as PaymentItem[];
                         <p class="text-sm text-muted-foreground">
                             Kalan alacak ({{ currency }})
                         </p>
-                        <CardTitle class="text-2xl text-amber-600">
+                        <CardTitle class="text-2xl text-warning">
                             {{ formatMoney(total.balance, String(currency)) }}
                         </CardTitle>
                         <p
@@ -191,7 +191,7 @@ const asPayments = (items: unknown) => items as PaymentItem[];
                         <p class="text-sm text-muted-foreground">
                             Tahsil edilen ({{ currency }})
                         </p>
-                        <CardTitle class="text-2xl text-emerald-600">
+                        <CardTitle class="text-2xl text-success">
                             {{ formatMoney(total.paid, String(currency)) }}
                         </CardTitle>
                     </template>
@@ -273,7 +273,7 @@ const asPayments = (items: unknown) => items as PaymentItem[];
                             </td>
                             <td
                                 v-if="tab === 'borclu'"
-                                class="px-4 py-2 text-right font-medium text-amber-600 tabular-nums"
+                                class="px-4 py-2 text-right font-medium text-warning tabular-nums"
                             >
                                 {{ formatMoney(row.balance, row.currency) }}
                             </td>

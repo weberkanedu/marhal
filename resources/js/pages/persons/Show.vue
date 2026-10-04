@@ -131,7 +131,7 @@ function confirmDelete(): void {
                     </p>
                     <p
                         v-if="person.kvkk_consent"
-                        class="mt-1 flex items-center gap-1 text-xs text-emerald-600"
+                        class="mt-1 flex items-center gap-1 text-xs text-success"
                     >
                         <ShieldCheck class="size-3" /> KVKK onayı alındı ({{
                             formatDate(person.kvkk_consent_at)
@@ -139,7 +139,7 @@ function confirmDelete(): void {
                     </p>
                     <p
                         v-else
-                        class="mt-1 flex items-center gap-1 text-xs text-amber-600"
+                        class="mt-1 flex items-center gap-1 text-xs text-warning"
                     >
                         <AlertTriangle class="size-3" /> KVKK onayı kaydedilmedi
                     </p>
@@ -202,7 +202,7 @@ function confirmDelete(): void {
                             {{ formatDate(person.passport_expiry_date) }}
                             <span
                                 v-if="person.passport_expiring"
-                                class="ml-1 inline-flex items-center gap-1 text-xs text-amber-600"
+                                class="ml-1 inline-flex items-center gap-1 text-xs text-warning"
                             >
                                 <AlertTriangle class="size-3" /> 6 aydan az
                                 kaldı
@@ -304,8 +304,11 @@ function confirmDelete(): void {
                                 <Badge
                                     :variant="
                                         registration.status === 'iptal'
-                                            ? 'destructive'
-                                            : 'secondary'
+                                            ? 'danger'
+                                            : registration.status ===
+                                                'kesin_kayit'
+                                              ? 'success'
+                                              : 'warning'
                                     "
                                 >
                                     {{ statusLabels[registration.status] }}
@@ -323,8 +326,8 @@ function confirmDelete(): void {
                                 class="py-2 text-right font-medium tabular-nums"
                                 :class="
                                     Number(registration.balance) > 0
-                                        ? 'text-amber-600'
-                                        : 'text-emerald-600'
+                                        ? 'text-warning'
+                                        : 'text-success'
                                 "
                             >
                                 {{

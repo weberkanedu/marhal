@@ -32,11 +32,12 @@ Tarayıcıda: http://localhost:8000
 
 ### Demo hesaplar (sadece lokal, şifre: `password`)
 
-| E-posta                 | Rol                     |
-| ----------------------- | ----------------------- |
-| `platform@marhal.test`  | Platform yöneticisi     |
-| `admin@marhal.test`     | Demo Turizm — yönetici  |
-| `operasyon@marhal.test` | Demo Turizm — operasyon |
+| E-posta                 | Rol                            |
+| ----------------------- | ------------------------------ |
+| `platform@marhal.test`  | Platform yöneticisi            |
+| `admin@marhal.test`     | Demo Turizm — yönetici         |
+| `operasyon@marhal.test` | Demo Turizm — operasyon        |
+| `rehber@marhal.test`    | Demo Turizm — rehber (A Grubu) |
 
 ## Sık kullanılan komutlar
 

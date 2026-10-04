@@ -46,26 +46,26 @@ const pinInputContainerRef = useTemplateRef('pinInputContainerRef');
 const modalConfig = computed<TwoFactorConfigContent>(() => {
     if (props.twoFactorEnabled) {
         return {
-            title: 'Two-factor authentication enabled',
+            title: 'İki adımlı doğrulama açıldı',
             description:
-                'Two-factor authentication is now enabled. Scan the QR code or enter the setup key in your authenticator app.',
-            buttonText: 'Close',
+                'İki adımlı doğrulama açıldı. QR kodu doğrulama uygulamanızla okutun veya kurulum anahtarını girin.',
+            buttonText: 'Kapat',
         };
     }
 
     if (showVerificationStep.value) {
         return {
-            title: 'Verify authentication code',
-            description: 'Enter the 6-digit code from your authenticator app',
-            buttonText: 'Continue',
+            title: 'Kodu doğrulayın',
+            description: 'Doğrulama uygulamanızdaki 6 haneli kodu girin',
+            buttonText: 'Devam',
         };
     }
 
     return {
-        title: 'Enable two-factor authentication',
+        title: 'İki adımlı doğrulamayı aç',
         description:
-            'To finish enabling two-factor authentication, scan the QR code or enter the setup key in your authenticator app',
-        buttonText: 'Continue',
+            'Kurulumu tamamlamak için QR kodu doğrulama uygulamanızla okutun veya kurulum anahtarını girin',
+        buttonText: 'Devam',
     };
 });
 
@@ -197,7 +197,7 @@ watch(
                                 class="absolute inset-0 top-1/2 h-px w-full bg-border"
                             />
                             <span class="relative bg-card px-2 py-1"
-                                >or, enter the code manually</span
+                                >ya da kodu elle girin</span
                             >
                         </div>
 
@@ -279,14 +279,14 @@ watch(
                                     @click="showVerificationStep = false"
                                     :disabled="processing"
                                 >
-                                    Back
+                                    Geri
                                 </Button>
                                 <Button
                                     type="submit"
                                     class="w-auto flex-1"
                                     :disabled="processing || code.length < 6"
                                 >
-                                    Confirm
+                                    Onayla
                                 </Button>
                             </div>
                         </div>

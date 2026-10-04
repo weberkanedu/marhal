@@ -8,9 +8,9 @@ import { send } from '@/routes/verification';
 
 defineOptions({
     layout: {
-        title: 'Email verification',
+        title: 'E-posta doğrulama',
         description:
-            'Please verify your email address by clicking on the link we just emailed to you.',
+            'Size gönderdiğimiz bağlantıya tıklayarak e-posta adresinizi doğrulayın.',
     },
 });
 
@@ -20,14 +20,13 @@ defineProps<{
 </script>
 
 <template>
-    <Head title="Email verification" />
+    <Head title="E-posta doğrulama" />
 
     <div
         v-if="status === 'verification-link-sent'"
         class="mb-4 text-center text-sm font-medium text-green-600"
     >
-        A new verification link has been sent to the email address you provided
-        during registration.
+        Kayıtlı e-posta adresinize yeni bir doğrulama bağlantısı gönderildi.
     </div>
 
     <Form
@@ -37,11 +36,11 @@ defineProps<{
     >
         <Button :disabled="processing" variant="secondary">
             <Spinner v-if="processing" />
-            Resend verification email
+            Doğrulama e-postasını yeniden gönder
         </Button>
 
         <TextLink :href="logout()" as="button" class="mx-auto block text-sm">
-            Log out
+            Çıkış yap
         </TextLink>
     </Form>
 </template>

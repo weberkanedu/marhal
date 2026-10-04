@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Tenant;
+use App\Models\User;
 use App\Support\Tenancy\CurrentTenant;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -44,9 +46,21 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user()?->withoutRelations(),
             ],
             // Tembel: `tenant` middleware'i çalıştıktan sonra, sayfa render edilirken değerlendirilir.
-            'tenant' => fn () => app(CurrentTenant::class)->get()?->only(['id', 'name', 'default_currency']),
-            'features' => fn () => app(CurrentTenant::class)->get()?->enabledFeatures() ?? [],
+            // Acente bağlamı kurulmayan sayfalarda (ör. ayarlar) kullanıcının acentesi kullanılır ki menü eksik kalmasın.
+            'tenant' => fn () => $this->tenant($request)?->only(['id', 'name', 'default_currency']),
+            'features' => fn () => $this->tenant($request)?->enabledFeatures() ?? [],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    private function tenant(Request $request): ?Tenant
+    {
+        /** @var User|null $user */
+        $user = $request->user();
+
+        // Askıdaki / süresi dolmuş acentenin modülleri menüde gösterilmez.
+        $tenant = app(CurrentTenant::class)->get() ?? $user?->tenant;
+
+        return $tenant?->isAccessible() ? $tenant : null;
     }
 }

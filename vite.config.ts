@@ -12,9 +12,10 @@ export default defineConfig({
             input: ['resources/css/app.css', 'resources/js/app.ts'],
             refresh: true,
             fonts: [
-                bunny('Instrument Sans', {
-                    weights: [400, 500, 600],
-                }),
+                // Tema yazı tipleri (resources/css/app.css → --font-body / --font-display)
+                bunny('Inter', { weights: [400, 500, 600] }),
+                bunny('Fraunces', { weights: [500, 600] }),
+                bunny('Plus Jakarta Sans', { weights: [400, 500, 600] }),
             ],
         }),
         inertia(),

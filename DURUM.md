@@ -7,15 +7,15 @@
 
 **Faz 1 (MVP) adımları**
 
-| #   | Adım                                                               | Durum       |
-| --- | ------------------------------------------------------------------ | ----------- |
-| 0   | Altyapı: Laravel iskeleti, çok kiracılı yapı, paketler, şifreleme  | ✅          |
-| 1   | Yolcular (liste, arama, ekleme, fotoğraf, TC doğrulama)            | ✅          |
-| 2   | Turlar ve gruplar, yolcuların tura/gruba kaydı                     | ✅          |
-| 3   | Ödemeler ve taksit planı                                           | ✅          |
-| 4   | Raporlar (Excel / PDF)                                             | ✅          |
-| 5   | Kullanıcı yönetimi, platform paneli (acente açma, paket)           | ✅          |
-| 6   | Türkçeleştirme + **görsel tasarım** (kullanıcı onayladı) + kontrol | 🚧 sıradaki |
+| #   | Adım                                                               | Durum |
+| --- | ------------------------------------------------------------------ | ----- |
+| 0   | Altyapı: Laravel iskeleti, çok kiracılı yapı, paketler, şifreleme  | ✅    |
+| 1   | Yolcular (liste, arama, ekleme, fotoğraf, TC doğrulama)            | ✅    |
+| 2   | Turlar ve gruplar, yolcuların tura/gruba kaydı                     | ✅    |
+| 3   | Ödemeler ve taksit planı                                           | ✅    |
+| 4   | Raporlar (Excel / PDF)                                             | ✅    |
+| 5   | Kullanıcı yönetimi, platform paneli (acente açma, paket)           | ✅    |
+| 6   | Türkçeleştirme + **görsel tasarım** (kullanıcı onayladı) + kontrol | ✅    |
 
 Sonraki fazlar: Faz 2 oda/otobüs, Faz 3 uçuş/yaka kartı, Faz 4 API/entegrasyonlar.
 
@@ -53,7 +53,8 @@ Her adım sonunda güncellenir. ✅ bitti · 🟡 kısmen · ⏳ planlı
 - **Tur > Grup > Kayıt**: bir turda birden çok grup olabilir; her grubun rehberi var.
 - Yolcu fotoğrafları şimdilik sunucu diskinde (`MEDIA_DISK=local`), ileride S3.
 - Taksit takibi MVP'de (Faz 1, 3. adım).
-- Görsel iyileştirmeler 6. adımda toplu yapılacak.
+- **Tema seçici** (kullanıcı fikri): Haremeyn (varsayılan), Sade kurumsal, Kum ve bakır + açık/koyu mod; kullanıcıya kaydedilir. Durum renkleri her temada aynı. PDF/Excel temadan bağımsız.
+- Kendi hesabını silme kaldırıldı; hesapları yönetici "pasif yap" ile yönetir.
 - Kayıt sayfası yok; acenteleri platform yöneticisi açar.
 
 ## Ortamlar

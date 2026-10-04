@@ -253,7 +253,7 @@ const occupancyText = computed(() =>
             <Card v-if="can.viewFinance">
                 <CardHeader>
                     <CardDescription>Tahsil edilen</CardDescription>
-                    <CardTitle class="text-2xl text-emerald-600">
+                    <CardTitle class="text-2xl text-success">
                         {{ formatMoney(stats.paid, tour.currency) }}
                     </CardTitle>
                 </CardHeader>
@@ -261,7 +261,7 @@ const occupancyText = computed(() =>
             <Card v-if="can.viewFinance">
                 <CardHeader>
                     <CardDescription>Kalan alacak</CardDescription>
-                    <CardTitle class="text-2xl text-amber-600">
+                    <CardTitle class="text-2xl text-warning">
                         {{ formatMoney(stats.balance, tour.currency) }}
                     </CardTitle>
                 </CardHeader>
@@ -344,7 +344,7 @@ const occupancyText = computed(() =>
                     <button
                         v-if="stats.unassigned > 0"
                         type="button"
-                        class="flex items-center justify-between rounded-md px-2 py-1.5 text-left text-amber-700 hover:bg-muted"
+                        class="flex items-center justify-between rounded-md px-2 py-1.5 text-left text-warning hover:bg-muted"
                         :class="{
                             'bg-muted font-medium': groupFilter === 'none',
                         }"
@@ -455,7 +455,7 @@ const occupancyText = computed(() =>
                                             registration.person
                                                 .passport_expiring
                                         "
-                                        class="flex items-center gap-1 text-xs text-amber-600"
+                                        class="flex items-center gap-1 text-xs text-warning"
                                     >
                                         <AlertTriangle class="size-3" />
                                         {{
@@ -469,7 +469,7 @@ const occupancyText = computed(() =>
                                     <span v-if="registration.group_name">
                                         {{ registration.group_name }}
                                     </span>
-                                    <span v-else class="text-amber-700">
+                                    <span v-else class="text-warning">
                                         Grupsuz
                                     </span>
                                 </td>
@@ -487,11 +487,11 @@ const occupancyText = computed(() =>
                                         :variant="
                                             registration.status ===
                                             'kesin_kayit'
-                                                ? 'secondary'
+                                                ? 'success'
                                                 : registration.status ===
                                                     'iptal'
-                                                  ? 'destructive'
-                                                  : 'outline'
+                                                  ? 'danger'
+                                                  : 'warning'
                                         "
                                     >
                                         {{
@@ -536,8 +536,8 @@ const occupancyText = computed(() =>
                                     class="px-4 py-2 text-right font-medium tabular-nums"
                                     :class="
                                         Number(registration.balance) > 0
-                                            ? 'text-amber-600'
-                                            : 'text-emerald-600'
+                                            ? 'text-warning'
+                                            : 'text-success'
                                     "
                                 >
                                     {{

@@ -128,7 +128,7 @@ const genderLabels: Record<string, string> = { erkek: 'Erkek', kadin: 'Kadın' }
                                 </span>
                                 <span
                                     v-if="person.passport_expiring"
-                                    class="ml-2 inline-flex items-center gap-1 text-xs text-amber-600"
+                                    class="ml-2 inline-flex items-center gap-1 text-xs text-warning"
                                     :title="`Geçerlilik: ${formatDate(person.passport_expiry_date)}`"
                                 >
                                     <AlertTriangle class="size-3" /> 6 aydan az
