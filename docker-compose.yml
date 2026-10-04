@@ -1,0 +1,61 @@
+# Lokal geliştirme ortamı. Kullanım için README.md'ye bakın.
+services:
+    app:
+        build:
+            context: .
+            target: dev
+        ports:
+            - '8000:8080'
+        environment:
+            SSL_MODE: 'off'
+            # Önbellek açık ama dosya değişikliklerini 2 sn'de bir kontrol eder
+            # (Windows'ta bind mount yavaş olduğu için büyük fark yaratır).
+            PHP_OPCACHE_ENABLE: '1'
+            PHP_OPCACHE_VALIDATE_TIMESTAMPS: '1'
+            PHP_OPCACHE_REVALIDATE_FREQ: '2'
+            PHP_OPCACHE_MAX_ACCELERATED_FILES: '20000'
+        volumes:
+            - .:/var/www/html
+            # vendor ve node_modules Docker'ın kendi diskinde (Windows dosya paylaşımı çok yavaş)
+            - vendor:/var/www/html/vendor
+            - node_modules:/var/www/html/node_modules
+        depends_on:
+            db:
+                condition: service_healthy
+
+    vite:
+        build:
+            context: .
+            target: dev
+        command: ['npm', 'run', 'dev']
+        environment:
+            VITE_IN_DOCKER: '1'
+        ports:
+            - '5173:5173'
+        volumes:
+            - .:/var/www/html
+            - vendor:/var/www/html/vendor
+            - node_modules:/var/www/html/node_modules
+        depends_on:
+            - app
+        profiles: ['dev']
+
+    db:
+        image: postgres:16-alpine
+        environment:
+            POSTGRES_DB: marhal
+            POSTGRES_USER: marhal
+            POSTGRES_PASSWORD: marhal
+        ports:
+            - '5432:5432'
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U marhal -d marhal']
+            interval: 5s
+            retries: 10
+
+volumes:
+    pgdata:
+    vendor:
+    node_modules:
