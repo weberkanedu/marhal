@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ageFrom, formatDate, formatMoney } from '@/lib/format';
 import { destroy, edit, index, reveal } from '@/routes/persons';
+import { show as showRegistration } from '@/routes/registrations';
 import type { PersonDetail } from '@/types/person';
 
 type RegistrationRow = {
@@ -284,9 +285,12 @@ function confirmDelete(): void {
                             class="border-b last:border-0"
                         >
                             <td class="py-2">
-                                <div class="font-medium">
+                                <Link
+                                    :href="showRegistration(registration.id)"
+                                    class="font-medium hover:underline"
+                                >
                                     {{ registration.tour.name }}
-                                </div>
+                                </Link>
                                 <div class="text-xs text-muted-foreground">
                                     {{
                                         formatDate(registration.tour.start_date)

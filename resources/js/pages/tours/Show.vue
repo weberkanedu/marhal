@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
     AlertTriangle,
     CalendarDays,
@@ -8,6 +8,7 @@ import {
     Trash2,
     UserPlus,
     Users,
+    Wallet,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import GroupController from '@/actions/App/Http/Controllers/GroupController';
@@ -25,6 +26,7 @@ import {
 } from '@/components/ui/card';
 import { formatDate, formatMoney } from '@/lib/format';
 import { show as showPerson } from '@/routes/persons';
+import { show as showRegistration } from '@/routes/registrations';
 import { destroy, edit, index } from '@/routes/tours';
 import { tourStatusVariant } from '@/types/tour';
 import type {
@@ -57,6 +59,11 @@ const registrationStatusLabels: Record<string, string> = {
 };
 const roomTypeLabels = computed(() =>
     Object.fromEntries(props.options.roomTypes.map((o) => [o.value, o.label])),
+);
+
+const page = usePage();
+const paymentsEnabled = computed(() =>
+    (page.props.features ?? []).includes('payments'),
 );
 
 // Grup filtresi: 'all' | 'none' | grup id
@@ -453,6 +460,23 @@ const occupancyText = computed(() =>
                                     }}
                                 </td>
                                 <td class="px-2 py-2 whitespace-nowrap">
+                                    <Button
+                                        v-if="paymentsEnabled"
+                                        variant="ghost"
+                                        size="icon-sm"
+                                        title="Ödemeler"
+                                        as-child
+                                    >
+                                        <Link
+                                            :href="
+                                                showRegistration(
+                                                    registration.id,
+                                                )
+                                            "
+                                        >
+                                            <Wallet />
+                                        </Link>
+                                    </Button>
                                     <template v-if="can.update">
                                         <Button
                                             variant="ghost"

@@ -8,7 +8,6 @@ use App\Models\Registration;
 use App\Models\Tour;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Validator;
 
 class RegistrationRequest extends FormRequest
 {
@@ -68,32 +67,7 @@ class RegistrationRequest extends FormRequest
         ];
     }
 
-    /**
-     * Kapasite kontrolü (iptal edilmemiş kayıtlar sayılır).
-     *
-     * @return array<int, callable(Validator): void>
-     */
-    public function after(): array
-    {
-        return [function (Validator $validator): void {
-            $tour = $this->tour();
-            /** @var Registration|null $registration */
-            $registration = $this->route('registration');
-
-            $willOccupy = $this->input('status') !== RegistrationStatus::Cancelled->value;
-            $alreadyOccupies = $registration !== null && $registration->status !== RegistrationStatus::Cancelled;
-
-            if ($tour->capacity === null || ! $willOccupy || $alreadyOccupies) {
-                return;
-            }
-
-            $occupied = $tour->registrations()->where('status', '!=', RegistrationStatus::Cancelled)->count();
-
-            if ($occupied >= $tour->capacity) {
-                $validator->errors()->add('person_id', "Tur kapasitesi dolu ({$tour->capacity} kişi).");
-            }
-        }];
-    }
+    // Kapasite gibi iş kuralları App\Actions\Registrations içinde; burada sadece girdi biçimi doğrulanır.
 
     public function tour(): Tour
     {

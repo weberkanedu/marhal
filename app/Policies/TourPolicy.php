@@ -35,6 +35,22 @@ class TourPolicy
         return $this->create($user) && $this->sameTenant($user, $tour);
     }
 
+    /**
+     * Tahsilat / iade girme, taksit planı düzenleme.
+     */
+    public function managePayments(User $user, Tour $tour): bool
+    {
+        return $user->role->canManagePayments() && $this->sameTenant($user, $tour);
+    }
+
+    /**
+     * Girilmiş bir ödemeyi silme (hatalı kayıt düzeltme) — sadece yönetici.
+     */
+    public function deletePayments(User $user, Tour $tour): bool
+    {
+        return $user->hasRole(UserRole::Admin) && $this->sameTenant($user, $tour);
+    }
+
     public function delete(User $user, Tour $tour): bool
     {
         return $user->hasRole(UserRole::Admin) && $this->sameTenant($user, $tour);

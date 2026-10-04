@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Groups\DeleteGroup;
 use App\Http\Requests\GroupRequest;
 use App\Models\Group;
 use App\Models\Tour;
@@ -40,12 +41,11 @@ class GroupController extends Controller
     /**
      * Grup silinince yolcuları turda kalır, sadece "grupsuz" olur.
      */
-    public function destroy(Group $group): RedirectResponse
+    public function destroy(Group $group, DeleteGroup $delete): RedirectResponse
     {
         Gate::authorize('update', $group->tour);
 
-        $group->registrations()->update(['group_id' => null]);
-        $group->forceDelete();
+        $delete->handle($group);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => "{$group->name} silindi; yolcuları grupsuz kaldı."]);
 

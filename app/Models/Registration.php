@@ -143,4 +143,56 @@ class Registration extends Model
     {
         return Money::sub($this->netPrice(), $this->paidTotal());
     }
+
+    /**
+     * @return HasMany<Installment, $this>
+     */
+    public function installments(): HasMany
+    {
+        return $this->hasMany(Installment::class)->orderBy('due_date');
+    }
+
+    /**
+     * Vadesi bugün veya daha önce olan taksitlerin toplamını `due_total` olarak ekler.
+     *
+     * @param  Builder<Registration>  $query
+     * @return Builder<Registration>
+     */
+    public function scopeWithDueTotal(Builder $query): Builder
+    {
+        return $query->addSelect([
+            'due_total' => Installment::query()
+                ->withoutGlobalScopes()
+                ->selectRaw('COALESCE(SUM(amount), 0)')
+                ->whereColumn('installments.registration_id', 'registrations.id')
+                ->whereDate('installments.due_date', '<=', today()),
+        ]);
+    }
+
+    /**
+     * Vadesi gelmiş taksitlerin toplamı.
+     *
+     * @return numeric-string
+     */
+    public function dueTotal(): string
+    {
+        if (array_key_exists('due_total', $this->attributes)) {
+            return Money::of($this->attributes['due_total']);
+        }
+
+        return Money::of($this->installments()->whereDate('due_date', '<=', today())->sum('amount'));
+    }
+
+    /**
+     * Gecikmiş borç: vadesi gelen taksitler − ödenen (negatifse 0).
+     * Taksit planı yoksa gecikme hesaplanmaz.
+     *
+     * @return numeric-string
+     */
+    public function overdue(): string
+    {
+        $overdue = Money::sub($this->dueTotal(), $this->paidTotal());
+
+        return bccomp($overdue, '0', 2) > 0 ? $overdue : '0.00';
+    }
 }

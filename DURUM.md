@@ -12,8 +12,8 @@
 | 0   | Altyapı: Laravel iskeleti, çok kiracılı yapı, paketler, şifreleme  | ✅          |
 | 1   | Yolcular (liste, arama, ekleme, fotoğraf, TC doğrulama)            | ✅          |
 | 2   | Turlar ve gruplar, yolcuların tura/gruba kaydı                     | ✅          |
-| 3   | Ödemeler ve taksit planı                                           | 🚧 sıradaki |
-| 4   | Raporlar (Excel / PDF)                                             | ⏳          |
+| 3   | Ödemeler ve taksit planı                                           | ✅          |
+| 4   | Raporlar (Excel / PDF)                                             | 🚧 sıradaki |
 | 5   | Kullanıcı yönetimi, platform paneli (acente açma, paket)           | ⏳          |
 | 6   | Türkçeleştirme + **görsel tasarım** (kullanıcı onayladı) + kontrol | ⏳          |
 
@@ -30,9 +30,9 @@ Her adım sonunda güncellenir. ✅ bitti · 🟡 kısmen · ⏳ planlı
 | 1. Kayıt ve grup bilgileri, yolcu durum takibi    | ✅    | Tur detayı (kayıt durumu)     |
 | 1. Mekke / Medine otel bilgileri                  | ⏳    | Faz 2 (oteller + oda)         |
 | 2. Toplam ücret, kalan bakiye                     | ✅    | Tur detayı, yolcu detayı      |
-| 2. Ödeme girişi, yöntem, tarih, geçmiş            | ⏳    | Adım 3                        |
-| 2. Taksit takibi                                  | ⏳    | Adım 3                        |
-| 2. Borçlu / tamamlanan listeleri, tahsilat raporu | ⏳    | Adım 3–4                      |
+| 2. Ödeme girişi, yöntem, tarih, geçmiş            | ✅    | Kayıt ödeme sayfası           |
+| 2. Taksit takibi                                  | ✅    | Taksit planı + gecikme        |
+| 2. Borçlu / tamamlanan listeleri, tahsilat raporu | 🟡    | Tahsilat ekranı; Excel Adım 4 |
 | 3. Oda yerleşim planı (otel/kat/oda, boş/dolu)    | ⏳    | Faz 2                         |
 | 4. Otobüs yerleşim planı (koltuk, rehber)         | ⏳    | Faz 2                         |
 | 5. Uçuş listeleri                                 | ⏳    | Faz 3                         |
@@ -42,8 +42,7 @@ Her adım sonunda güncellenir. ✅ bitti · 🟡 kısmen · ⏳ planlı
 | 8. Özet sayılar (yolcu, alacak)                   | 🟡    | Ana panel; Excel/PDF Adım 4   |
 | 8. Excel / PDF çıktıları                          | ⏳    | Adım 4 (her modülde)          |
 
-**Bilinen teknik borç:** Bazı iş kuralları (kayıt iptali, kapasite, grup silme) controller/request
-içinde. Adım 3'ten itibaren `app/Actions` sınıflarına taşınacak; Faz 4 API'si aynı kuralları kullanacak.
+**İş kuralları `app/Actions` içinde** (kayıt, iptal, kapasite, grup silme, ödeme, taksit). Ekranlar ve Faz 4 API'si aynı sınıfları kullanır.
 **SPEC'te olup henüz yapılmayan:** rehberin kendi grubunu görmesi (Adım 5).
 
 ## Alınan kararlar

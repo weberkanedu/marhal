@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GroupController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PersonController;
 use App\Http\Controllers\Platform\TenantController;
 use App\Http\Controllers\RegistrationController;
@@ -31,6 +33,15 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::post('tours/{tour}/registrations', [RegistrationController::class, 'store'])->name('tours.registrations.store');
         Route::put('registrations/{registration}', [RegistrationController::class, 'update'])->name('registrations.update');
         Route::delete('registrations/{registration}', [RegistrationController::class, 'destroy'])->name('registrations.destroy');
+    });
+
+    // Ödemeler ve tahsilat
+    Route::middleware('feature:payments')->group(function () {
+        Route::get('registrations/{registration}', [RegistrationController::class, 'show'])->name('registrations.show');
+        Route::post('registrations/{registration}/payments', [PaymentController::class, 'store'])->name('registrations.payments.store');
+        Route::put('registrations/{registration}/installments', [PaymentController::class, 'updateInstallments'])->name('registrations.installments.update');
+        Route::delete('payments/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
+        Route::get('collections', CollectionController::class)->name('collections.index');
     });
 });
 

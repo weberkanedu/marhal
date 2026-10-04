@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Building2, LayoutGrid, Plane, Users } from '@lucide/vue';
+import { Building2, LayoutGrid, Plane, Users, Wallet } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -15,6 +15,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as collectionsIndex } from '@/routes/collections';
 import { index as personsIndex } from '@/routes/persons';
 import { index as tenantsIndex } from '@/routes/platform/tenants';
 import { index as toursIndex } from '@/routes/tours';
@@ -49,6 +50,17 @@ const mainNavItems = computed<NavItem[]>(() => {
             { title: 'Turlar', href: toursIndex(), icon: Plane },
             { title: 'Yolcular', href: personsIndex(), icon: Users },
         );
+    }
+
+    if (
+        features.includes('payments') &&
+        (role === 'admin' || role === 'operasyon')
+    ) {
+        items.push({
+            title: 'Tahsilat',
+            href: collectionsIndex(),
+            icon: Wallet,
+        });
     }
 
     return items;

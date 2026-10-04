@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Actions\Payments\ReplaceInstallmentPlan;
 use App\Enums\PaymentMethod;
 use App\Enums\RegistrationStatus;
 use App\Enums\TenantStatus;
@@ -102,6 +103,15 @@ class DemoSeeder extends Seeder
                             'registration_id' => $registration->id,
                             'amount' => $index < 4 ? 1500 : 750,
                             'method' => PaymentMethod::Transfer,
+                            'paid_at' => now()->subDays(30),
+                        ]);
+                    }
+
+                    // Taksitli yolcular: yarısı ödenmiş, ikinci taksitin vadesi geçmiş → gecikmiş borç görünür.
+                    if ($index >= 4 && $index < 8) {
+                        app(ReplaceInstallmentPlan::class)->handle($registration, [
+                            ['due_date' => now()->subDays(30)->toDateString(), 'amount' => 750, 'notes' => 'Peşinat'],
+                            ['due_date' => now()->subDays(5)->toDateString(), 'amount' => 750],
                         ]);
                     }
                 });
