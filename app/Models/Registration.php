@@ -98,6 +98,16 @@ class Registration extends Model
     }
 
     /**
+     * Otobüs koltuğu (turda en fazla bir).
+     *
+     * @return HasMany<SeatAssignment, $this>
+     */
+    public function seatAssignments(): HasMany
+    {
+        return $this->hasMany(SeatAssignment::class);
+    }
+
+    /**
      * @return HasMany<Payment, $this>
      */
     public function payments(): HasMany

@@ -7,6 +7,7 @@ use App\Models\Registration;
 use App\Models\Room;
 use App\Models\RoomAssignment;
 use App\Models\TourHotel;
+use App\Support\FamilyUnits;
 use App\Support\TurkishText;
 use Illuminate\Support\Facades\DB;
 
@@ -58,8 +59,7 @@ class AutoAssignRooms
         $plan = ['placements' => [], 'kinds' => [], 'unplaced' => []];
 
         foreach ($this->units(array_values($pending->all())) as $unit) {
-            $genders = array_unique(array_map(fn (Registration $r) => $r->person->gender->value, $unit));
-            $mixed = count($genders) > 1;
+            $mixed = FamilyUnits::isMixedGender($unit);
             $kind = $mixed ? RoomKind::Family : RoomKind::forGender($unit[0]->person->gender);
 
             $key = $this->pick($unit, $kind);
@@ -144,41 +144,9 @@ class AutoAssignRooms
      */
     private function units(array $pending): array
     {
-        $byPerson = [];
-        foreach ($pending as $registration) {
-            $byPerson[$registration->person_id] = $registration;
-        }
+        $units = FamilyUnits::build($pending, $this->links);
 
-        $seen = [];
-        $units = [];
-
-        foreach ($pending as $registration) {
-            if (isset($seen[$registration->person_id])) {
-                continue;
-            }
-
-            $unit = [];
-            $queue = [$registration->person_id];
-            $seen[$registration->person_id] = true;
-
-            while ($queue !== []) {
-                $personId = array_shift($queue);
-                $unit[] = $byPerson[$personId];
-
-                foreach ($this->links[$personId] ?? [] as $relatedId) {
-                    if (isset($byPerson[$relatedId]) && ! isset($seen[$relatedId])) {
-                        $seen[$relatedId] = true;
-                        $queue[] = $relatedId;
-                    }
-                }
-            }
-
-            $units[] = $unit;
-        }
-
-        $mixed = fn (array $unit) => count(array_unique(array_map(fn (Registration $r) => $r->person->gender->value, $unit))) > 1;
-
-        usort($units, fn (array $a, array $b) => $mixed($b) <=> $mixed($a) ?: count($b) <=> count($a));
+        usort($units, fn (array $a, array $b) => FamilyUnits::isMixedGender($b) <=> FamilyUnits::isMixedGender($a) ?: count($b) <=> count($a));
 
         return $units;
     }

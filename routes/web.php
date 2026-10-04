@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AgencySettingsController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\BusController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GroupController;
@@ -16,9 +17,12 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoomAssignmentController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\RoomPlanController;
+use App\Http\Controllers\SeatAssignmentController;
+use App\Http\Controllers\SeatPlanController;
 use App\Http\Controllers\TourController;
 use App\Http\Controllers\TourHotelController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\VehicleTypeController;
 use Illuminate\Support\Facades\Route;
 
 // Ana adres: giriş yapmışsa panele, değilse giriş ekranına.
@@ -70,6 +74,24 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::delete('room-assignments/{assignment}', [RoomAssignmentController::class, 'destroy'])->name('room-assignments.destroy');
     });
 
+    // Araç tipleri, tur otobüsleri ve koltuk planı (otobüs planı modülü)
+    Route::middleware(['feature:passengers', 'feature:bus_planning'])->group(function () {
+        Route::get('vehicle-types', [VehicleTypeController::class, 'index'])->name('vehicle-types.index');
+        Route::post('vehicle-types', [VehicleTypeController::class, 'store'])->name('vehicle-types.store');
+        Route::put('vehicle-types/{vehicleType}', [VehicleTypeController::class, 'update'])->name('vehicle-types.update');
+        Route::delete('vehicle-types/{vehicleType}', [VehicleTypeController::class, 'destroy'])->name('vehicle-types.destroy');
+        Route::post('tours/{tour}/buses', [BusController::class, 'store'])->name('tours.buses.store');
+        Route::put('buses/{bus}', [BusController::class, 'update'])->name('buses.update');
+        Route::delete('buses/{bus}', [BusController::class, 'destroy'])->name('buses.destroy');
+
+        // Koltuk planı
+        Route::get('buses/{bus}/seats', [SeatPlanController::class, 'show'])->name('buses.seat-plan');
+        Route::get('buses/{bus}/auto-assign', [SeatPlanController::class, 'preview'])->name('buses.auto-assign-preview');
+        Route::post('buses/{bus}/auto-assign', [SeatPlanController::class, 'apply'])->name('buses.auto-assign');
+        Route::post('buses/{bus}/seats', [SeatAssignmentController::class, 'store'])->name('buses.seats.store');
+        Route::delete('seat-assignments/{seat}', [SeatAssignmentController::class, 'destroy'])->name('seat-assignments.destroy');
+    });
+
     // Ödemeler ve tahsilat
     Route::middleware('feature:payments')->group(function () {
         Route::get('registrations/{registration}', [RegistrationController::class, 'show'])->name('registrations.show');
@@ -87,6 +109,10 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::middleware('feature:room_planning')->group(function () {
             Route::get('stays/{stay}/rooming-list', [ReportController::class, 'roomingList'])->name('stays.rooming-list');
             Route::get('stays/{stay}/room-occupancy', [ReportController::class, 'roomOccupancy'])->name('stays.room-occupancy');
+        });
+        Route::middleware('feature:bus_planning')->group(function () {
+            Route::get('buses/{bus}/passengers', [ReportController::class, 'busPassengers'])->name('buses.passengers');
+            Route::get('buses/{bus}/seat-chart', [ReportController::class, 'busSeatChart'])->name('buses.seat-chart');
         });
     });
 

@@ -77,6 +77,14 @@ class Tour extends Model
     }
 
     /**
+     * @return HasMany<Bus, $this>
+     */
+    public function buses(): HasMany
+    {
+        return $this->hasMany(Bus::class);
+    }
+
+    /**
      * @param  Builder<Tour>  $query
      * @return Builder<Tour>
      */

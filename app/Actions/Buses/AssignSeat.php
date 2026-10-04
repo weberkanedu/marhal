@@ -1,0 +1,55 @@
+<?php
+
+namespace App\Actions\Buses;
+
+use App\Enums\RegistrationStatus;
+use App\Models\Bus;
+use App\Models\Registration;
+use App\Models\SeatAssignment;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+/**
+ * Yolcuyu koltuğa oturtur. Engelleyen kurallar: başka turun / iptal edilmiş kaydı, olmayan koltuk,
+ * rehbere ayrılmış koltuk, dolu koltuk. Yolcu turda başka bir koltuktaysa (başka otobüs dahil)
+ * yeni koltuğa taşınır. Yan koltukta karşı cinsten yolcu olması engellemez, sadece uyarıdır.
+ */
+class AssignSeat
+{
+    public function handle(Bus $bus, Registration $registration, int $seatNo): SeatAssignment
+    {
+        return DB::transaction(function () use ($bus, $registration, $seatNo): SeatAssignment {
+            // Aynı koltuğa aynı anda iki yerleştirme yapılmasın.
+            $bus = Bus::query()->lockForUpdate()->whereKey($bus->getKey())->firstOrFail();
+            $name = $registration->person->full_name;
+
+            if ($registration->tour_id !== $bus->tour_id || $registration->status === RegistrationStatus::Cancelled) {
+                $this->fail("{$name} bu turun aktif yolcusu değil.");
+            }
+
+            if (! $bus->layout()->has($seatNo)) {
+                $this->fail("{$bus->name} otobüsünde {$seatNo} numaralı koltuk yok.");
+            }
+
+            if (in_array($seatNo, $bus->reserved(), true)) {
+                $this->fail("{$seatNo} numaralı koltuk rehber / görevli için ayrılmış.");
+            }
+
+            $taken = $bus->seats()->where('seat_no', $seatNo)->where('registration_id', '!=', $registration->getKey())->with('registration.person')->first();
+
+            if ($taken !== null) {
+                $this->fail("{$seatNo} numaralı koltukta {$taken->registration->person->full_name} oturuyor.");
+            }
+
+            return SeatAssignment::query()->updateOrCreate(
+                ['tour_id' => $bus->tour_id, 'registration_id' => $registration->getKey()],
+                ['bus_id' => $bus->getKey(), 'seat_no' => $seatNo],
+            );
+        });
+    }
+
+    private function fail(string $message): never
+    {
+        throw ValidationException::withMessages(['seat' => $message]);
+    }
+}

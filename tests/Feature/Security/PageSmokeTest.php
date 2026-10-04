@@ -6,6 +6,7 @@ use App\Actions\Payments\ReplaceInstallmentPlan;
 use App\Enums\RoomKind;
 use App\Enums\UserRole;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Models\Bus;
 use App\Models\Group;
 use App\Models\Payment;
 use App\Models\Person;
@@ -13,6 +14,7 @@ use App\Models\Plan;
 use App\Models\Registration;
 use App\Models\Room;
 use App\Models\RoomAssignment;
+use App\Models\SeatAssignment;
 use App\Models\Tenant;
 use App\Models\Tour;
 use App\Models\TourHotel;
@@ -71,6 +73,9 @@ class PageSmokeTest extends TestCase
         $stay->groups()->sync([$group->id]);
         $room = Room::factory()->create(['tour_hotel_id' => $stay->id, 'kind' => RoomKind::forGender($person->gender)]);
         RoomAssignment::query()->forceCreate(['tenant_id' => $this->tenant->id, 'tour_hotel_id' => $stay->id, 'room_id' => $room->id, 'registration_id' => $registration->id]);
+        $bus = Bus::factory()->create(['tour_id' => $tour->id, 'reserved_seats' => [1]]);
+        $bus->groups()->sync([$group->id]);
+        SeatAssignment::query()->forceCreate(['tenant_id' => $this->tenant->id, 'tour_id' => $tour->id, 'bus_id' => $bus->id, 'registration_id' => $registration->id, 'seat_no' => 3]);
         app(ReplaceInstallmentPlan::class)->handle($registration, [['due_date' => now()->subDay()->toDateString(), 'amount' => 1000]]);
 
         $users = [
@@ -82,7 +87,7 @@ class PageSmokeTest extends TestCase
 
         $this->params = [
             'tour' => $tour->id, 'group' => $group->id, 'person' => $person->id,
-            'registration' => $registration->id, 'tenant' => $this->tenant->id, 'stay' => $stay->id, 'user' => (string) $users['operasyon']->id,
+            'registration' => $registration->id, 'tenant' => $this->tenant->id, 'stay' => $stay->id, 'bus' => $bus->id, 'user' => (string) $users['operasyon']->id,
         ];
 
         $visited = 0;

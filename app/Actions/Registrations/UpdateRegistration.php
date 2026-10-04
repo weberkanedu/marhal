@@ -29,9 +29,10 @@ class UpdateRegistration
             unset($data['person_id']);
             $registration->update($this->applyStatus->handle($data, $registration));
 
-            // İptal edilen yolcunun oda yerleşimleri boşaltılır (yatak başkasına verilebilsin).
+            // İptal edilen yolcunun oda ve koltuğu boşaltılır (başkasına verilebilsin).
             if ($newStatus === RegistrationStatus::Cancelled) {
                 $registration->roomAssignments()->delete();
+                $registration->seatAssignments()->delete();
             }
 
             return $registration;

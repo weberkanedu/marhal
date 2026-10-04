@@ -87,3 +87,15 @@ Not (soru 4): bir otobüste birden çok grup olabilir mi — cevapta açıkça y
   (dolu/boş yatak, uyarılar, yerleşmemişler). Müşteri örneği gelirse birebir uyarlanır.
 - Sonraya bırakılan: "Mekke yerleşimini Medine'ye kopyala" yardımcısı (oda numaraları otelden otele değiştiği için
   oda arkadaşı gruplarını taşıyacak şekilde), sürükle-bırak.
+
+## Uygulama notları (3. adım, 2026-10-04)
+
+- **Araç tipleri** (acente geneli): sol/sağ koltuk (1–2), sıra sayısı, arka sıra, orta kapı sırası; hazır şablonlar
+  (Standart 2+2, VIP 2+1, Midibüs, Sprinter) ve canlı önizleme. Numaralama önden arkaya, soldan sağa; kapı sırasının sağı boş.
+- **Otobüs** tura eklenir; koltuk düzeni araç tipinden **kopyalanır** (tip sonradan değişse de bozulmaz).
+  Bir otobüste birden çok grup olabilir. Rehber / görevli için koltuk ayrılabilir.
+- **Kurallar**: olmayan / ayrılmış / dolu koltuk engellenir; yolcu turda tek koltukta (başka otobüse taşınabilir);
+  iptalde koltuk boşalır. Yanında karşı cinsten akraba olmayan yolcu → sadece uyarı.
+- **Otomatik dağıt**: 65+ yaş ve aileleri öne; aileler ikişer ikişer yan yana ve art arda sıralarda;
+  tek yolcular yabancı karşı cinsin yanına düşmeyecek şekilde. Önizleme → onay.
+- **Raporlar**: otobüs yolcu listesi (koltuk sırasıyla, Excel/PDF) ve otobüse asılacak koltuk planı PDF'i.

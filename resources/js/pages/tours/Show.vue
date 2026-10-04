@@ -16,6 +16,7 @@ import RegistrationController from '@/actions/App/Http/Controllers/RegistrationC
 import ExportButtons from '@/components/ExportButtons.vue';
 import GroupDialog from '@/components/tours/GroupDialog.vue';
 import RegistrationDialog from '@/components/tours/RegistrationDialog.vue';
+import BusesCard from '@/components/tours/BusesCard.vue';
 import StaysCard from '@/components/tours/StaysCard.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ import {
     payments as paymentReports,
 } from '@/routes/reports/tours';
 import { destroy, edit, index } from '@/routes/tours';
+import type { TourBus, VehicleTypeOption } from '@/types/bus';
 import type { HotelOption, TourStay } from '@/types/hotel';
 import { tourStatusVariant } from '@/types/tour';
 import type {
@@ -51,7 +53,12 @@ const props = defineProps<{
     registrations: RegistrationRow[];
     // Oda planı modülü kapalıysa null.
     stays: TourStay[] | null;
-    options: TourShowOptions & { hotels: HotelOption[] };
+    // Otobüs planı modülü kapalıysa null.
+    buses: TourBus[] | null;
+    options: TourShowOptions & {
+        hotels: HotelOption[];
+        vehicleTypes: VehicleTypeOption[];
+    };
     can: {
         update: boolean;
         delete: boolean;
@@ -278,6 +285,15 @@ const occupancyText = computed(() =>
             :stays="stays"
             :groups="groups"
             :hotels="options.hotels"
+            :can-update="can.update"
+        />
+
+        <BusesCard
+            v-if="buses !== null"
+            :tour="tour"
+            :buses="buses"
+            :groups="groups"
+            :vehicle-types="options.vehicleTypes"
             :can-update="can.update"
         />
 

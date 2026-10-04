@@ -25,9 +25,9 @@ biz kuralım.
   doğum ve bitiş tarihinden erişim anahtarı üretilir), sonra telefon pasaportun kapağına yaklaştırılır.
 - **Tarayıcıdan (web sitesinden) NFC ile pasaport okunamaz.** Web NFC yalnızca basit etiketleri okur;
   pasaport çipi için **telefon uygulaması** gerekir. Bu "köprü" = küçük bir mobil uygulama:
-  - Android: açık kaynak JMRTD kütüphanesi ile mümkün (NFC'li telefonların çoğu).
-  - iPhone: iOS 13+ Core NFC ile mümkün (iPhone 7 ve sonrası), uygulamada pasaport okuma izni tanımlanır.
-  - Alternatif köprü: masaüstü USB pasaport okuyucu (büroda sabit cihaz). Pahalıdır, ikinci seçenek.
+    - Android: açık kaynak JMRTD kütüphanesi ile mümkün (NFC'li telefonların çoğu).
+    - iPhone: iOS 13+ Core NFC ile mümkün (iPhone 7 ve sonrası), uygulamada pasaport okuma izni tanımlanır.
+    - Alternatif köprü: masaüstü USB pasaport okuyucu (büroda sabit cihaz). Pahalıdır, ikinci seçenek.
 - Uygulama mağazası hesapları gerekir: Apple Developer (yıllık ~99 $), Google Play (tek sefer ~25 $).
   Alternatif olarak hazır ticari SDK'lar (lisans ücretli) değerlendirilebilir.
 
@@ -38,9 +38,9 @@ biz kuralım.
 3. Veriler şifreli bağlantıyla Marhal'a **"Taslak kayıt"** olarak gönderilir (doğrudan yolcu oluşturulmaz).
 4. Web'de yeni **"Taranan pasaportlar"** ekranı: taslaklar listelenir; personel bilgileri kontrol eder,
    eksikleri (telefon, acil durum kişisi, tur/grup, oda tipi) tamamlar ve **Onayla** der.
-   - Aynı pasaport no / T.C. kimlik no ile kişi zaten varsa yeni kişi açılmaz; mevcut kişi güncellenir
-     (farklar yan yana gösterilir).
-   - İstenirse onay sırasında doğrudan bir tura / gruba kayıt da yapılır.
+    - Aynı pasaport no / T.C. kimlik no ile kişi zaten varsa yeni kişi açılmaz; mevcut kişi güncellenir
+      (farklar yan yana gösterilir).
+    - İstenirse onay sırasında doğrudan bir tura / gruba kayıt da yapılır.
 5. Reddedilen veya 7 gün içinde onaylanmayan taslaklar otomatik silinir.
 
 **Ara çözüm (uygulama gerektirmez, daha hızlı yapılır):** web sayfasında telefonun kamerasıyla yalnızca MRZ'yi

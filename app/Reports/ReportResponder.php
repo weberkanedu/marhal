@@ -52,6 +52,28 @@ class ReportResponder
     }
 
     /**
+     * Tablo olmayan özel PDF'ler (ör. otobüs koltuk planı çizimi). Aynı başlık / logo / audit kuralları.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function pdfView(string $key, string $filename, string $view, array $data, bool $landscape = false): Response
+    {
+        $this->audit->log('export', changes: ['report' => $key, 'format' => 'pdf']);
+
+        $tenant = $this->currentTenant->get();
+
+        return Pdf::loadView($view, [
+            ...$data,
+            'tenant' => $tenant,
+            'logo' => $this->logoDataUri($tenant),
+            'generatedAt' => now(),
+        ])
+            ->setPaper('a4', $landscape ? 'landscape' : 'portrait')
+            ->setOption(['isFontSubsettingEnabled' => true, 'isPhpEnabled' => false, 'isRemoteEnabled' => false])
+            ->download($filename);
+    }
+
+    /**
      * Logo PDF'e gömülü (data URI) olarak verilir; dompdf'te uzak/yerel dosya erişimi kapalı kalır.
      */
     private function logoDataUri(?Tenant $tenant): ?string

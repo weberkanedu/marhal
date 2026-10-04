@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\Tenant;
 use App\Support\Tenancy\CurrentTenant;
+use Database\Seeders\Demo\BusPlanDemo;
+use Database\Seeders\Demo\FixParentAgesDemo;
 use Database\Seeders\Demo\RoomPlanDemo;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -23,6 +25,8 @@ class UpdateDemoData extends Command
     /** @var array<string, class-string> paket adı → sınıf (run(Tenant): string) */
     public const PACKS = [
         'faz2-oda-plani' => RoomPlanDemo::class,
+        'faz2-otobus-plani' => BusPlanDemo::class,
+        'faz2-yakinlik-yas-duzeltme' => FixParentAgesDemo::class,
     ];
 
     public function handle(CurrentTenant $currentTenant): int

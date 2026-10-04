@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Models\Bus;
 use App\Models\Group;
+use App\Models\SeatAssignment;
 use App\Models\Tour;
 use App\Models\TourHotel;
+use App\Reports\Definitions\BusPassengerList;
 use App\Reports\Definitions\CollectionReport;
 use App\Reports\Definitions\StayRoomingList;
 use App\Reports\Definitions\StayRoomOccupancy;
@@ -15,6 +18,7 @@ use App\Reports\ReportResponder;
 use App\Support\Collections\CollectionFilters;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -81,6 +85,42 @@ class ReportController extends Controller
         Gate::authorize('update', $stay->tour);
 
         return $this->responder->download($definition->build($stay), $this->format($request));
+    }
+
+    /**
+     * Otobüs yolcu listesi (koltuk sırasıyla).
+     */
+    public function busPassengers(Request $request, Bus $bus, BusPassengerList $definition): Response
+    {
+        Gate::authorize('update', $bus->tour);
+
+        $revealIds = $request->user()?->role->canRevealSensitiveData() ?? false;
+
+        return $this->responder->download($definition->build($bus, $revealIds), $this->format($request));
+    }
+
+    /**
+     * Otobüse asılabilecek koltuk planı çizimi (sadece PDF).
+     */
+    public function busSeatChart(Bus $bus): Response
+    {
+        Gate::authorize('update', $bus->tour);
+
+        $bus->load('tour');
+        $layout = $bus->layout();
+
+        return $this->responder->pdfView('bus_seat_chart', Str::slug("{$bus->name} koltuk plani", '-', 'tr').'.pdf', 'reports.bus-seats', [
+            'title' => "{$bus->tour->name} — {$bus->name} Koltuk Planı",
+            'subtitle' => array_values(array_filter([
+                $layout->label().($bus->plate ? ' · Plaka '.$bus->plate : ''),
+                $bus->driver_name ? 'Şoför: '.$bus->driver_name.' '.($bus->driver_phone ?? '') : null,
+            ])),
+            'grid' => $layout->grid(),
+            'reserved' => $bus->reserved(),
+            'names' => $bus->seats()->with('registration.person')->get()
+                ->mapWithKeys(fn (SeatAssignment $s) => [$s->seat_no => $s->registration->person->full_name])
+                ->all(),
+        ], landscape: $layout->rows > 9);
     }
 
     private function format(Request $request): string

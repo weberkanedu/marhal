@@ -10,6 +10,7 @@ use App\Enums\TourStatus;
 use App\Enums\TourType;
 use App\Enums\UserRole;
 use App\Http\Requests\TourRequest;
+use App\Models\Bus;
 use App\Models\Group;
 use App\Models\Hotel;
 use App\Models\Person;
@@ -17,6 +18,7 @@ use App\Models\Registration;
 use App\Models\Tour;
 use App\Models\TourHotel;
 use App\Models\User;
+use App\Models\VehicleType;
 use App\Support\Money;
 use App\Support\Tenancy\CurrentTenant;
 use App\Support\TurkishText;
@@ -152,6 +154,24 @@ class TourController extends Controller
                 'occupied' => $stay->room_assignments_count,
             ]) : null;
 
+        // Otobüsler (otobüs planı modülü açıksa): rehber sadece kendi gruplarının otobüslerini görür.
+        $busPlanning = $currentTenant->get()?->hasFeature(Feature::BusPlanning) ?? false;
+        $buses = $busPlanning ? $tour->buses()
+            ->when($guideOf !== null, fn (Builder $q) => $q->whereHas('groups', fn (Builder $g) => $g->whereIn('groups.id', $guideOf ?? [])))
+            ->with(['groups:id,name', 'vehicleType:id,name'])
+            ->withCount('seats')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Bus $bus) => [
+                ...$bus->only(['id', 'name', 'vehicle_type_id', 'plate', 'driver_name', 'driver_phone', 'notes']),
+                'vehicle_type' => $bus->vehicleType?->name,
+                'label' => $bus->layout()->label(),
+                'reserved' => $bus->reserved(),
+                'groups' => $bus->groups->map(fn (Group $g) => ['id' => $g->id, 'name' => $g->name])->values(),
+                'seats' => $bus->layout()->seatCount() - count($bus->reserved()),
+                'occupied' => $bus->seats_count,
+            ]) : null;
+
         return Inertia::render('tours/Show', [
             'tour' => [
                 ...$this->summary($tour, $finance),
@@ -170,7 +190,12 @@ class TourController extends Controller
             'groups' => $groups,
             'registrations' => $registrations,
             'stays' => $stays,
+            'buses' => $buses,
             'options' => [
+                'vehicleTypes' => $busPlanning && ($user?->can('update', $tour) ?? false)
+                    ? VehicleType::query()->orderBy('name')->get()
+                        ->map(fn (VehicleType $t) => ['id' => $t->id, 'name' => $t->name, 'label' => $t->layout()->label()])
+                    : [],
                 'hotels' => $rooms && ($user?->can('update', $tour) ?? false)
                     ? Hotel::query()->get(['id', 'name', 'city'])
                         ->sortBy([fn (Hotel $a, Hotel $b) => array_search($a->city, HotelCity::cases(), true) <=> array_search($b->city, HotelCity::cases(), true)

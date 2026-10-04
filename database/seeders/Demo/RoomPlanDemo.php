@@ -101,7 +101,7 @@ class RoomPlanDemo
     }
 
     /**
-     * Her grupta bir karı-koca (aynı soyad) ve varsa bir anne-çocuk yakınlığı kurar.
+     * Her grupta bir karı-koca (aynı soyad) ve varsa bir anne-çocuk yakınlığı kurar (anne daha yaşlı olan).
      */
     private function relateFamilies(Tour $tour): void
     {
@@ -113,8 +113,9 @@ class RoomPlanDemo
             ->groupBy('group_id')
             ->each(function (Collection $registrations): void {
                 $persons = $registrations->map(fn (Registration $r) => $r->person);
-                $men = $persons->where('gender', Gender::Male)->values();
-                $women = $persons->where('gender', Gender::Female)->values();
+                // En yaşlılar önce: anne, çocuğundan büyük olsun.
+                $men = $persons->where('gender', Gender::Male)->sortBy('birth_date')->values();
+                $women = $persons->where('gender', Gender::Female)->sortBy('birth_date')->values();
 
                 if ($men->isNotEmpty() && $women->isNotEmpty()) {
                     $women[0]->update(['last_name' => $men[0]->last_name]);
@@ -123,7 +124,7 @@ class RoomPlanDemo
 
                 if ($women->count() > 1) {
                     $this->addRelation->handle($women[1], $women[0], Relation::Mother);
-                } elseif ($men->count() > 1 && $women->isNotEmpty()) {
+                } elseif ($men->count() > 1 && $women->isNotEmpty() && $men[1]->birth_date > $women[0]->birth_date) {
                     $this->addRelation->handle($men[1], $women[0], Relation::Mother);
                 }
             });
