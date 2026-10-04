@@ -90,6 +90,18 @@ Ortam değişkenleri yerelde `.env.staging` dosyasında (git'e girmez).
 - [ ] Staging demo hesapları (`platform@`, `admin@`, `operasyon@`) staging'e Adım 5'ten önce yüklendi;
       `rehber@` hesabı ve hazır taksit planları staging'de yok (sadece lokalde).
 
+## Ertelenen altyapı işleri (kullanıcı kararı 2026-10-04: "sonra yapılacak")
+
+Sıra ve anlatım kullanıcıyla konuşuldu; başlarken bu sırayla, adım adım yönlendir (gizli bilgileri kullanıcı girer):
+
+1. **Kalıcı disk (staging)**: Dokploy → marhal-staging → Advanced → Volumes → *Volume Mount* (bind değil),
+   ad `marhal-staging-storage`, yol `/var/www/html/storage/app` → Deploy → fotoğraf yükle, tekrar deploy, fotoğraf duruyor mu.
+2. **E-posta**: servis seçimi (öneri Brevo — AB, günde 300 ücretsiz — veya Resend), gönderen alan adı DNS doğrulaması
+   (şimdilik `noreply@erkanicil.me`), Dokploy ortam değişkenleri (MAIL_*), "Şifremi unuttum" ile deneme.
+3. **Yedek**: uzak depo (Hetzner Object Storage veya Cloudflare R2) → Dokploy S3 Destination → `marhal-db-staging`
+   günlük yedek (03:00, 14 gün) → boş veritabanına **geri yükleme denemesi**.
+4. **Production en son**: staging onaylanınca + KVKK görüşü gelince (DEPLOY.md). O zamana kadar staging'e de gerçek yolcu verisi girilmez.
+
 ## Sıradaki iş (önerilen sıra)
 
 1. **Production hazırlığı (teknik)** — adım adım liste: [DEPLOY.md](DEPLOY.md): kalıcı disk → otomatik DB yedeği + geri yükleme denemesi →
