@@ -16,17 +16,28 @@ use App\Models\Tour;
 use App\Models\User;
 use App\Support\Tenancy\CurrentTenant;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 /**
- * Yalnızca lokal geliştirme için örnek veri. Tüm demo kullanıcıların şifresi: "password".
+ * Örnek veri. Lokalde tüm demo kullanıcıların şifresi "password"; internete açık
+ * ortamlarda (staging) her hesap için rastgele güçlü şifre üretilir ve konsola yazılır.
  */
 class DemoSeeder extends Seeder
 {
     public function run(): void
     {
+        $accounts = [];
+        $password = function (string $email) use (&$accounts): string {
+            $plain = app()->isLocal() ? 'password' : Str::password(16, symbols: false);
+            $accounts[$email] = $plain;
+
+            return $plain;
+        };
+
         User::factory()->superAdmin()->create([
             'name' => 'Platform Yöneticisi',
             'email' => 'platform@marhal.test',
+            'password' => $password('platform@marhal.test'),
         ]);
 
         $tenant = Tenant::create([
@@ -43,12 +54,21 @@ class DemoSeeder extends Seeder
         User::factory()->forTenant($tenant)->create([
             'name' => 'Acente Yöneticisi',
             'email' => 'admin@marhal.test',
+            'password' => $password('admin@marhal.test'),
         ]);
 
         User::factory()->forTenant($tenant)->role(UserRole::Operations)->create([
             'name' => 'Operasyon Personeli',
             'email' => 'operasyon@marhal.test',
+            'password' => $password('operasyon@marhal.test'),
         ]);
+
+        if (! app()->isLocal()) {
+            $this->command?->warn('Demo hesaplar (şifreleri bir yere not edin, tekrar gösterilmez):');
+            foreach ($accounts as $email => $plain) {
+                $this->command?->line("  {$email}  {$plain}");
+            }
+        }
 
         app(CurrentTenant::class)->run($tenant, function () use ($tenant): void {
             $tour = Tour::factory()->create([
