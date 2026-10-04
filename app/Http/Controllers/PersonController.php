@@ -165,6 +165,37 @@ class PersonController extends Controller
     }
 
     /**
+     * Tura kayıt ekranındaki kişi arama kutusu için JSON sonuç.
+     * `exclude_tour` verilirse o tura zaten kayıtlı kişiler işaretlenir.
+     */
+    public function lookup(Request $request): JsonResponse
+    {
+        Gate::authorize('viewAny', Person::class);
+
+        $search = trim((string) $request->query('q', ''));
+        $tourId = $request->query('exclude_tour');
+
+        if (mb_strlen($search) < 2) {
+            return response()->json([]);
+        }
+
+        $persons = Person::query()
+            ->tap(fn (Builder $query) => $this->applySearch($query, $search))
+            ->when($tourId, fn (Builder $query) => $query->withExists([
+                'registrations as already_registered' => fn (Builder $q) => $q->where('tour_id', $tourId),
+            ]))
+            ->orderByName()
+            ->limit(10)
+            ->get()
+            ->map(fn (Person $person) => [
+                ...$this->listItem($person),
+                'already_registered' => (bool) ($person->getAttributes()['already_registered'] ?? false),
+            ]);
+
+        return response()->json($persons);
+    }
+
+    /**
      * Kimlik / pasaport numarasının tamamını gösterir (sadece yönetici) ve audit log'a yazar.
      */
     public function reveal(Person $person, AuditLogger $audit): JsonResponse
@@ -266,10 +297,7 @@ class PersonController extends Controller
     private function formOptions(): array
     {
         return [
-            'genders' => collect(Gender::cases())->map(fn (Gender $gender) => [
-                'value' => $gender->value,
-                'label' => $gender->label(),
-            ]),
+            'genders' => Gender::options(),
         ];
     }
 }

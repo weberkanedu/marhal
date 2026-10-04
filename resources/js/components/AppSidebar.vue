@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Building2, LayoutGrid, Users } from '@lucide/vue';
+import { Building2, LayoutGrid, Plane, Users } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -17,6 +17,7 @@ import {
 import { dashboard } from '@/routes';
 import { index as personsIndex } from '@/routes/persons';
 import { index as tenantsIndex } from '@/routes/platform/tenants';
+import { index as toursIndex } from '@/routes/tours';
 import type { NavItem } from '@/types';
 
 const page = usePage();
@@ -44,7 +45,10 @@ const mainNavItems = computed<NavItem[]>(() => {
         features.includes('passengers') &&
         (role === 'admin' || role === 'operasyon')
     ) {
-        items.push({ title: 'Yolcular', href: personsIndex(), icon: Users });
+        items.push(
+            { title: 'Turlar', href: toursIndex(), icon: Plane },
+            { title: 'Yolcular', href: personsIndex(), icon: Users },
+        );
     }
 
     return items;

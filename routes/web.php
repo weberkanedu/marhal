@@ -1,8 +1,11 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GroupController;
 use App\Http\Controllers\PersonController;
 use App\Http\Controllers\Platform\TenantController;
+use App\Http\Controllers\RegistrationController;
+use App\Http\Controllers\TourController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -18,6 +21,16 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
             ->middleware('throttle:30,1')
             ->name('persons.reveal');
         Route::get('persons/{person}/photo', [PersonController::class, 'photo'])->name('persons.photo');
+        Route::get('persons-lookup', [PersonController::class, 'lookup'])->name('persons.lookup');
+
+        // Turlar, gruplar ve kayıtlar
+        Route::resource('tours', TourController::class);
+        Route::post('tours/{tour}/groups', [GroupController::class, 'store'])->name('tours.groups.store');
+        Route::put('groups/{group}', [GroupController::class, 'update'])->name('groups.update');
+        Route::delete('groups/{group}', [GroupController::class, 'destroy'])->name('groups.destroy');
+        Route::post('tours/{tour}/registrations', [RegistrationController::class, 'store'])->name('tours.registrations.store');
+        Route::put('registrations/{registration}', [RegistrationController::class, 'update'])->name('registrations.update');
+        Route::delete('registrations/{registration}', [RegistrationController::class, 'destroy'])->name('registrations.destroy');
     });
 });
 

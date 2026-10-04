@@ -64,9 +64,9 @@ class DemoSeeder extends Seeder
         ]);
 
         if (! app()->isLocal()) {
-            $this->command?->warn('Demo hesaplar (şifreleri bir yere not edin, tekrar gösterilmez):');
+            $this->command->warn('Demo hesaplar (şifreleri bir yere not edin, tekrar gösterilmez):');
             foreach ($accounts as $email => $plain) {
-                $this->command?->line("  {$email}  {$plain}");
+                $this->command->line("  {$email}  {$plain}");
             }
         }
 

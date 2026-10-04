@@ -1,0 +1,510 @@
+<script setup lang="ts">
+import { Head, Link, router } from '@inertiajs/vue3';
+import {
+    AlertTriangle,
+    CalendarDays,
+    Pencil,
+    Plus,
+    Trash2,
+    UserPlus,
+    Users,
+} from '@lucide/vue';
+import { computed, ref } from 'vue';
+import GroupController from '@/actions/App/Http/Controllers/GroupController';
+import RegistrationController from '@/actions/App/Http/Controllers/RegistrationController';
+import GroupDialog from '@/components/tours/GroupDialog.vue';
+import RegistrationDialog from '@/components/tours/RegistrationDialog.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { formatDate, formatMoney } from '@/lib/format';
+import { show as showPerson } from '@/routes/persons';
+import { destroy, edit, index } from '@/routes/tours';
+import { tourStatusVariant } from '@/types/tour';
+import type {
+    RegistrationRow,
+    TourGroup,
+    TourShowOptions,
+    TourStats,
+    TourSummary,
+} from '@/types/tour';
+
+const props = defineProps<{
+    tour: TourSummary;
+    stats: TourStats;
+    groups: TourGroup[];
+    registrations: RegistrationRow[];
+    options: TourShowOptions;
+    can: { update: boolean; delete: boolean };
+}>();
+
+defineOptions({
+    layout: {
+        breadcrumbs: [{ title: 'Turlar', href: index() }],
+    },
+});
+
+const registrationStatusLabels: Record<string, string> = {
+    on_kayit: 'Ön kayıt',
+    kesin_kayit: 'Kesin kayıt',
+    iptal: 'İptal',
+};
+const roomTypeLabels = computed(() =>
+    Object.fromEntries(props.options.roomTypes.map((o) => [o.value, o.label])),
+);
+
+// Grup filtresi: 'all' | 'none' | grup id
+const groupFilter = ref<string>('all');
+const showCancelled = ref(false);
+
+const visibleRegistrations = computed(() =>
+    props.registrations.filter((r) => {
+        if (!showCancelled.value && r.status === 'iptal') {
+            return false;
+        }
+
+        if (groupFilter.value === 'all') {
+            return true;
+        }
+
+        return groupFilter.value === 'none'
+            ? r.group_id === null
+            : r.group_id === groupFilter.value;
+    }),
+);
+
+// Diyaloglar
+const groupDialogOpen = ref(false);
+const editingGroup = ref<TourGroup | null>(null);
+const registrationDialogOpen = ref(false);
+const editingRegistration = ref<RegistrationRow | null>(null);
+
+function openGroup(group: TourGroup | null): void {
+    editingGroup.value = group;
+    groupDialogOpen.value = true;
+}
+
+function openRegistration(registration: RegistrationRow | null): void {
+    editingRegistration.value = registration;
+    registrationDialogOpen.value = true;
+}
+
+function deleteGroup(group: TourGroup): void {
+    if (
+        confirm(
+            `${group.name} silinsin mi? Gruptaki ${group.registrations_count} yolcu turda kalır, grupsuz olur.`,
+        )
+    ) {
+        router.delete(GroupController.destroy.url(group.id), {
+            preserveScroll: true,
+        });
+    }
+}
+
+function removeRegistration(registration: RegistrationRow): void {
+    if (
+        confirm(
+            `${registration.person.full_name} bu turdan çıkarılsın mı? (Ödemesi varsa çıkarılamaz, iptal edilmelidir.)`,
+        )
+    ) {
+        router.delete(RegistrationController.destroy.url(registration.id), {
+            preserveScroll: true,
+        });
+    }
+}
+
+function deleteTour(): void {
+    if (confirm(`${props.tour.name} silinsin mi?`)) {
+        router.delete(destroy.url(props.tour.id));
+    }
+}
+
+const occupancyText = computed(() =>
+    props.tour.capacity
+        ? `${props.stats.registered} / ${props.tour.capacity}`
+        : String(props.stats.registered),
+);
+</script>
+
+<template>
+    <Head :title="tour.name" />
+
+    <div class="flex w-full flex-col gap-4 p-4">
+        <!-- Başlık -->
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-2xl font-semibold tracking-tight">
+                        {{ tour.name }}
+                    </h1>
+                    <Badge :variant="tourStatusVariant[tour.status]">
+                        {{ tour.status_label }}
+                    </Badge>
+                </div>
+                <p
+                    class="mt-1 flex items-center gap-2 text-sm text-muted-foreground"
+                >
+                    <CalendarDays class="size-4" />
+                    {{ formatDate(tour.start_date) }} –
+                    {{ formatDate(tour.end_date) }}
+                    <template v-if="tour.default_price">
+                        · Kişi başı
+                        {{ formatMoney(tour.default_price, tour.currency) }}
+                    </template>
+                </p>
+            </div>
+            <div class="flex gap-2">
+                <Button v-if="can.update" @click="openRegistration(null)">
+                    <UserPlus /> Yolcu ekle
+                </Button>
+                <Button v-if="can.update" variant="outline" as-child>
+                    <Link :href="edit(tour.id)"><Pencil /> Düzenle</Link>
+                </Button>
+                <Button
+                    v-if="can.delete"
+                    variant="ghost"
+                    class="text-destructive"
+                    @click="deleteTour"
+                >
+                    <Trash2 />
+                </Button>
+            </div>
+        </div>
+
+        <!-- Özet -->
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card>
+                <CardHeader>
+                    <CardDescription>Yolcu</CardDescription>
+                    <CardTitle class="text-2xl">{{ occupancyText }}</CardTitle>
+                    <p class="text-xs text-muted-foreground">
+                        {{ stats.confirmed }} kesin · {{ stats.pending }} ön
+                        kayıt
+                        <template v-if="stats.cancelled">
+                            · {{ stats.cancelled }} iptal
+                        </template>
+                    </p>
+                </CardHeader>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardDescription>Toplam tutar</CardDescription>
+                    <CardTitle class="text-2xl">
+                        {{ formatMoney(stats.total, tour.currency) }}
+                    </CardTitle>
+                </CardHeader>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardDescription>Tahsil edilen</CardDescription>
+                    <CardTitle class="text-2xl text-emerald-600">
+                        {{ formatMoney(stats.paid, tour.currency) }}
+                    </CardTitle>
+                </CardHeader>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardDescription>Kalan alacak</CardDescription>
+                    <CardTitle class="text-2xl text-amber-600">
+                        {{ formatMoney(stats.balance, tour.currency) }}
+                    </CardTitle>
+                </CardHeader>
+            </Card>
+        </div>
+
+        <div class="grid min-w-0 gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
+            <!-- Gruplar -->
+            <Card class="h-fit min-w-0">
+                <CardHeader class="flex flex-row items-center justify-between">
+                    <CardTitle>Gruplar</CardTitle>
+                    <Button
+                        v-if="can.update"
+                        variant="ghost"
+                        size="sm"
+                        @click="openGroup(null)"
+                    >
+                        <Plus /> Ekle
+                    </Button>
+                </CardHeader>
+                <CardContent class="flex flex-col gap-1 text-sm">
+                    <button
+                        type="button"
+                        class="flex items-center justify-between rounded-md px-2 py-1.5 text-left hover:bg-muted"
+                        :class="{
+                            'bg-muted font-medium': groupFilter === 'all',
+                        }"
+                        @click="groupFilter = 'all'"
+                    >
+                        Tüm yolcular
+                        <span class="text-muted-foreground">
+                            {{ stats.registered }}
+                        </span>
+                    </button>
+                    <div
+                        v-for="group in groups"
+                        :key="group.id"
+                        class="group/item flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-muted"
+                        :class="{ 'bg-muted': groupFilter === group.id }"
+                    >
+                        <button
+                            type="button"
+                            class="flex-1 text-left"
+                            :class="{ 'font-medium': groupFilter === group.id }"
+                            @click="groupFilter = group.id"
+                        >
+                            <div>{{ group.name }}</div>
+                            <div
+                                v-if="group.guide_name"
+                                class="text-xs text-muted-foreground"
+                            >
+                                Rehber: {{ group.guide_name }}
+                            </div>
+                        </button>
+                        <span class="text-muted-foreground">
+                            {{ group.registrations_count }}
+                        </span>
+                        <span
+                            v-if="can.update"
+                            class="ml-1 hidden gap-0.5 group-hover/item:flex"
+                        >
+                            <button
+                                type="button"
+                                class="rounded p-1 hover:bg-background"
+                                title="Düzenle"
+                                @click="openGroup(group)"
+                            >
+                                <Pencil class="size-3" />
+                            </button>
+                            <button
+                                type="button"
+                                class="rounded p-1 text-destructive hover:bg-background"
+                                title="Sil"
+                                @click="deleteGroup(group)"
+                            >
+                                <Trash2 class="size-3" />
+                            </button>
+                        </span>
+                    </div>
+                    <button
+                        v-if="stats.unassigned > 0"
+                        type="button"
+                        class="flex items-center justify-between rounded-md px-2 py-1.5 text-left text-amber-700 hover:bg-muted"
+                        :class="{
+                            'bg-muted font-medium': groupFilter === 'none',
+                        }"
+                        @click="groupFilter = 'none'"
+                    >
+                        Grupsuz yolcular
+                        <span>{{ stats.unassigned }}</span>
+                    </button>
+                </CardContent>
+            </Card>
+
+            <!-- Kayıtlar -->
+            <Card class="min-w-0 py-0">
+                <CardContent class="overflow-x-auto p-0">
+                    <div
+                        class="flex items-center justify-between border-b px-4 py-3"
+                    >
+                        <span class="text-sm font-medium">
+                            {{ visibleRegistrations.length }} yolcu
+                        </span>
+                        <label
+                            v-if="stats.cancelled > 0"
+                            class="flex items-center gap-2 text-sm text-muted-foreground"
+                        >
+                            <input v-model="showCancelled" type="checkbox" />
+                            İptalleri göster
+                        </label>
+                    </div>
+
+                    <div
+                        v-if="visibleRegistrations.length === 0"
+                        class="flex flex-col items-center gap-3 p-10 text-sm text-muted-foreground"
+                    >
+                        <Users class="size-8" />
+                        Bu listede yolcu yok.
+                        <Button
+                            v-if="can.update"
+                            size="sm"
+                            @click="openRegistration(null)"
+                        >
+                            <UserPlus /> Yolcu ekle
+                        </Button>
+                    </div>
+
+                    <table v-else class="w-full text-sm">
+                        <thead
+                            class="bg-muted/50 text-left text-muted-foreground"
+                        >
+                            <tr>
+                                <th class="px-4 py-2 font-medium">Yolcu</th>
+                                <th class="px-4 py-2 font-medium">Grup</th>
+                                <th class="px-4 py-2 font-medium">Oda</th>
+                                <th class="px-4 py-2 font-medium">Durum</th>
+                                <th class="px-4 py-2 text-right font-medium">
+                                    Ücret
+                                </th>
+                                <th class="px-4 py-2 text-right font-medium">
+                                    Kalan
+                                </th>
+                                <th class="w-0 px-2 py-2"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="registration in visibleRegistrations"
+                                :key="registration.id"
+                                class="border-t hover:bg-muted/40"
+                                :class="{
+                                    'opacity-50':
+                                        registration.status === 'iptal',
+                                }"
+                            >
+                                <td class="px-4 py-2">
+                                    <Link
+                                        :href="
+                                            showPerson(registration.person.id)
+                                        "
+                                        class="font-medium hover:underline"
+                                    >
+                                        {{ registration.person.full_name }}
+                                    </Link>
+                                    <div
+                                        v-if="
+                                            registration.person
+                                                .passport_missing ||
+                                            registration.person
+                                                .passport_expiring
+                                        "
+                                        class="flex items-center gap-1 text-xs text-amber-600"
+                                    >
+                                        <AlertTriangle class="size-3" />
+                                        {{
+                                            registration.person.passport_missing
+                                                ? 'Pasaport bilgisi yok'
+                                                : 'Pasaport süresi yetersiz'
+                                        }}
+                                    </div>
+                                </td>
+                                <td class="px-4 py-2">
+                                    <span v-if="registration.group_name">
+                                        {{ registration.group_name }}
+                                    </span>
+                                    <span v-else class="text-amber-700">
+                                        Grupsuz
+                                    </span>
+                                </td>
+                                <td class="px-4 py-2">
+                                    {{
+                                        registration.room_type
+                                            ? roomTypeLabels[
+                                                  registration.room_type
+                                              ]
+                                            : '—'
+                                    }}
+                                </td>
+                                <td class="px-4 py-2">
+                                    <Badge
+                                        :variant="
+                                            registration.status ===
+                                            'kesin_kayit'
+                                                ? 'secondary'
+                                                : registration.status ===
+                                                    'iptal'
+                                                  ? 'destructive'
+                                                  : 'outline'
+                                        "
+                                    >
+                                        {{
+                                            registrationStatusLabels[
+                                                registration.status
+                                            ]
+                                        }}
+                                    </Badge>
+                                </td>
+                                <td class="px-4 py-2 text-right tabular-nums">
+                                    {{
+                                        formatMoney(
+                                            registration.net_price,
+                                            registration.currency,
+                                        )
+                                    }}
+                                </td>
+                                <td
+                                    class="px-4 py-2 text-right font-medium tabular-nums"
+                                    :class="
+                                        Number(registration.balance) > 0
+                                            ? 'text-amber-600'
+                                            : 'text-emerald-600'
+                                    "
+                                >
+                                    {{
+                                        formatMoney(
+                                            registration.balance,
+                                            registration.currency,
+                                        )
+                                    }}
+                                </td>
+                                <td class="px-2 py-2 whitespace-nowrap">
+                                    <template v-if="can.update">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon-sm"
+                                            title="Düzenle"
+                                            @click="
+                                                openRegistration(registration)
+                                            "
+                                        >
+                                            <Pencil />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon-sm"
+                                            class="text-destructive"
+                                            title="Turdan çıkar"
+                                            @click="
+                                                removeRegistration(registration)
+                                            "
+                                        >
+                                            <Trash2 />
+                                        </Button>
+                                    </template>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </CardContent>
+            </Card>
+        </div>
+
+        <Card v-if="tour.notes">
+            <CardHeader>
+                <CardTitle>Notlar</CardTitle>
+            </CardHeader>
+            <CardContent class="text-sm whitespace-pre-line">
+                {{ tour.notes }}
+            </CardContent>
+        </Card>
+    </div>
+
+    <GroupDialog
+        v-model:open="groupDialogOpen"
+        :tour-id="tour.id"
+        :group="editingGroup"
+        :guides="options.guides"
+    />
+    <RegistrationDialog
+        v-model:open="registrationDialogOpen"
+        :tour="tour"
+        :groups="groups"
+        :options="options"
+        :registration="editingRegistration"
+    />
+</template>

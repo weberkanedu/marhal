@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { CalendarDays, Users, Wallet } from '@lucide/vue';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -10,6 +10,7 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { dashboard } from '@/routes';
+import { show as showTour } from '@/routes/tours';
 
 type UpcomingTour = {
     id: string;
@@ -148,7 +149,14 @@ function formatDate(date: string): string {
                             :key="tour.id"
                             class="border-b last:border-0"
                         >
-                            <td class="py-2 font-medium">{{ tour.name }}</td>
+                            <td class="py-2 font-medium">
+                                <Link
+                                    :href="showTour(tour.id)"
+                                    class="hover:underline"
+                                >
+                                    {{ tour.name }}
+                                </Link>
+                            </td>
                             <td class="py-2">
                                 {{ formatDate(tour.start_date) }} –
                                 {{ formatDate(tour.end_date) }}
