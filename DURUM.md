@@ -146,7 +146,9 @@ Ortam değişkenleri yerelde `.env.staging` dosyasında (git'e girmez).
   · Biçim: `vendor/bin/pint` ve `npm run check:fix` · Tip: `npm run types:check`
 - Yeni Vue sayfası / rota ekledikten sonra: `php artisan wayfinder:generate --with-form` ve testlerden önce `npm run build`.
 - **Staging'de DB var: eski migration dosyalarını değiştirme, her şema değişikliği yeni migration.**
-- `git push`'u PowerShell'den yap (Bash'ten kimlik sorup takılabiliyor). Commit mesajı için dosya kullan (`git commit -F`).
+- `git push`'u PowerShell'den, etkileşimsiz yap: `$env:GIT_TERMINAL_PROMPT='0'; $env:GCM_INTERACTIVE='never'; git push origin staging`
+  (aksi halde kimlik yöneticisi görünmeyen bir seçim penceresi açıp takılabiliyor; kayıtlı GitHub kimliği çalışıyor).
+  Commit mesajı için dosya kullan (`git commit -F`).
 - PHP dosyalarını sed/node ile düzenleme: ters bölü (`\`) kaçışları bozuluyor; doğrudan dosya düzenle.
 - Arayüzde durum renkleri için `text-success` / `text-warning` / `text-danger` ve Badge `success|warning|danger`
   varyantlarını kullan; sabit renk (emerald, amber) yazma (temalar bozulur).
