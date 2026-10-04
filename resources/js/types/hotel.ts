@@ -30,4 +30,7 @@ export type TourStay = {
     nights: number;
     groups: { id: string; name: string }[];
     notes: string | null;
+    rooms_count: number;
+    beds: number;
+    occupied: number;
 };

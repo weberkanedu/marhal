@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Enums\UserRole;
 use App\Models\Group;
 use App\Models\Tour;
+use App\Models\TourHotel;
 use App\Reports\Definitions\CollectionReport;
+use App\Reports\Definitions\StayRoomingList;
+use App\Reports\Definitions\StayRoomOccupancy;
 use App\Reports\Definitions\TourPassengerList;
 use App\Reports\Definitions\TourPaymentStatus;
 use App\Reports\ReportResponder;
@@ -59,6 +62,25 @@ class ReportController extends Controller
             $definition->build(CollectionFilters::fromRequest($request)),
             $this->format($request),
         );
+    }
+
+    /**
+     * Otele verilecek oda listesi (rooming list).
+     */
+    public function roomingList(Request $request, TourHotel $stay, StayRoomingList $definition): Response
+    {
+        Gate::authorize('update', $stay->tour);
+
+        $revealIds = $request->user()?->role->canRevealSensitiveData() ?? false;
+
+        return $this->responder->download($definition->build($stay, $revealIds), $this->format($request));
+    }
+
+    public function roomOccupancy(Request $request, TourHotel $stay, StayRoomOccupancy $definition): Response
+    {
+        Gate::authorize('update', $stay->tour);
+
+        return $this->responder->download($definition->build($stay), $this->format($request));
     }
 
     private function format(Request $request): string

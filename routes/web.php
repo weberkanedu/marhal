@@ -8,10 +8,14 @@ use App\Http\Controllers\GroupController;
 use App\Http\Controllers\HotelController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PersonController;
+use App\Http\Controllers\PersonRelationController;
 use App\Http\Controllers\Platform\PlanController;
 use App\Http\Controllers\Platform\TenantController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RoomAssignmentController;
+use App\Http\Controllers\RoomController;
+use App\Http\Controllers\RoomPlanController;
 use App\Http\Controllers\TourController;
 use App\Http\Controllers\TourHotelController;
 use App\Http\Controllers\UserController;
@@ -32,6 +36,8 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
             ->name('persons.reveal');
         Route::get('persons/{person}/photo', [PersonController::class, 'photo'])->name('persons.photo');
         Route::get('persons-lookup', [PersonController::class, 'lookup'])->name('persons.lookup');
+        Route::post('persons/{person}/relations', [PersonRelationController::class, 'store'])->name('persons.relations.store');
+        Route::delete('person-relations/{relation}', [PersonRelationController::class, 'destroy'])->name('person-relations.destroy');
 
         // Turlar, gruplar ve kayıtlar
         Route::resource('tours', TourController::class);
@@ -52,6 +58,16 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::post('tours/{tour}/stays', [TourHotelController::class, 'store'])->name('tours.stays.store');
         Route::put('stays/{stay}', [TourHotelController::class, 'update'])->name('stays.update');
         Route::delete('stays/{stay}', [TourHotelController::class, 'destroy'])->name('stays.destroy');
+
+        // Oda planı
+        Route::get('stays/{stay}/rooms', [RoomPlanController::class, 'show'])->name('stays.room-plan');
+        Route::get('stays/{stay}/auto-assign', [RoomPlanController::class, 'preview'])->name('stays.auto-assign-preview');
+        Route::post('stays/{stay}/auto-assign', [RoomPlanController::class, 'apply'])->name('stays.auto-assign');
+        Route::post('stays/{stay}/rooms', [RoomController::class, 'store'])->name('stays.rooms.store');
+        Route::put('rooms/{room}', [RoomController::class, 'update'])->name('rooms.update');
+        Route::delete('rooms/{room}', [RoomController::class, 'destroy'])->name('rooms.destroy');
+        Route::post('rooms/{room}/assignments', [RoomAssignmentController::class, 'store'])->name('rooms.assignments.store');
+        Route::delete('room-assignments/{assignment}', [RoomAssignmentController::class, 'destroy'])->name('room-assignments.destroy');
     });
 
     // Ödemeler ve tahsilat
@@ -68,6 +84,10 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::get('tours/{tour}/passengers', [ReportController::class, 'tourPassengers'])->name('tours.passengers');
         Route::get('tours/{tour}/payments', [ReportController::class, 'tourPayments'])->name('tours.payments');
         Route::get('collections', [ReportController::class, 'collections'])->name('collections');
+        Route::middleware('feature:room_planning')->group(function () {
+            Route::get('stays/{stay}/rooming-list', [ReportController::class, 'roomingList'])->name('stays.rooming-list');
+            Route::get('stays/{stay}/room-occupancy', [ReportController::class, 'roomOccupancy'])->name('stays.room-occupancy');
+        });
     });
 
     // Acente yönetimi (sadece acente yöneticisi)

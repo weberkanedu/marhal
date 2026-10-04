@@ -88,6 +88,16 @@ class Registration extends Model
     }
 
     /**
+     * Konaklamalardaki odaları (Mekke, Medine…).
+     *
+     * @return HasMany<RoomAssignment, $this>
+     */
+    public function roomAssignments(): HasMany
+    {
+        return $this->hasMany(RoomAssignment::class);
+    }
+
+    /**
      * @return HasMany<Payment, $this>
      */
     public function payments(): HasMany

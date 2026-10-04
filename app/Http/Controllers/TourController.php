@@ -132,6 +132,8 @@ class TourController extends Controller
         $stays = $rooms ? $tour->stays()
             ->when($guideOf !== null, fn (Builder $q) => $q->whereHas('groups', fn (Builder $g) => $g->whereIn('groups.id', $guideOf ?? [])))
             ->with(['hotel', 'groups:id,name'])
+            ->withCount(['rooms', 'roomAssignments'])
+            ->withSum('rooms', 'capacity')
             ->orderBy('check_in')
             ->get()
             ->map(fn (TourHotel $stay) => [
@@ -145,6 +147,9 @@ class TourController extends Controller
                 'nights' => $stay->nights(),
                 'groups' => $stay->groups->map(fn (Group $g) => ['id' => $g->id, 'name' => $g->name])->values(),
                 'notes' => $stay->notes,
+                'rooms_count' => $stay->rooms_count,
+                'beds' => (int) $stay->rooms_sum_capacity,
+                'occupied' => $stay->room_assignments_count,
             ]) : null;
 
         return Inertia::render('tours/Show', [

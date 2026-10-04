@@ -87,6 +87,16 @@ class Person extends Model
     }
 
     /**
+     * Yakınları (her yakınlık iki yönlü saklanır; bu taraf: "ilgili kişi, bu kişinin X'i").
+     *
+     * @return HasMany<PersonRelation, $this>
+     */
+    public function relations(): HasMany
+    {
+        return $this->hasMany(PersonRelation::class);
+    }
+
+    /**
      * T.C. Kimlik No ile arama (şifreli alan, hash üzerinden).
      *
      * @param  Builder<Person>  $query

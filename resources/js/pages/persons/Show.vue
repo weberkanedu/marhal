@@ -10,13 +10,15 @@ import {
     Trash2,
 } from '@lucide/vue';
 import { ref } from 'vue';
+import RelationsCard from '@/components/persons/RelationsCard.vue';
+import type { PersonRelationRow } from '@/components/persons/RelationsCard.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ageFrom, formatDate, formatMoney } from '@/lib/format';
 import { destroy, edit, index, reveal } from '@/routes/persons';
 import { show as showRegistration } from '@/routes/registrations';
-import type { PersonDetail } from '@/types/person';
+import type { Option, PersonDetail } from '@/types/person';
 
 type RegistrationRow = {
     id: string;
@@ -31,6 +33,8 @@ type RegistrationRow = {
 const props = defineProps<{
     person: PersonDetail;
     registrations: RegistrationRow[];
+    relations: PersonRelationRow[];
+    relationOptions: Option[];
     can: { update: boolean; delete: boolean; reveal: boolean };
 }>();
 
@@ -256,6 +260,14 @@ function confirmDelete(): void {
                 {{ person.notes }}
             </CardContent>
         </Card>
+
+        <RelationsCard
+            :person-id="person.id"
+            :person-name="person.full_name"
+            :relations="relations"
+            :options="relationOptions"
+            :can-update="can.update"
+        />
 
         <Card>
             <CardHeader>

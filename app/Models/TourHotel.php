@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Bir turun konaklaması: hangi otelde, hangi tarihlerde, hangi gruplar kalıyor.
@@ -23,6 +24,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property Carbon $check_in
  * @property Carbon $check_out
  * @property string|null $notes
+ * @property-read int|null $rooms_count
+ * @property-read int|null $room_assignments_count
+ * @property-read string|int|null $rooms_sum_capacity
  * @property-read Tour $tour
  * @property-read Hotel $hotel
  */
@@ -65,6 +69,22 @@ class TourHotel extends Model
     public function groups(): BelongsToMany
     {
         return $this->belongsToMany(Group::class, 'group_tour_hotel');
+    }
+
+    /**
+     * @return HasMany<Room, $this>
+     */
+    public function rooms(): HasMany
+    {
+        return $this->hasMany(Room::class);
+    }
+
+    /**
+     * @return HasMany<RoomAssignment, $this>
+     */
+    public function roomAssignments(): HasMany
+    {
+        return $this->hasMany(RoomAssignment::class);
     }
 
     public function nights(): int

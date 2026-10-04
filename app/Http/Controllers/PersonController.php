@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Enums\Gender;
 use App\Enums\RegistrationStatus;
+use App\Enums\Relation;
 use App\Http\Requests\PersonRequest;
 use App\Models\Person;
+use App\Models\PersonRelation;
 use App\Models\Registration;
 use App\Support\Audit\AuditLogger;
 use App\Support\Media\PersonPhotoStore;
@@ -90,6 +92,21 @@ class PersonController extends Controller
                 'created_at' => $person->created_at?->toIso8601String(),
             ],
             'registrations' => $registrations,
+            // Yakınlar: aile odası kuralı için (iki yönlü saklanır, burada bu kişiden bakılır).
+            'relations' => $person->relations()
+                ->with('relatedPerson:id,first_name,last_name,gender')
+                ->get()
+                ->filter(fn (PersonRelation $relation) => $relation->relatedPerson !== null)
+                ->map(fn (PersonRelation $relation) => [
+                    'id' => $relation->id,
+                    'person_id' => $relation->related_person_id,
+                    'full_name' => $relation->relatedPerson->full_name,
+                    'relation' => $relation->relation->value,
+                    'relation_label' => $relation->relation->label(),
+                    'is_family' => $relation->relation->isFamily(),
+                ])
+                ->values(),
+            'relationOptions' => Relation::options(),
             'can' => [
                 'update' => $request->user()?->can('update', $person) ?? false,
                 'delete' => $request->user()?->can('delete', $person) ?? false,

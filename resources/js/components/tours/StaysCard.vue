@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Link, router } from '@inertiajs/vue3';
-import { BedDouble, Pencil, Plus, Trash2 } from '@lucide/vue';
+import { BedDouble, DoorOpen, Pencil, Plus, Trash2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import TourHotelController from '@/actions/App/Http/Controllers/TourHotelController';
 import InputError from '@/components/InputError.vue';
@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label';
 import { formatDate } from '@/lib/format';
 import { selectClass, textareaClass } from '@/lib/formClasses';
 import { index as hotelsIndex } from '@/routes/hotels';
+import { roomPlan } from '@/routes/stays';
 import type { HotelOption, TourStay } from '@/types/hotel';
 import type { TourGroup, TourSummary } from '@/types/tour';
 
@@ -125,6 +126,16 @@ const cityVariant = (city: string) =>
                             yolcular)
                         </span>
                     </div>
+                    <Button variant="outline" size="sm" as-child>
+                        <Link :href="roomPlan(stay.id)">
+                            <DoorOpen />
+                            Oda planı
+                            <span class="text-xs text-muted-foreground">
+                                {{ stay.rooms_count }} oda ·
+                                {{ stay.occupied }}/{{ stay.beds }}
+                            </span>
+                        </Link>
+                    </Button>
                     <div v-if="canUpdate" class="flex">
                         <Button
                             variant="ghost"

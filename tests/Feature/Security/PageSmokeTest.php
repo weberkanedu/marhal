@@ -3,6 +3,7 @@
 namespace Tests\Feature\Security;
 
 use App\Actions\Payments\ReplaceInstallmentPlan;
+use App\Enums\RoomKind;
 use App\Enums\UserRole;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Group;
@@ -10,8 +11,11 @@ use App\Models\Payment;
 use App\Models\Person;
 use App\Models\Plan;
 use App\Models\Registration;
+use App\Models\Room;
+use App\Models\RoomAssignment;
 use App\Models\Tenant;
 use App\Models\Tour;
+use App\Models\TourHotel;
 use App\Models\User;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -63,6 +67,10 @@ class PageSmokeTest extends TestCase
         $person = Person::factory()->create(['tenant_id' => $this->tenant->id]);
         $registration = Registration::factory()->create(['tour_id' => $tour->id, 'group_id' => $group->id, 'person_id' => $person->id, 'price' => 1500]);
         Payment::factory()->create(['registration_id' => $registration->id, 'amount' => 500]);
+        $stay = TourHotel::factory()->create(['tour_id' => $tour->id]);
+        $stay->groups()->sync([$group->id]);
+        $room = Room::factory()->create(['tour_hotel_id' => $stay->id, 'kind' => RoomKind::forGender($person->gender)]);
+        RoomAssignment::query()->forceCreate(['tenant_id' => $this->tenant->id, 'tour_hotel_id' => $stay->id, 'room_id' => $room->id, 'registration_id' => $registration->id]);
         app(ReplaceInstallmentPlan::class)->handle($registration, [['due_date' => now()->subDay()->toDateString(), 'amount' => 1000]]);
 
         $users = [
@@ -74,7 +82,7 @@ class PageSmokeTest extends TestCase
 
         $this->params = [
             'tour' => $tour->id, 'group' => $group->id, 'person' => $person->id,
-            'registration' => $registration->id, 'tenant' => $this->tenant->id, 'user' => (string) $users['operasyon']->id,
+            'registration' => $registration->id, 'tenant' => $this->tenant->id, 'stay' => $stay->id, 'user' => (string) $users['operasyon']->id,
         ];
 
         $visited = 0;

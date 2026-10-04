@@ -22,4 +22,17 @@ enum RoomType: string
             self::Quint => '5 kişilik',
         };
     }
+
+    /**
+     * Ücreti ödenen odanın kişi sayısı (yerleşimde oda büyüklüğüyle karşılaştırılır).
+     */
+    public function capacity(): int
+    {
+        return match ($this) {
+            self::Double => 2,
+            self::Triple => 3,
+            self::Quad => 4,
+            self::Quint => 5,
+        };
+    }
 }

@@ -13,15 +13,15 @@ Modül 4 (otobüs yerleşimi), Modül 7 (grup bazında oda/otobüs organizasyonu
 
 ## Önerilen veri modeli (yeni migration'larla)
 
-| Tablo              | Alanlar                                                                                                                                  | Not                                                                                  |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `hotels`           | id, tenant_id, name, city (`mekke` / `medine` / `diger`), address, phone, stars, notes                                                   | ✅ Yapıldı. Acente geneli; turda kullanılan otel silinemez                           |
-| `tour_hotels`      | id, tenant_id, tour_id, hotel_id, check_in, check_out, notes + `group_tour_hotel` (hangi gruplar)                                        | ✅ Yapıldı. Grup bazında; bir grup aynı gecelerde iki otelde olamaz                  |
-| `rooms`            | id, tenant_id, tour_hotel_id, floor, room_no, capacity, gender (`erkek` / `kadin` / `aile`), notes                                       | Oda listesi tur-otel bazında                                                         |
-| `room_assignments` | id, tenant_id, room_id, registration_id                                                                                                  | Kayıt başına her tur-otelde **en fazla bir** oda (unique: tour_hotel + registration) |
-| `person_relations` | (mevcut) person_id, related_person_id, relation                                                                                          | Aile odası kuralı için                                                               |
-| `buses`            | id, tenant_id, tour_id, group_id (nullable), bus_no, plate, layout (`2+2` / `2+1`), seat_count, driver_name, driver_phone, guide_user_id |                                                                                      |
-| `seat_assignments` | id, tenant_id, bus_id, seat_no, registration_id                                                                                          | unique: bus + seat, bus + registration                                               |
+| Tablo              | Alanlar                                                                                                                                  | Not                                                                               |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `hotels`           | id, tenant_id, name, city (`mekke` / `medine` / `diger`), address, phone, stars, notes                                                   | ✅ Yapıldı. Acente geneli; turda kullanılan otel silinemez                        |
+| `tour_hotels`      | id, tenant_id, tour_id, hotel_id, check_in, check_out, notes + `group_tour_hotel` (hangi gruplar)                                        | ✅ Yapıldı. Grup bazında; bir grup aynı gecelerde iki otelde olamaz               |
+| `rooms`            | id, tenant_id, tour_hotel_id, floor, room_no, capacity, kind (`erkek` / `kadin` / `aile`), notes                                         | ✅ Yapıldı. Toplu ekleme (501–510)                                                |
+| `room_assignments` | id, tenant_id, tour_hotel_id, room_id, registration_id                                                                                   | ✅ Yapıldı. unique: tour_hotel + registration; aynı gecelerde iki otel engellenir |
+| `person_relations` | (mevcut) person_id, related_person_id, relation                                                                                          | Aile odası kuralı için                                                            |
+| `buses`            | id, tenant_id, tour_id, group_id (nullable), bus_no, plate, layout (`2+2` / `2+1`), seat_count, driver_name, driver_phone, guide_user_id |                                                                                   |
+| `seat_assignments` | id, tenant_id, bus_id, seat_no, registration_id                                                                                          | unique: bus + seat, bus + registration                                            |
 
 ## İş kuralları (app/Actions, testlerle korunacak)
 
@@ -71,3 +71,19 @@ Modül 4 (otobüs yerleşimi), Modül 7 (grup bazında oda/otobüs organizasyonu
 
 Not (soru 4): bir otobüste birden çok grup olabilir mi — cevapta açıkça yok; esnek tasarlanır
 (otobüs tura bağlı, isteğe bağlı grup(lar)).
+
+## Uygulama notları (2. adım, 2026-10-04)
+
+- **Yakınlıklar** iki yönlü saklanır; ters yön cinsiyete göre bulunur (kayınvalide ↔ gelin/damat,
+  amca/dayı ↔ yeğen …). "Diğer" dışındaki yakınlıklar aile odası için aile sayılır (hepsi mahrem).
+- **Aile odası kuralı**: yeni gelen, odadakilerden en az biriyle aile bağıyla bağlı olmalı.
+- **Uyarılar (engellemez)**: ödenen oda tipi ≠ oda büyüklüğü; grubu bu otelde olmayan yolcu (istisna).
+- **Otomatik dağıt**: önizleme → onay. Aile kümeleri birlikte; karma aileler aile odasına; önce yarı dolu
+  ve ödenen tiple aynı büyüklükteki odalar; boş odaların türü yerleşenlere göre ayarlanır.
+  Elle yapılmış yerleşimlere dokunmaz; sığmayanları nedeniyle listeler.
+- **İptal** edilen kaydın odaları boşalır; oda silinirse yolcular yerleşmemiş listesine döner.
+- **Raporlar**: "Otel oda listesi" (oda, kat, tip, tür, sıra, soyad/ad BÜYÜK harf, cinsiyet, doğum, uyruk,
+  pasaport no + bitiş, grup, not; başlıkta giriş/çıkış ve rehber) ve "Oda doluluk özeti"
+  (dolu/boş yatak, uyarılar, yerleşmemişler). Müşteri örneği gelirse birebir uyarlanır.
+- Sonraya bırakılan: "Mekke yerleşimini Medine'ye kopyala" yardımcısı (oda numaraları otelden otele değiştiği için
+  oda arkadaşı gruplarını taşıyacak şekilde), sürükle-bırak.
