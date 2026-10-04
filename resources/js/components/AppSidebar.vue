@@ -2,13 +2,10 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     Building2,
-    BusFront,
-    Hotel,
     LayoutGrid,
     Package,
     Plane,
-    ScrollText,
-    UserCog,
+    Settings,
     Users,
     Wallet,
 } from '@lucide/vue';
@@ -25,17 +22,13 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { agencySettingsPages, agencySettingsTabs } from '@/lib/agencySettings';
 import { dashboard } from '@/routes';
-import { edit as agencyEdit } from '@/routes/agency';
-import { index as auditIndex } from '@/routes/audit';
 import { index as collectionsIndex } from '@/routes/collections';
-import { index as hotelsIndex } from '@/routes/hotels';
-import { index as vehicleTypesIndex } from '@/routes/vehicle-types';
 import { index as personsIndex } from '@/routes/persons';
 import { index as plansIndex } from '@/routes/platform/plans';
 import { index as tenantsIndex } from '@/routes/platform/tenants';
 import { index as toursIndex } from '@/routes/tours';
-import { index as usersIndex } from '@/routes/users';
 import type { NavItem } from '@/types';
 
 const page = usePage();
@@ -66,36 +59,41 @@ const mainNavItems = computed<NavItem[]>(() => {
             : [];
     }
 
+    // Sayfa hangi bölüme ait? (alt sayfalarda da menü maddesi seçili görünsün)
+    const component = page.component;
+    const under = (...prefixes: string[]) =>
+        prefixes.some((prefix) => component.startsWith(prefix));
+    const staff = role === 'admin' || role === 'operasyon';
+
+    // Menüde sadece günlük işler; tanımlar ve yönetim "Acente ayarları"nda.
     const items: NavItem[] = [
         { title: 'Ana Panel', href: dashboard(), icon: LayoutGrid },
     ];
 
-    if (
-        features.includes('passengers') &&
-        (role === 'admin' || role === 'operasyon')
-    ) {
+    if (features.includes('passengers') && staff) {
         items.push(
-            { title: 'Turlar', href: toursIndex(), icon: Plane },
-            { title: 'Yolcular', href: personsIndex(), icon: Users },
+            {
+                title: 'Turlar',
+                href: toursIndex(),
+                icon: Plane,
+                isActive: under(
+                    'tours/',
+                    'rooms/',
+                    'buses/',
+                    'flights/',
+                    'registrations/',
+                ),
+            },
+            {
+                title: 'Yolcular',
+                href: personsIndex(),
+                icon: Users,
+                isActive: under('persons/'),
+            },
         );
-
-        if (features.includes('room_planning')) {
-            items.push({ title: 'Oteller', href: hotelsIndex(), icon: Hotel });
-        }
-
-        if (features.includes('bus_planning')) {
-            items.push({
-                title: 'Araç tipleri',
-                href: vehicleTypesIndex(),
-                icon: BusFront,
-            });
-        }
     }
 
-    if (
-        features.includes('payments') &&
-        (role === 'admin' || role === 'operasyon')
-    ) {
+    if (features.includes('payments') && staff) {
         items.push({
             title: 'Tahsilat',
             href: collectionsIndex(),
@@ -103,12 +101,14 @@ const mainNavItems = computed<NavItem[]>(() => {
         });
     }
 
-    if (role === 'admin') {
-        items.push(
-            { title: 'Personel', href: usersIndex(), icon: UserCog },
-            { title: 'Erişim kayıtları', href: auditIndex(), icon: ScrollText },
-            { title: 'Acente ayarları', href: agencyEdit(), icon: Building2 },
-        );
+    const settingsTabs = agencySettingsTabs(role, features);
+    if (settingsTabs.length > 0) {
+        items.push({
+            title: 'Acente ayarları',
+            href: settingsTabs[0].href,
+            icon: Settings,
+            isActive: under(...agencySettingsPages),
+        });
     }
 
     return items;

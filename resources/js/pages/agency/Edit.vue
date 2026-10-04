@@ -35,7 +35,10 @@ const props = defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Acente ayarları', href: edit() }],
+        breadcrumbs: [
+            { title: 'Acente ayarları', href: edit() },
+            { title: 'Acente bilgileri', href: edit() },
+        ],
     },
 });
 
@@ -53,11 +56,11 @@ function onLogo(event: Event): void {
 </script>
 
 <template>
-    <Head title="Acente ayarları" />
+    <Head title="Acente bilgileri" />
 
-    <div class="mx-auto w-full max-w-3xl p-4">
+    <div class="w-full max-w-3xl p-4">
         <Heading
-            title="Acente ayarları"
+            title="Acente bilgileri"
             :description="`Paketiniz: ${agency.plan}. Bu bilgiler PDF raporlarında ve yaka kartlarında kullanılır.`"
         />
 

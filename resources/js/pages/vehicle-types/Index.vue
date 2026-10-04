@@ -26,7 +26,10 @@ defineProps<{ types: VehicleTypeRow[] }>();
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Araç tipleri', href: index() }],
+        breadcrumbs: [
+            { title: 'Acente ayarları', href: index() },
+            { title: 'Araç tipleri', href: index() },
+        ],
     },
 });
 
@@ -135,9 +138,9 @@ function remove(type: VehicleTypeRow): void {
     <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h1 class="text-xl font-semibold tracking-tight">
+                <h2 class="text-lg font-semibold tracking-tight">
                     Araç tipleri
-                </h1>
+                </h2>
                 <p class="text-sm text-muted-foreground">
                     Kullandığınız otobüslerin koltuk düzenleri. Tura otobüs
                     eklerken buradan seçilir.

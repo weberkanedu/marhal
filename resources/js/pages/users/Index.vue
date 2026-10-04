@@ -41,7 +41,10 @@ const props = defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Personel', href: index() }],
+        breadcrumbs: [
+            { title: 'Acente ayarları', href: index() },
+            { title: 'Personel', href: index() },
+        ],
     },
 });
 
@@ -82,7 +85,7 @@ const limitReached = () =>
     <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h1 class="text-xl font-semibold tracking-tight">Personel</h1>
+                <h2 class="text-lg font-semibold tracking-tight">Personel</h2>
                 <p class="text-sm text-muted-foreground">
                     Aktif kullanıcı: {{ limit.active }}
                     <template v-if="limit.max !== null">

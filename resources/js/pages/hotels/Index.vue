@@ -29,7 +29,10 @@ const props = defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Oteller', href: index() }],
+        breadcrumbs: [
+            { title: 'Acente ayarları', href: index() },
+            { title: 'Oteller', href: index() },
+        ],
     },
 });
 
@@ -72,7 +75,7 @@ function remove(hotel: HotelRow): void {
     <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h1 class="text-xl font-semibold tracking-tight">Oteller</h1>
+                <h2 class="text-lg font-semibold tracking-tight">Oteller</h2>
                 <p class="text-sm text-muted-foreground">
                     Çalıştığınız oteller. Turun sayfasında "Konaklama"
                     bölümünden gruplara atanır.

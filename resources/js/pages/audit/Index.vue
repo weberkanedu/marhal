@@ -30,7 +30,10 @@ const props = defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Erişim kayıtları', href: index() }],
+        breadcrumbs: [
+            { title: 'Acente ayarları', href: index() },
+            { title: 'Erişim kayıtları', href: index() },
+        ],
     },
 });
 
@@ -77,9 +80,9 @@ const formatDateTime = (value: string | null) =>
 
     <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <div>
-            <h1 class="text-xl font-semibold tracking-tight">
+            <h2 class="text-lg font-semibold tracking-tight">
                 Erişim kayıtları
-            </h1>
+            </h2>
             <p class="text-sm text-muted-foreground">
                 Kim, ne zaman, hangi kayda ne yaptı. Kimlik ve pasaport
                 numaraları kayıtlara yazılmaz. Bu liste silinemez ve

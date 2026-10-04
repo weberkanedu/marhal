@@ -196,7 +196,9 @@ const free = computed(() => props.stats.beds - props.stats.occupied);
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <Link
-                    :href="showTour(stay.tour.id)"
+                    :href="
+                        showTour(stay.tour.id, { query: { tab: 'konaklama' } })
+                    "
                     class="mb-1 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
                 >
                     <ArrowLeft class="size-4" /> {{ stay.tour.name }}

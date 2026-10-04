@@ -227,7 +227,7 @@ function applyAuto(): void {
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <Link
-                    :href="showTour(bus.tour.id)"
+                    :href="showTour(bus.tour.id, { query: { tab: 'ulasim' } })"
                     class="mb-1 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
                 >
                     <ArrowLeft class="size-4" /> {{ bus.tour.name }}

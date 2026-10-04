@@ -122,7 +122,9 @@ function add(): void {
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <Link
-                    :href="showTour(flight.tour.id)"
+                    :href="
+                        showTour(flight.tour.id, { query: { tab: 'ulasim' } })
+                    "
                     class="mb-1 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
                 >
                     <ArrowLeft class="size-4" /> {{ flight.tour.name }}
