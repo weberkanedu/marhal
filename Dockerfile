@@ -57,3 +57,6 @@ ENV PHP_OPCACHE_ENABLE=1 \
     AUTORUN_LARAVEL_MIGRATION=true
 
 COPY --from=build --chown=www-data:www-data /var/www/html /var/www/html
+
+# Staging'de (APP_ENV=staging) açılışta yeni demo veri paketlerini yükler; migration'lardan (50-…) sonra çalışır.
+COPY --chmod=755 docker/entrypoint.d/60-demo-data.sh /etc/entrypoint.d/60-demo-data.sh

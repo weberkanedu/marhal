@@ -127,5 +127,8 @@ class DemoSeeder extends Seeder
                     }
                 });
         });
+
+        // Sonraki fazların örnek verisi (oteller, oda planı …) — staging'de de aynı komut çalışır.
+        $this->command->call('marhal:demo-data');
     }
 }

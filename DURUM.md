@@ -149,5 +149,9 @@ Ortam değişkenleri yerelde `.env.staging` dosyasında (git'e girmez).
 - Arayüzde durum renkleri için `text-success` / `text-warning` / `text-danger` ve Badge `success|warning|danger`
   varyantlarını kullan; sabit renk (emerald, amber) yazma (temalar bozulur).
 - Dokploy'da gizli anahtar / şifre alanlarını kullanıcı kendisi doldurur (asistan uzak formlara sır yazmaz).
+- **Demo veri paketleri (kullanıcı isteği):** her yeni özellik için `database/seeders/Demo/` altında bir paket yaz ve
+  `UpdateDemoData::PACKS`'e ekle. Staging her açılışta `marhal:demo-data` çalıştırır (docker/entrypoint.d/60-demo-data.sh);
+  paket demo acenteye bir kez yüklenir (`demo_packs`), kullanıcının silmeleri korunur. Production'da çalışmaz.
+  Böylece kullanıcı yeni özelliği staging'de veri girmeden görür. Gerçek müşteriler boş başlar.
 - Kullanıcı Türkçe, teknik olmayan dille, adım adım ve "kontrollü" ilerlemek istiyor: her adım sonunda
   gereksinim tablosunu güncelle, sapmaları dürüstçe raporla, tarayıcıda gözle kontrol et.
