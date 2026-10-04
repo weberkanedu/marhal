@@ -26,7 +26,7 @@ class CollectionController extends Controller
             'tab' => $filters->tab,
             'filters' => $filters->toArray(),
             'tours' => Tour::query()->orderByDesc('start_date')->get(['id', 'name']),
-            'rows' => $query->get($filters),
+            'rows' => $query->get($filters, perPage: 50),
         ]);
     }
 }

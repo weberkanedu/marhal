@@ -191,15 +191,15 @@ class PaymentTest extends TestCase
         $this->actingAs($this->staff)->get(route('collections.index'))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('tab', 'borclu')
-                ->has('rows.items', 1)
-                ->where('rows.items.0.id', $this->registration->id)
+                ->has('rows.items.data', 1)
+                ->where('rows.items.data.0.id', $this->registration->id)
                 ->where('rows.totals.USD.balance', '1500.00'));
 
         $this->actingAs($this->staff)->get(route('collections.index', ['tab' => 'tamamlanan']))
-            ->assertInertia(fn (Assert $page) => $page->has('rows.items', 1)->where('rows.items.0.id', $paidOff->id));
+            ->assertInertia(fn (Assert $page) => $page->has('rows.items.data', 1)->where('rows.items.data.0.id', $paidOff->id));
 
         $this->actingAs($this->staff)->get(route('collections.index', ['tab' => 'tahsilatlar']))
-            ->assertInertia(fn (Assert $page) => $page->has('rows.items', 1)->where('rows.totals.USD.net', '1000.00'));
+            ->assertInertia(fn (Assert $page) => $page->has('rows.items.data', 1)->where('rows.totals.USD.net', '1000.00'));
     }
 
     public function test_payments_module_is_blocked_when_not_in_plan(): void

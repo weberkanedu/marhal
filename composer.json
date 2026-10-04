@@ -76,6 +76,12 @@
             "@types:check",
             "@php artisan test"
         ],
+        "test:pgsql": [
+            "Composer\\Config::disableProcessTimeout",
+            "@putenv DB_CONNECTION=pgsql",
+            "@putenv DB_DATABASE=marhal_test",
+            "@php artisan test"
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"

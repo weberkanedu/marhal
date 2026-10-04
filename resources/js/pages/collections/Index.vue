@@ -10,6 +10,7 @@ import { formatDate, formatMoney } from '@/lib/format';
 import { selectClass } from '@/lib/formClasses';
 import { index } from '@/routes/collections';
 import { show as showRegistration } from '@/routes/registrations';
+import type { Paginated } from '@/types/person';
 import { collections as collectionsReport } from '@/routes/reports';
 
 type Tab = 'borclu' | 'tamamlanan' | 'tahsilatlar';
@@ -45,7 +46,7 @@ const props = defineProps<{
     filters: { tour: string | null; from: string; to: string };
     tours: { id: string; name: string }[];
     rows: {
-        items: (RegistrationItem | PaymentItem)[];
+        items: Paginated<RegistrationItem | PaymentItem>;
         totals: Record<string, Record<string, string>>;
     };
 }>();
@@ -152,7 +153,7 @@ const asPayments = (items: unknown) => items as PaymentItem[];
         </div>
 
         <ExportButtons
-            v-if="reportsEnabled && rows.items.length > 0"
+            v-if="reportsEnabled && rows.items.total > 0"
             :url="exportUrl"
             label="Bu listeyi indir"
         />
@@ -202,7 +203,7 @@ const asPayments = (items: unknown) => items as PaymentItem[];
         <Card class="py-0">
             <CardContent class="overflow-x-auto p-0">
                 <p
-                    v-if="rows.items.length === 0"
+                    v-if="rows.items.data.length === 0"
                     class="p-8 text-center text-sm text-muted-foreground"
                 >
                     Bu listede kayıt yok.
@@ -239,7 +240,7 @@ const asPayments = (items: unknown) => items as PaymentItem[];
                     </thead>
                     <tbody>
                         <tr
-                            v-for="row in asRegistrations(rows.items)"
+                            v-for="row in asRegistrations(rows.items.data)"
                             :key="row.id"
                             class="cursor-pointer border-t hover:bg-muted/40"
                             @click="router.visit(showRegistration(row.id))"
@@ -312,7 +313,7 @@ const asPayments = (items: unknown) => items as PaymentItem[];
                     </thead>
                     <tbody>
                         <tr
-                            v-for="row in asPayments(rows.items)"
+                            v-for="row in asPayments(rows.items.data)"
                             :key="row.id"
                             class="cursor-pointer border-t hover:bg-muted/40"
                             @click="
@@ -356,5 +357,43 @@ const asPayments = (items: unknown) => items as PaymentItem[];
                 </table>
             </CardContent>
         </Card>
+
+        <div
+            v-if="rows.items.last_page > 1"
+            class="flex items-center justify-between text-sm"
+        >
+            <span class="text-muted-foreground">
+                {{ rows.items.from }}–{{ rows.items.to }} /
+                {{ rows.items.total }}
+            </span>
+            <div class="flex gap-2">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    :disabled="!rows.items.prev_page_url"
+                    @click="
+                        rows.items.prev_page_url &&
+                        router.visit(rows.items.prev_page_url, {
+                            preserveScroll: true,
+                        })
+                    "
+                >
+                    Önceki
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    :disabled="!rows.items.next_page_url"
+                    @click="
+                        rows.items.next_page_url &&
+                        router.visit(rows.items.next_page_url, {
+                            preserveScroll: true,
+                        })
+                    "
+                >
+                    Sonraki
+                </Button>
+            </div>
+        </div>
     </div>
 </template>

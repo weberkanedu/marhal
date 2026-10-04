@@ -7,6 +7,7 @@ use App\Reports\Column;
 use App\Reports\Report;
 use App\Support\Collections\CollectionFilters;
 use App\Support\Collections\CollectionQuery;
+use Illuminate\Support\Collection;
 
 /**
  * Tahsilat ekranının üç sekmesinin çıktısı (ekranla aynı sorgu ve filtreler).
@@ -17,7 +18,10 @@ class CollectionReport
 
     public function build(CollectionFilters $filters): Report
     {
+        // Rapor sayfasız (tüm satırlar) alınır; get() perPage verilmezse Collection döner.
         $data = $this->query->get($filters);
+        $items = $data['items'] instanceof Collection ? $data['items'] : collect($data['items']->items());
+        $data['items'] = $items;
         $tourName = $filters->tourId ? Tour::query()->whereKey($filters->tourId)->value('name') : null;
         $scope = $tourName ?? 'Tüm turlar';
 

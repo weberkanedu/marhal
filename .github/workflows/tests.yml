@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - staging
   pull_request:
 
 permissions:
@@ -27,8 +28,15 @@ jobs:
           --health-interval 5s
           --health-retries 10
 
+    # Testler production ile aynı veritabanı türünde (PostgreSQL) koşar; phpunit.xml'deki
+    # SQLite ayarını bu ortam değişkenleri geçersiz kılar.
     env:
+      DB_CONNECTION: pgsql
       DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: marhal
+      DB_USERNAME: marhal
+      DB_PASSWORD: marhal
 
     steps:
       - name: Checkout code
