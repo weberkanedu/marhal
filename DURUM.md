@@ -19,6 +19,15 @@
 
 Sonraki fazlar: Faz 2 oda/otobüs, Faz 3 uçuş/yaka kartı, Faz 4 API/entegrasyonlar.
 
+**Faz 2 adımları** (tasarım ve müşteri kararları: [FAZ2.md](FAZ2.md))
+
+| #   | Adım                                                                                      | Durum |
+| --- | ----------------------------------------------------------------------------------------- | ----- |
+| 1   | Oteller ekranı + tura grup bazında konaklama (Mekke / Medine)                             | ✅    |
+| 2   | Yakınlıklar (genişletilmiş liste) + oda planı (kurallar, ekran, otomatik dağıt, raporlar) | ⏳    |
+| 3   | Araç tipleri + otobüs / koltuk planı                                                      | ⏳    |
+| 4   | Rehber görünümü, telefon uyumu, otel/transfer listesi (müşteri örneğine göre)             | ⏳    |
+
 ## Gereksinim takibi (müşterinin ilk listesi)
 
 Her adım sonunda güncellenir. ✅ bitti · 🟡 kısmen · ⏳ planlı
@@ -28,7 +37,7 @@ Her adım sonunda güncellenir. ✅ bitti · 🟡 kısmen · ⏳ planlı
 | 1. Ad soyad, iletişim, TC/pasaport, doğum tarihi  | ✅    | Yolcular                                            |
 | 1. Kişi fotoğrafı, acil durum bilgisi             | ✅    | Yolcular                                            |
 | 1. Kayıt ve grup bilgileri, yolcu durum takibi    | ✅    | Tur detayı (kayıt durumu)                           |
-| 1. Mekke / Medine otel bilgileri                  | ⏳    | Faz 2 (oteller + oda)                               |
+| 1. Mekke / Medine otel bilgileri                  | ✅    | Oteller + tur sayfası "Konaklama" (grup bazında)    |
 | 2. Toplam ücret, kalan bakiye                     | ✅    | Tur detayı, yolcu detayı                            |
 | 2. Ödeme girişi, yöntem, tarih, geçmiş            | ✅    | Kayıt ödeme sayfası                                 |
 | 2. Taksit takibi                                  | ✅    | Taksit planı + gecikme                              |
@@ -87,10 +96,11 @@ Ortam değişkenleri yerelde `.env.staging` dosyasında (git'e girmez).
    e-posta → `marhal-db-production` deploy → `main` dalına merge → production ortam değişkenleri
    (yeni anahtarlar, `.env.production`, git dışı) → Dokploy paneline HTTPS.
 2. **KVKK görüşü** (müşteri tarafı) gelince production'a gerçek veri.
-3. **Faz 2** (tasarım: [FAZ2.md](FAZ2.md), açık sorular müşteride): `hotels` + `tour_hotels` (Mekke/Medine), oda yerleşimi (`rooms`, `room_assignments`;
-   cinsiyet / aile kuralı `person_relations` ile), otobüs ve koltuk planı (`buses`, `seat_assignments`),
-   her biri için Excel/PDF (mevcut `app/Reports` altyapısı). Özellik bayrakları hazır:
-   `room_planning`, `bus_planning`.
+3. **Faz 2** (müşteri kararları alındı, [FAZ2.md](FAZ2.md)): ✅ 1. adım oteller + konaklama.
+   Sıradaki: **2. adım** — `Relation` listesini genişlet (kayın, gelin, damat…) + yolcu sayfasına "Yakınlar";
+   oda planı (`rooms`, `room_assignments`; cinsiyet / aile kuralı, oda tipi farkı sadece uyarı,
+   tıkla-yerleştir + otomatik dağıt, Mekke/Medine ayrı). Sonra araç tipleri + otobüs planı.
+   **Müşteriden bekleniyor:** otele / transfer firmasına verilen örnek Excel listesi.
 4. **Faz 3**: uçuş listeleri (`flight_lists`), yaka kartı (`badge_generation`; logo + fotoğraf hazır).
 5. **Faz 4**: `/api/v1` (iş kuralları `app/Actions` içinde hazır), WhatsApp/SMS, muhasebe, vize takibi.
 

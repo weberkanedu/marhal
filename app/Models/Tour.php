@@ -67,6 +67,16 @@ class Tour extends Model
     }
 
     /**
+     * Turun konaklamaları (Mekke / Medine otelleri, grup bazında).
+     *
+     * @return HasMany<TourHotel, $this>
+     */
+    public function stays(): HasMany
+    {
+        return $this->hasMany(TourHotel::class);
+    }
+
+    /**
      * @param  Builder<Tour>  $query
      * @return Builder<Tour>
      */

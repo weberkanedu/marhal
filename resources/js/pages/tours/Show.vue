@@ -16,6 +16,7 @@ import RegistrationController from '@/actions/App/Http/Controllers/RegistrationC
 import ExportButtons from '@/components/ExportButtons.vue';
 import GroupDialog from '@/components/tours/GroupDialog.vue';
 import RegistrationDialog from '@/components/tours/RegistrationDialog.vue';
+import StaysCard from '@/components/tours/StaysCard.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,6 +34,7 @@ import {
     payments as paymentReports,
 } from '@/routes/reports/tours';
 import { destroy, edit, index } from '@/routes/tours';
+import type { HotelOption, TourStay } from '@/types/hotel';
 import { tourStatusVariant } from '@/types/tour';
 import type {
     RegistrationRow,
@@ -47,7 +49,9 @@ const props = defineProps<{
     stats: TourStats;
     groups: TourGroup[];
     registrations: RegistrationRow[];
-    options: TourShowOptions;
+    // Oda planı modülü kapalıysa null.
+    stays: TourStay[] | null;
+    options: TourShowOptions & { hotels: HotelOption[] };
     can: {
         update: boolean;
         delete: boolean;
@@ -267,6 +271,15 @@ const occupancyText = computed(() =>
                 </CardHeader>
             </Card>
         </div>
+
+        <StaysCard
+            v-if="stays !== null"
+            :tour="tour"
+            :stays="stays"
+            :groups="groups"
+            :hotels="options.hotels"
+            :can-update="can.update"
+        />
 
         <div class="grid min-w-0 gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
             <!-- Gruplar -->

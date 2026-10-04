@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Feature;
+use App\Enums\HotelCity;
 use App\Enums\RegistrationStatus;
 use App\Enums\RoomType;
 use App\Enums\TourStatus;
@@ -9,9 +11,11 @@ use App\Enums\TourType;
 use App\Enums\UserRole;
 use App\Http\Requests\TourRequest;
 use App\Models\Group;
+use App\Models\Hotel;
 use App\Models\Person;
 use App\Models\Registration;
 use App\Models\Tour;
+use App\Models\TourHotel;
 use App\Models\User;
 use App\Support\Money;
 use App\Support\Tenancy\CurrentTenant;
@@ -89,7 +93,7 @@ class TourController extends Controller
         return to_route('tours.show', $tour);
     }
 
-    public function show(Request $request, Tour $tour): Response
+    public function show(Request $request, Tour $tour, CurrentTenant $currentTenant): Response
     {
         Gate::authorize('view', $tour);
 
@@ -123,6 +127,26 @@ class TourController extends Controller
 
         $active = $registrations->where('status', '!=', RegistrationStatus::Cancelled->value);
 
+        // Konaklama (oda planı modülü açıksa): rehber sadece kendi gruplarının otellerini görür.
+        $rooms = $currentTenant->get()?->hasFeature(Feature::RoomPlanning) ?? false;
+        $stays = $rooms ? $tour->stays()
+            ->when($guideOf !== null, fn (Builder $q) => $q->whereHas('groups', fn (Builder $g) => $g->whereIn('groups.id', $guideOf ?? [])))
+            ->with(['hotel', 'groups:id,name'])
+            ->orderBy('check_in')
+            ->get()
+            ->map(fn (TourHotel $stay) => [
+                'id' => $stay->id,
+                'hotel_id' => $stay->hotel_id,
+                'hotel_name' => $stay->hotel->name,
+                'city' => $stay->hotel->city->value,
+                'city_label' => $stay->hotel->city->label(),
+                'check_in' => $stay->check_in->toDateString(),
+                'check_out' => $stay->check_out->toDateString(),
+                'nights' => $stay->nights(),
+                'groups' => $stay->groups->map(fn (Group $g) => ['id' => $g->id, 'name' => $g->name])->values(),
+                'notes' => $stay->notes,
+            ]) : null;
+
         return Inertia::render('tours/Show', [
             'tour' => [
                 ...$this->summary($tour, $finance),
@@ -140,7 +164,15 @@ class TourController extends Controller
             ],
             'groups' => $groups,
             'registrations' => $registrations,
+            'stays' => $stays,
             'options' => [
+                'hotels' => $rooms && ($user?->can('update', $tour) ?? false)
+                    ? Hotel::query()->get(['id', 'name', 'city'])
+                        ->sortBy([fn (Hotel $a, Hotel $b) => array_search($a->city, HotelCity::cases(), true) <=> array_search($b->city, HotelCity::cases(), true)
+                            ?: TurkishText::compare($a->name, $b->name)])
+                        ->values()
+                        ->map(fn (Hotel $h) => ['id' => $h->id, 'name' => $h->name, 'city' => $h->city->value, 'city_label' => $h->city->label()])
+                    : [],
                 ...$this->formOptions(),
                 'roomTypes' => RoomType::options(),
                 'registrationStatuses' => RegistrationStatus::options(),

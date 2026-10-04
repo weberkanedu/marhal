@@ -1,6 +1,6 @@
 # Faz 2 — Otel, oda ve otobüs yerleşimi (tasarım taslağı)
 
-Durum: **Hazırlık / onay bekliyor.** Aşağıdaki "Açık sorular" cevaplanınca uygulamaya geçilir.
+Durum: **Kararlar alındı (2026-10-04), uygulama başladı.** Kararlar en altta.
 Müşteri listesindeki karşılığı: Modül 1 (Mekke/Medine otel bilgisi), Modül 3 (oda yerleşimi),
 Modül 4 (otobüs yerleşimi), Modül 7 (grup bazında oda/otobüs organizasyonu), Modül 8 (otel/oda/otobüs listeleri).
 
@@ -15,8 +15,8 @@ Modül 4 (otobüs yerleşimi), Modül 7 (grup bazında oda/otobüs organizasyonu
 
 | Tablo              | Alanlar                                                                                                                                  | Not                                                                                  |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `hotels`           | id, tenant_id, name, city (`mekke` / `medine` / `diger`), address, phone, stars                                                          | Acente geneli; turlar arasında tekrar kullanılır                                     |
-| `tour_hotels`      | id, tenant_id, tour_id, hotel_id, check_in, check_out, notes                                                                             | Turun hangi otelde kaç gece kalacağı (Mekke + Medine)                                |
+| `hotels`           | id, tenant_id, name, city (`mekke` / `medine` / `diger`), address, phone, stars, notes                                                   | ✅ Yapıldı. Acente geneli; turda kullanılan otel silinemez                           |
+| `tour_hotels`      | id, tenant_id, tour_id, hotel_id, check_in, check_out, notes + `group_tour_hotel` (hangi gruplar)                                        | ✅ Yapıldı. Grup bazında; bir grup aynı gecelerde iki otelde olamaz                  |
 | `rooms`            | id, tenant_id, tour_hotel_id, floor, room_no, capacity, gender (`erkek` / `kadin` / `aile`), notes                                       | Oda listesi tur-otel bazında                                                         |
 | `room_assignments` | id, tenant_id, room_id, registration_id                                                                                                  | Kayıt başına her tur-otelde **en fazla bir** oda (unique: tour_hotel + registration) |
 | `person_relations` | (mevcut) person_id, related_person_id, relation                                                                                          | Aile odası kuralı için                                                               |
@@ -57,16 +57,17 @@ Modül 4 (otobüs yerleşimi), Modül 7 (grup bazında oda/otobüs organizasyonu
 3. Otobüs planı (aynı yapı)
 4. Rehber görünümü, telefon uyumu, PageSmokeTest kapsamı, DURUM.md güncellemesi
 
-## Açık sorular (müşteriden cevap bekleniyor)
+## Müşteri kararları (2026-10-04)
 
-1. **Otel ataması tur bazında mı, grup bazında mı?** Aynı turdaki A ve B grupları farklı otellerde kalabilir mi?
-2. **Oda tipi ve yerleşim**: Yolcunun ödediği oda tipi (ör. 4 kişilik) ile yerleştiği oda farklı olabilir mi?
-   Sistem engellesin mi, sadece uyarsın mı?
-3. **Karma oda kuralı**: Aynı odada sadece aynı cinsiyet + "aile" odası istisnası doğru mu?
-   Aile sayılacak yakınlıklar: eş, anne, baba, çocuk, kardeş — başka (ör. kayınvalide, gelin) eklensin mi?
-4. **Otobüs**: Her grubun kendi otobüsü mü olur, yoksa bir otobüste birden fazla grup olabilir mi?
-   Kullanılan koltuk düzenleri (2+2, 46 koltuk; 2+1 VIP …)?
-5. **Yerleşim nasıl yapılıyor**: Elle mi, yoksa "otomatik dağıt" + elle düzeltme mi tercih edilir?
-6. **Otelin istediği liste formatı**: Otele / transfer firmasına verilen örnek bir liste (Excel) paylaşılabilir mi?
-   Raporlar birebir o formatta üretilir.
-7. **Medine ve Mekke oda planları** ayrı ayrı mı yapılıyor (genelde evet), yoksa aynı yerleşim mi taşınıyor?
+| #   | Soru                         | Karar                                                                                                                            | Tasarıma etkisi                                                                                                                                                                                            |
+| --- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Otel tur mu, grup mu?        | **Grup bazında.** Aynı turun grupları farklı otellerde kalabilir; ayrıca gruptaki bazı yolcular başka otelde kalmak isteyebilir. | Konaklama (`tour_hotels`) hangi gruplar için olduğunu tutar (`group_tour_hotel`). Yolcu istisnası: yolcu, aynı şehirdeki başka bir konaklamanın odasına elle yerleştirilebilir (o şehirde tek oda kuralı). |
+| 2   | Farklı oda tipine yerleşim   | **Sadece uyarı**; kullanıcı duruma göre devam edebilir.                                                                          | Yerleştirme engellenmez; ekranda ve raporda "oda tipi farklı" uyarısı.                                                                                                                                     |
+| 3   | Cinsiyet + aile kuralı       | Kural doğru; **yakınlık listesi genişlesin** (kayınvalide, gelin vb.).                                                           | `Relation` enum'una kayın / gelin / damat / torun / büyükanne-baba / amca-dayı-hala-teyze / yeğen eklenir. Yolcu sayfasına "Yakınlar" bölümü.                                                              |
+| 4   | Otobüs ve koltuk düzeni      | **Araç tipleri tanımlanabilir olsun** (VIP turlar için az koltuklu araçlar).                                                     | Acente geneli `vehicle_types` (ad, düzen 2+2 / 2+1 / 1+1, sıra sayısı, arka sıra, koltuk sayısı). Otobüs bir araç tipinden oluşturulur.                                                                    |
+| 5   | Elle mi, otomatik mi?        | **İkisi de**: isteyen otomatik dağıtır (sonra elle düzeltir), isteyen tamamen elle yapar.                                        | Tıkla-yerleştir + "Otomatik dağıt" (önizleme → onay).                                                                                                                                                      |
+| 6   | Otel / transfer liste örneği | Paylaşılacak.                                                                                                                    | Örnek gelene kadar genel format; gelince birebir uyarlanır.                                                                                                                                                |
+| 7   | Mekke / Medine planları      | **Ayrı ayrı** yapılıyor.                                                                                                         | Oda planı her konaklama (otel) için ayrı; "diğer otelin yerleşimini kopyala" yardımcısı.                                                                                                                   |
+
+Not (soru 4): bir otobüste birden çok grup olabilir mi — cevapta açıkça yok; esnek tasarlanır
+(otobüs tura bağlı, isteğe bağlı grup(lar)).

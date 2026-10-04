@@ -2,6 +2,7 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     Building2,
+    Hotel,
     LayoutGrid,
     Package,
     Plane,
@@ -27,6 +28,7 @@ import { dashboard } from '@/routes';
 import { edit as agencyEdit } from '@/routes/agency';
 import { index as auditIndex } from '@/routes/audit';
 import { index as collectionsIndex } from '@/routes/collections';
+import { index as hotelsIndex } from '@/routes/hotels';
 import { index as personsIndex } from '@/routes/persons';
 import { index as plansIndex } from '@/routes/platform/plans';
 import { index as tenantsIndex } from '@/routes/platform/tenants';
@@ -74,6 +76,10 @@ const mainNavItems = computed<NavItem[]>(() => {
             { title: 'Turlar', href: toursIndex(), icon: Plane },
             { title: 'Yolcular', href: personsIndex(), icon: Users },
         );
+
+        if (features.includes('room_planning')) {
+            items.push({ title: 'Oteller', href: hotelsIndex(), icon: Hotel });
+        }
     }
 
     if (

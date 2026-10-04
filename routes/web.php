@@ -5,6 +5,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GroupController;
+use App\Http\Controllers\HotelController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PersonController;
 use App\Http\Controllers\Platform\PlanController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\Platform\TenantController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TourController;
+use App\Http\Controllers\TourHotelController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -39,6 +41,17 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::post('tours/{tour}/registrations', [RegistrationController::class, 'store'])->name('tours.registrations.store');
         Route::put('registrations/{registration}', [RegistrationController::class, 'update'])->name('registrations.update');
         Route::delete('registrations/{registration}', [RegistrationController::class, 'destroy'])->name('registrations.destroy');
+    });
+
+    // Oteller ve tur konaklamaları (oda planı modülü)
+    Route::middleware(['feature:passengers', 'feature:room_planning'])->group(function () {
+        Route::get('hotels', [HotelController::class, 'index'])->name('hotels.index');
+        Route::post('hotels', [HotelController::class, 'store'])->name('hotels.store');
+        Route::put('hotels/{hotel}', [HotelController::class, 'update'])->name('hotels.update');
+        Route::delete('hotels/{hotel}', [HotelController::class, 'destroy'])->name('hotels.destroy');
+        Route::post('tours/{tour}/stays', [TourHotelController::class, 'store'])->name('tours.stays.store');
+        Route::put('stays/{stay}', [TourHotelController::class, 'update'])->name('stays.update');
+        Route::delete('stays/{stay}', [TourHotelController::class, 'destroy'])->name('stays.destroy');
     });
 
     // Ödemeler ve tahsilat
