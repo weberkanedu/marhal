@@ -202,7 +202,7 @@ class TenantController extends Controller
         ];
     }
 
-    private static function featureLabel(Feature $feature): string
+    public static function featureLabel(Feature $feature): string
     {
         return match ($feature) {
             Feature::Passengers => 'Yolcu ve tur yönetimi',

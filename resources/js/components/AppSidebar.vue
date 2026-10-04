@@ -3,7 +3,9 @@ import { Link, usePage } from '@inertiajs/vue3';
 import {
     Building2,
     LayoutGrid,
+    Package,
     Plane,
+    ScrollText,
     UserCog,
     Users,
     Wallet,
@@ -23,8 +25,10 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { edit as agencyEdit } from '@/routes/agency';
+import { index as auditIndex } from '@/routes/audit';
 import { index as collectionsIndex } from '@/routes/collections';
 import { index as personsIndex } from '@/routes/persons';
+import { index as plansIndex } from '@/routes/platform/plans';
 import { index as tenantsIndex } from '@/routes/platform/tenants';
 import { index as toursIndex } from '@/routes/tours';
 import { index as usersIndex } from '@/routes/users';
@@ -42,7 +46,10 @@ const homeLink = computed(() =>
 
 const mainNavItems = computed<NavItem[]>(() => {
     if (isSuperAdmin.value) {
-        return [{ title: 'Acenteler', href: tenantsIndex(), icon: Building2 }];
+        return [
+            { title: 'Acenteler', href: tenantsIndex(), icon: Building2 },
+            { title: 'Paketler', href: plansIndex(), icon: Package },
+        ];
     }
 
     const role = page.props.auth.user?.role;
@@ -83,6 +90,7 @@ const mainNavItems = computed<NavItem[]>(() => {
     if (role === 'admin') {
         items.push(
             { title: 'Personel', href: usersIndex(), icon: UserCog },
+            { title: 'Erişim kayıtları', href: auditIndex(), icon: ScrollText },
             { title: 'Acente ayarları', href: agencyEdit(), icon: Building2 },
         );
     }

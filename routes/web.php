@@ -1,11 +1,13 @@
 <?php
 
 use App\Http\Controllers\AgencySettingsController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PersonController;
+use App\Http\Controllers\Platform\PlanController;
 use App\Http\Controllers\Platform\TenantController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\ReportController;
@@ -64,6 +66,8 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
             ->middleware('throttle:10,1')
             ->name('users.reset-password');
 
+        Route::get('audit-logs', AuditLogController::class)->name('audit.index');
+
         Route::get('agency', [AgencySettingsController::class, 'edit'])->name('agency.edit');
         Route::post('agency', [AgencySettingsController::class, 'update'])->name('agency.update');
     });
@@ -75,6 +79,8 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
     ->prefix('platform')
     ->name('platform.')
     ->group(function () {
+        Route::get('plans', [PlanController::class, 'index'])->name('plans.index');
+        Route::put('plans/{plan}', [PlanController::class, 'update'])->name('plans.update');
         Route::get('tenants', [TenantController::class, 'index'])->name('tenants.index');
         Route::post('tenants', [TenantController::class, 'store'])->name('tenants.store');
         Route::get('tenants/{tenant}', [TenantController::class, 'show'])->name('tenants.show');

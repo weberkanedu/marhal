@@ -389,7 +389,7 @@ const occupancyText = computed(() =>
                         </Button>
                     </div>
 
-                    <table v-else class="w-full text-sm">
+                    <table v-else class="hidden w-full text-sm sm:table">
                         <thead
                             class="bg-muted/50 text-left text-muted-foreground"
                         >
@@ -594,6 +594,116 @@ const occupancyText = computed(() =>
                             </tr>
                         </tbody>
                     </table>
+
+                    <!-- Telefon: tablo yerine kartlar (rehberin sahada kullanımı) -->
+                    <ul
+                        v-if="visibleRegistrations.length > 0"
+                        class="divide-y sm:hidden"
+                    >
+                        <li
+                            v-for="registration in visibleRegistrations"
+                            :key="registration.id"
+                            class="space-y-1.5 px-4 py-3"
+                            :class="{
+                                'opacity-50': registration.status === 'iptal',
+                            }"
+                        >
+                            <div class="flex items-start justify-between gap-2">
+                                <span class="font-medium">
+                                    {{ registration.person.full_name }}
+                                </span>
+                                <Badge
+                                    :variant="
+                                        registration.status === 'kesin_kayit'
+                                            ? 'success'
+                                            : registration.status === 'iptal'
+                                              ? 'danger'
+                                              : 'warning'
+                                    "
+                                >
+                                    {{
+                                        registrationStatusLabels[
+                                            registration.status
+                                        ]
+                                    }}
+                                </Badge>
+                            </div>
+                            <div class="text-xs text-muted-foreground">
+                                {{ registration.group_name ?? 'Grupsuz' }}
+                                <template v-if="registration.room_type">
+                                    ·
+                                    {{ roomTypeLabels[registration.room_type] }}
+                                </template>
+                            </div>
+                            <div
+                                class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm"
+                            >
+                                <a
+                                    v-if="registration.person.phone"
+                                    :href="`tel:${registration.person.phone}`"
+                                    class="text-primary underline-offset-4 hover:underline"
+                                >
+                                    {{ registration.person.phone }}
+                                </a>
+                                <span
+                                    v-if="
+                                        !can.viewFinance &&
+                                        registration.person.emergency_contact
+                                    "
+                                    class="text-muted-foreground"
+                                >
+                                    Acil:
+                                    {{ registration.person.emergency_contact }}
+                                </span>
+                                <span
+                                    v-if="can.viewFinance"
+                                    :class="
+                                        Number(registration.balance) > 0
+                                            ? 'text-warning'
+                                            : 'text-success'
+                                    "
+                                >
+                                    Kalan:
+                                    {{
+                                        formatMoney(
+                                            registration.balance,
+                                            registration.currency,
+                                        )
+                                    }}
+                                </span>
+                            </div>
+                            <div
+                                v-if="
+                                    can.update ||
+                                    (paymentsEnabled && can.viewFinance)
+                                "
+                                class="flex gap-2 pt-1"
+                            >
+                                <Button
+                                    v-if="paymentsEnabled && can.viewFinance"
+                                    variant="outline"
+                                    size="sm"
+                                    as-child
+                                >
+                                    <Link
+                                        :href="
+                                            showRegistration(registration.id)
+                                        "
+                                    >
+                                        <Wallet /> Ödemeler
+                                    </Link>
+                                </Button>
+                                <Button
+                                    v-if="can.update"
+                                    variant="outline"
+                                    size="sm"
+                                    @click="openRegistration(registration)"
+                                >
+                                    <Pencil /> Düzenle
+                                </Button>
+                            </div>
+                        </li>
+                    </ul>
                 </CardContent>
             </Card>
         </div>
