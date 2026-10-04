@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import ExportButtons from '@/components/ExportButtons.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,7 @@ import { formatDate, formatMoney } from '@/lib/format';
 import { selectClass } from '@/lib/formClasses';
 import { index } from '@/routes/collections';
 import { show as showRegistration } from '@/routes/registrations';
+import { collections as collectionsReport } from '@/routes/reports';
 
 type Tab = 'borclu' | 'tamamlanan' | 'tahsilatlar';
 
@@ -78,6 +80,24 @@ function go(tab: Tab = props.tab): void {
     );
 }
 
+const page = usePage();
+const reportsEnabled = computed(() =>
+    (page.props.features ?? []).includes('basic_reports'),
+);
+
+// Rapor, ekranda uygulanmış filtrelerle aynı veriyi üretir.
+const exportUrl = computed(() =>
+    collectionsReport.url({
+        query: {
+            tab: props.tab,
+            ...(props.filters.tour ? { tour: props.filters.tour } : {}),
+            ...(props.tab === 'tahsilatlar'
+                ? { from: props.filters.from, to: props.filters.to }
+                : {}),
+        },
+    }),
+);
+
 const asRegistrations = (items: unknown) => items as RegistrationItem[];
 const asPayments = (items: unknown) => items as PaymentItem[];
 </script>
@@ -130,6 +150,12 @@ const asPayments = (items: unknown) => items as PaymentItem[];
                 >
             </template>
         </div>
+
+        <ExportButtons
+            v-if="reportsEnabled && rows.items.length > 0"
+            :url="exportUrl"
+            label="Bu listeyi indir"
+        />
 
         <!-- Toplamlar -->
         <div

@@ -13,6 +13,7 @@ import {
 import { computed, ref } from 'vue';
 import GroupController from '@/actions/App/Http/Controllers/GroupController';
 import RegistrationController from '@/actions/App/Http/Controllers/RegistrationController';
+import ExportButtons from '@/components/ExportButtons.vue';
 import GroupDialog from '@/components/tours/GroupDialog.vue';
 import RegistrationDialog from '@/components/tours/RegistrationDialog.vue';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +28,10 @@ import {
 import { formatDate, formatMoney } from '@/lib/format';
 import { show as showPerson } from '@/routes/persons';
 import { show as showRegistration } from '@/routes/registrations';
+import {
+    passengers as passengerReports,
+    payments as paymentReports,
+} from '@/routes/reports/tours';
 import { destroy, edit, index } from '@/routes/tours';
 import { tourStatusVariant } from '@/types/tour';
 import type {
@@ -65,9 +70,22 @@ const page = usePage();
 const paymentsEnabled = computed(() =>
     (page.props.features ?? []).includes('payments'),
 );
+const reportsEnabled = computed(() =>
+    (page.props.features ?? []).includes('basic_reports'),
+);
 
 // Grup filtresi: 'all' | 'none' | grup id
 const groupFilter = ref<string>('all');
+
+// Bir grup seçiliyse yolcu listesi raporu o grupla sınırlanır.
+const passengerReportUrl = computed(() =>
+    passengerReports.url(props.tour.id, {
+        query:
+            groupFilter.value !== 'all' && groupFilter.value !== 'none'
+                ? { group: groupFilter.value }
+                : {},
+    }),
+);
 const showCancelled = ref(false);
 
 const visibleRegistrations = computed(() =>
@@ -182,6 +200,26 @@ const occupancyText = computed(() =>
                     <Trash2 />
                 </Button>
             </div>
+        </div>
+
+        <!-- Raporlar -->
+        <div
+            v-if="reportsEnabled"
+            class="flex flex-wrap items-center gap-x-6 gap-y-2"
+        >
+            <ExportButtons
+                :url="passengerReportUrl"
+                :label="
+                    groupFilter !== 'all' && groupFilter !== 'none'
+                        ? 'Yolcu listesi (seçili grup)'
+                        : 'Yolcu listesi'
+                "
+            />
+            <ExportButtons
+                v-if="paymentsEnabled"
+                :url="paymentReports.url(tour.id)"
+                label="Ödeme durumu"
+            />
         </div>
 
         <!-- Özet -->

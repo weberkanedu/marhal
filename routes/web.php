@@ -7,6 +7,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PersonController;
 use App\Http\Controllers\Platform\TenantController;
 use App\Http\Controllers\RegistrationController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TourController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +43,13 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::put('registrations/{registration}/installments', [PaymentController::class, 'updateInstallments'])->name('registrations.installments.update');
         Route::delete('payments/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
         Route::get('collections', CollectionController::class)->name('collections.index');
+    });
+
+    // Excel / PDF raporları
+    Route::middleware(['feature:basic_reports', 'throttle:30,1'])->prefix('reports')->name('reports.')->group(function () {
+        Route::get('tours/{tour}/passengers', [ReportController::class, 'tourPassengers'])->name('tours.passengers');
+        Route::get('tours/{tour}/payments', [ReportController::class, 'tourPayments'])->name('tours.payments');
+        Route::get('collections', [ReportController::class, 'collections'])->name('collections');
     });
 });
 
