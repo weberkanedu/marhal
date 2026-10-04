@@ -64,10 +64,10 @@ Her adım sonunda güncellenir. ✅ bitti · 🟡 kısmen · ⏳ planlı
 - Taksit takibi MVP'de (Faz 1, 3. adım).
 - **Tema seçici** (kullanıcı fikri): Haremeyn (varsayılan), Sade kurumsal, Kum ve bakır + açık/koyu mod; kullanıcıya kaydedilir. Durum renkleri her temada aynı. PDF/Excel temadan bağımsız.
 - **Ekran düzeni (2026-10-04, kullanıcı onayı)**: sol menüde sadece günlük işler (Ana Panel, Turlar, Yolcular, Tahsilat)
-  + "Acente ayarları". Ayarlar sekmeli tek sayfa (`layouts/agency`, `lib/agencySettings.ts`): Acente bilgileri, Personel,
-  Oteller, Araç tipleri, Erişim kayıtları (operasyon yalnız Oteller / Araç tipleri). Kişisel ayarlar sağ alttaki kişi menüsünde.
-  Tur sayfası sekmeli: Yolcular / Konaklama / Ulaşım / Çıktılar (bütün Excel/PDF); sekme adreste `?tab=`.
-  Yeni ayar sayfası eklenecekse `agencySettingsTabs` + `agencySettingsPages`'e eklenir.
+    - "Acente ayarları". Ayarlar sekmeli tek sayfa (`layouts/agency`, `lib/agencySettings.ts`): Acente bilgileri, Personel,
+      Oteller, Araç tipleri, Erişim kayıtları (operasyon yalnız Oteller / Araç tipleri). Kişisel ayarlar sağ alttaki kişi menüsünde.
+      Tur sayfası sekmeli: Yolcular / Konaklama / Ulaşım / Çıktılar (bütün Excel/PDF); sekme adreste `?tab=`.
+      Yeni ayar sayfası eklenecekse `agencySettingsTabs` + `agencySettingsPages`'e eklenir.
 - Kendi hesabını silme kaldırıldı; hesapları yönetici "pasif yap" ile yönetir.
 - Kayıt sayfası yok; acenteleri platform yöneticisi açar.
 
@@ -110,7 +110,7 @@ Sıra ve anlatım kullanıcıyla konuşuldu; başlarken bu sırayla, adım adım
 ## Kullanılabilirlik planı (kullanıcıyla konuşuldu, 2026-10-04)
 
 1. ✅ Menü sadeleştirme + Acente ayarları sekmeli + tur sayfası sekmeleri (Çıktılar dahil).
-2. ⏳ Ana panel: "bugün neyle ilgilenmeliyim" — vadesi geçen / yaklaşan taksitler, pasaportu eksik / 6 aydan kısa,
+2. ✅ Ana panel (`TourReadiness`): "bugün neyle ilgilenmeliyim" — vadesi geçen / yaklaşan taksitler, pasaportu eksik / 6 aydan kısa,
    yaklaşan turda odası / koltuğu / uçuşu olmayanlar, kontenjan.
 3. ⏳ Excel'den toplu yolcu aktarma.
 4. ⏳ Üst çubukta hızlı arama (ad / T.C. / pasaport) ve ilk kullanım rehberi (logo, otel, ilk tur).
