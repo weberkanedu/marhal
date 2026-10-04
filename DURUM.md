@@ -19,6 +19,33 @@
 
 Sonraki fazlar: Faz 2 oda/otobüs, Faz 3 uçuş/yaka kartı, Faz 4 API/entegrasyonlar.
 
+## Gereksinim takibi (müşterinin ilk listesi)
+
+Her adım sonunda güncellenir. ✅ bitti · 🟡 kısmen · ⏳ planlı
+
+| Modül / madde                                     | Durum | Nerede / ne zaman             |
+| ------------------------------------------------- | ----- | ----------------------------- |
+| 1. Ad soyad, iletişim, TC/pasaport, doğum tarihi  | ✅    | Yolcular                      |
+| 1. Kişi fotoğrafı, acil durum bilgisi             | ✅    | Yolcular                      |
+| 1. Kayıt ve grup bilgileri, yolcu durum takibi    | ✅    | Tur detayı (kayıt durumu)     |
+| 1. Mekke / Medine otel bilgileri                  | ⏳    | Faz 2 (oteller + oda)         |
+| 2. Toplam ücret, kalan bakiye                     | ✅    | Tur detayı, yolcu detayı      |
+| 2. Ödeme girişi, yöntem, tarih, geçmiş            | ⏳    | Adım 3                        |
+| 2. Taksit takibi                                  | ⏳    | Adım 3                        |
+| 2. Borçlu / tamamlanan listeleri, tahsilat raporu | ⏳    | Adım 3–4                      |
+| 3. Oda yerleşim planı (otel/kat/oda, boş/dolu)    | ⏳    | Faz 2                         |
+| 4. Otobüs yerleşim planı (koltuk, rehber)         | ⏳    | Faz 2                         |
+| 5. Uçuş listeleri                                 | ⏳    | Faz 3                         |
+| 6. Yaka kartı (tekli/toplu PDF, logo)             | ⏳    | Faz 3 (logo alanı hazır)      |
+| 7. Tur, tarih, grup, yolcu atama, rehber          | ✅    | Turlar                        |
+| 7. Grup bazında oda/otobüs/uçuş organizasyonu     | ⏳    | Faz 2–3                       |
+| 8. Özet sayılar (yolcu, alacak)                   | 🟡    | Ana panel; Excel/PDF Adım 4   |
+| 8. Excel / PDF çıktıları                          | ⏳    | Adım 4 (her modülde)          |
+
+**Bilinen teknik borç:** Bazı iş kuralları (kayıt iptali, kapasite, grup silme) controller/request
+içinde. Adım 3'ten itibaren `app/Actions` sınıflarına taşınacak; Faz 4 API'si aynı kuralları kullanacak.
+**SPEC'te olup henüz yapılmayan:** rehberin kendi grubunu görmesi (Adım 5).
+
 ## Alınan kararlar
 
 - Yığın: Laravel 13 + Vue 3 + Inertia 3 + PostgreSQL 16, Docker.
