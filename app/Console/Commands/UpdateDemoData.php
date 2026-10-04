@@ -6,6 +6,7 @@ use App\Models\Tenant;
 use App\Support\Tenancy\CurrentTenant;
 use Database\Seeders\Demo\BusPlanDemo;
 use Database\Seeders\Demo\FixParentAgesDemo;
+use Database\Seeders\Demo\FlightDemo;
 use Database\Seeders\Demo\RoomPlanDemo;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -27,6 +28,7 @@ class UpdateDemoData extends Command
         'faz2-oda-plani' => RoomPlanDemo::class,
         'faz2-otobus-plani' => BusPlanDemo::class,
         'faz2-yakinlik-yas-duzeltme' => FixParentAgesDemo::class,
+        'faz3-ucuslar' => FlightDemo::class,
     ];
 
     public function handle(CurrentTenant $currentTenant): int

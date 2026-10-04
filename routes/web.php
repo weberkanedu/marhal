@@ -5,6 +5,8 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BusController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FlightController;
+use App\Http\Controllers\FlightPassengerController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\HotelController;
 use App\Http\Controllers\PaymentController;
@@ -94,6 +96,17 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::delete('seat-assignments/{seat}', [SeatAssignmentController::class, 'destroy'])->name('seat-assignments.destroy');
     });
 
+    // Uçuşlar ve havayolu listeleri (uçuş listesi modülü)
+    Route::middleware(['feature:passengers', 'feature:flight_lists'])->group(function () {
+        Route::post('tours/{tour}/flights', [FlightController::class, 'store'])->name('tours.flights.store');
+        Route::get('flights/{flight}', [FlightController::class, 'show'])->name('flights.show');
+        Route::put('flights/{flight}', [FlightController::class, 'update'])->name('flights.update');
+        Route::delete('flights/{flight}', [FlightController::class, 'destroy'])->name('flights.destroy');
+        Route::post('flights/{flight}/passengers', [FlightPassengerController::class, 'store'])->name('flights.passengers.store');
+        Route::put('flight-passengers/{passenger}', [FlightPassengerController::class, 'update'])->name('flight-passengers.update');
+        Route::delete('flight-passengers/{passenger}', [FlightPassengerController::class, 'destroy'])->name('flight-passengers.destroy');
+    });
+
     // Ödemeler ve tahsilat
     Route::middleware('feature:payments')->group(function () {
         Route::get('registrations/{registration}', [RegistrationController::class, 'show'])->name('registrations.show');
@@ -116,6 +129,9 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
             Route::get('buses/{bus}/passengers', [ReportController::class, 'busPassengers'])->name('buses.passengers');
             Route::get('buses/{bus}/seat-chart', [ReportController::class, 'busSeatChart'])->name('buses.seat-chart');
         });
+        Route::get('flights/{flight}/manifest', [ReportController::class, 'flightManifest'])
+            ->middleware('feature:flight_lists')
+            ->name('flights.manifest');
     });
 
     // Acente yönetimi (sadece acente yöneticisi)

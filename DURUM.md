@@ -44,7 +44,7 @@ Her adım sonunda güncellenir. ✅ bitti · 🟡 kısmen · ⏳ planlı
 | 2. Borçlu / tamamlanan listeleri, tahsilat raporu | ✅    | Tahsilat ekranı + Excel/PDF                                                 |
 | 3. Oda yerleşim planı (otel/kat/oda, boş/dolu)    | ✅    | Tur → Konaklama → Oda planı (+ otomatik dağıt)                              |
 | 4. Otobüs yerleşim planı (koltuk, rehber)         | ✅    | Araç tipleri + Tur → Otobüsler → Koltuk planı                               |
-| 5. Uçuş listeleri                                 | ⏳    | Faz 3                                                                       |
+| 5. Uçuş listeleri                                 | ✅    | Tur → Uçuşlar → yolcular, PNR / bilet, havayolu listesi                 |
 | 6. Yaka kartı (tekli/toplu PDF, logo)             | ⏳    | Faz 3 (logo alanı hazır)                                                    |
 | 7. Tur, tarih, grup, yolcu atama, rehber          | ✅    | Turlar                                                                      |
 | 7. Grup bazında oda/otobüs/uçuş organizasyonu     | 🟡    | Oda ✅, otobüs ✅ (grup bazında); uçuş Faz 3                                |
@@ -101,7 +101,8 @@ Ortam değişkenleri yerelde `.env.staging` dosyasında (git'e girmez).
    ✅ 3. adım araç tipleri + otobüs / koltuk planı + otobüs listesi ve koltuk planı PDF'i.
    ✅ 4. adım toparlama: tur listesi + yolcu raporunda oda / koltuk (rehber de görür), "Başka otelden kopyala", telefon düzeltmeleri. **Faz 2 tamamlandı.**
    Otel listesi formatı: müşteri örneği yok; genel format yapıldı, geri bildirime göre güncellenecek.
-4. **Faz 3**: uçuş listeleri (`flight_lists`), yaka kartı (`badge_generation`; logo + fotoğraf hazır).
+4. **Faz 3** ([FAZ3.md](FAZ3.md)): ✅ 1. adım uçuşlar + havayolu listesi. Sıradaki: **2. adım yaka kartı**
+   (`badge_generation`; tekli / toplu PDF), sonra toparlama.
 5. **Faz 4**: `/api/v1` (iş kuralları `app/Actions` içinde hazır), WhatsApp/SMS, muhasebe, vize takibi.
 6. **Fikir havuzu** ([FIKIRLER.md](FIKIRLER.md)): pasaportu NFC ile okuyup taslak kayıt + onay (premium, üst paket;
    öneri: Faz 4 API'sinden sonra "Faz 5 — Mobil tarayıcı", önce kamerayla MRZ okuma ara çözümü).

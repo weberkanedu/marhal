@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\Feature;
+use App\Enums\FlightDirection;
 use App\Enums\HotelCity;
 use App\Enums\RegistrationStatus;
 use App\Enums\RoomType;
@@ -11,6 +12,7 @@ use App\Enums\TourType;
 use App\Enums\UserRole;
 use App\Http\Requests\TourRequest;
 use App\Models\Bus;
+use App\Models\Flight;
 use App\Models\Group;
 use App\Models\Hotel;
 use App\Models\Person;
@@ -160,6 +162,13 @@ class TourController extends Controller
                 'occupied' => $stay->room_assignments_count,
             ]) : null;
 
+        // Uçuşlar (uçuş listesi modülü açıksa). Rehber uçuş bilgisini görür; yolcu sayısı kendi grubuyla sınırlı.
+        $flights = ($currentTenant->get()?->hasFeature(Feature::FlightLists) ?? false) ? $tour->flights()
+            ->withCount(['passengers' => fn (Builder $q) => $q->when($guideOf !== null, fn (Builder $p) => $p->whereHas('registration', fn (Builder $r) => $r->whereIn('group_id', $guideOf ?? [])))])
+            ->orderBy('departure_at')
+            ->get()
+            ->map(fn (Flight $flight) => [...FlightController::summary($flight), 'passengers_count' => $flight->passengers_count]) : null;
+
         // Otobüsler (otobüs planı modülü açıksa): rehber sadece kendi gruplarının otobüslerini görür.
         $buses = $busPlanning ? $tour->buses()
             ->when($guideOf !== null, fn (Builder $q) => $q->whereHas('groups', fn (Builder $g) => $g->whereIn('groups.id', $guideOf ?? [])))
@@ -196,6 +205,7 @@ class TourController extends Controller
             'registrations' => $registrations,
             'stays' => $stays,
             'buses' => $buses,
+            'flights' => $flights,
             'options' => [
                 'vehicleTypes' => $busPlanning && ($user?->can('update', $tour) ?? false)
                     ? VehicleType::query()->orderBy('name')->get()
@@ -210,6 +220,7 @@ class TourController extends Controller
                     : [],
                 ...$this->formOptions(),
                 'roomTypes' => RoomType::options(),
+                'flightDirections' => FlightDirection::options(),
                 'registrationStatuses' => RegistrationStatus::options(),
                 'guides' => User::query()
                     ->where('tenant_id', $tour->tenant_id)

@@ -77,6 +77,14 @@ class Tour extends Model
     }
 
     /**
+     * @return HasMany<Flight, $this>
+     */
+    public function flights(): HasMany
+    {
+        return $this->hasMany(Flight::class);
+    }
+
+    /**
      * @return HasMany<Bus, $this>
      */
     public function buses(): HasMany

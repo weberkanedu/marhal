@@ -6,6 +6,8 @@ use App\Actions\Persons\AddPersonRelation;
 use App\Enums\Gender;
 use App\Enums\Relation;
 use App\Models\Bus;
+use App\Models\Flight;
+use App\Models\FlightPassenger;
 use App\Models\Hotel;
 use App\Models\Person;
 use App\Models\PersonRelation;
@@ -45,6 +47,14 @@ class DemoDataTest extends TestCase
         $this->assertSame(4, VehicleType::count());
         $this->assertSame(2, Bus::count(), 'Grup başına bir otobüs');
         $this->assertSame(6, SeatAssignment::count(), '1. otobüs (A Grubu) dağıtılmış, 2. otobüs boş');
+    }
+
+    public function test_demo_seed_includes_flights(): void
+    {
+        $this->seed([PlanSeeder::class, DemoSeeder::class]);
+
+        $this->assertSame(2, Flight::count());
+        $this->assertSame(24, FlightPassenger::count(), '12 aktif yolcu × gidiş + dönüş');
     }
 
     public function test_demo_parents_are_older_than_their_children(): void

@@ -98,6 +98,16 @@ class Registration extends Model
     }
 
     /**
+     * Bulunduğu uçuşlar.
+     *
+     * @return HasMany<FlightPassenger, $this>
+     */
+    public function flightPassengers(): HasMany
+    {
+        return $this->hasMany(FlightPassenger::class);
+    }
+
+    /**
      * Otobüs koltuğu (turda en fazla bir).
      *
      * @return HasMany<SeatAssignment, $this>

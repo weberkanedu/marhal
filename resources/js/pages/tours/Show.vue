@@ -17,6 +17,7 @@ import ExportButtons from '@/components/ExportButtons.vue';
 import GroupDialog from '@/components/tours/GroupDialog.vue';
 import RegistrationDialog from '@/components/tours/RegistrationDialog.vue';
 import BusesCard from '@/components/tours/BusesCard.vue';
+import FlightsCard from '@/components/tours/FlightsCard.vue';
 import StaysCard from '@/components/tours/StaysCard.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,8 @@ import {
 } from '@/routes/reports/tours';
 import { destroy, edit, index } from '@/routes/tours';
 import type { TourBus, VehicleTypeOption } from '@/types/bus';
+import type { TourFlight } from '@/types/flight';
+import type { Option } from '@/types/person';
 import type { HotelOption, TourStay } from '@/types/hotel';
 import { tourStatusVariant } from '@/types/tour';
 import type {
@@ -55,7 +58,10 @@ const props = defineProps<{
     stays: TourStay[] | null;
     // Otobüs planı modülü kapalıysa null.
     buses: TourBus[] | null;
+    // Uçuş listesi modülü kapalıysa null.
+    flights: TourFlight[] | null;
     options: TourShowOptions & {
+        flightDirections: Option[];
         hotels: HotelOption[];
         vehicleTypes: VehicleTypeOption[];
     };
@@ -285,6 +291,14 @@ const occupancyText = computed(() =>
             :stays="stays"
             :groups="groups"
             :hotels="options.hotels"
+            :can-update="can.update"
+        />
+
+        <FlightsCard
+            v-if="flights !== null"
+            :tour="tour"
+            :flights="flights"
+            :directions="options.flightDirections"
             :can-update="can.update"
         />
 

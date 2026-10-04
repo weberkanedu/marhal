@@ -5,7 +5,7 @@ Umre / Hac acenteleri için çok kiracılı SaaS (Laravel 13 + Vue 3 + Inertia 3
 **Her oturumun başında önce [DURUM.md](DURUM.md)'yi oku**: nerede kaldığımız, kararlar, ortamlar,
 açık işler, teknik borç ve çalışma notları oradadır. Ürün tanımı [PROJECT.md](PROJECT.md),
 teknik şartname [SPEC.md](SPEC.md), yayın kontrol listesi [DEPLOY.md](DEPLOY.md),
-Faz 2 tasarımı ve açık sorular [FAZ2.md](FAZ2.md), ileride yapılacak fikirler [FIKIRLER.md](FIKIRLER.md).
+Faz 2 tasarımı ve açık sorular [FAZ2.md](FAZ2.md), Faz 3 [FAZ3.md](FAZ3.md), ileride yapılacak fikirler [FIKIRLER.md](FIKIRLER.md).
 
 ## Kurallar (kısa)
 

@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
 use App\Models\Bus;
+use App\Models\Flight;
 use App\Models\Group;
 use App\Models\SeatAssignment;
 use App\Models\Tour;
 use App\Models\TourHotel;
 use App\Reports\Definitions\BusPassengerList;
 use App\Reports\Definitions\CollectionReport;
+use App\Reports\Definitions\FlightManifest;
 use App\Reports\Definitions\StayRoomingList;
 use App\Reports\Definitions\StayRoomOccupancy;
 use App\Reports\Definitions\TourPassengerList;
@@ -121,6 +123,18 @@ class ReportController extends Controller
                 ->mapWithKeys(fn (SeatAssignment $s) => [$s->seat_no => $s->registration->person->full_name])
                 ->all(),
         ], landscape: $layout->rows > 9);
+    }
+
+    /**
+     * Havayolu yolcu listesi (manifest).
+     */
+    public function flightManifest(Request $request, Flight $flight, FlightManifest $definition): Response
+    {
+        Gate::authorize('update', $flight->tour);
+
+        $revealIds = $request->user()?->role->canRevealSensitiveData() ?? false;
+
+        return $this->responder->download($definition->build($flight, $revealIds), $this->format($request));
     }
 
     private function format(Request $request): string

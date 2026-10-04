@@ -7,6 +7,7 @@ use App\Enums\RoomKind;
 use App\Enums\UserRole;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Bus;
+use App\Models\Flight;
 use App\Models\Group;
 use App\Models\Payment;
 use App\Models\Person;
@@ -76,6 +77,8 @@ class PageSmokeTest extends TestCase
         $bus = Bus::factory()->create(['tour_id' => $tour->id, 'reserved_seats' => [1]]);
         $bus->groups()->sync([$group->id]);
         SeatAssignment::query()->forceCreate(['tenant_id' => $this->tenant->id, 'tour_id' => $tour->id, 'bus_id' => $bus->id, 'registration_id' => $registration->id, 'seat_no' => 3]);
+        $flight = Flight::factory()->create(['tour_id' => $tour->id, 'pnr' => 'ABC123']);
+        $flight->passengers()->create(['registration_id' => $registration->id, 'ticket_no' => '235-1234567890']);
         app(ReplaceInstallmentPlan::class)->handle($registration, [['due_date' => now()->subDay()->toDateString(), 'amount' => 1000]]);
 
         $users = [
@@ -87,7 +90,7 @@ class PageSmokeTest extends TestCase
 
         $this->params = [
             'tour' => $tour->id, 'group' => $group->id, 'person' => $person->id,
-            'registration' => $registration->id, 'tenant' => $this->tenant->id, 'stay' => $stay->id, 'bus' => $bus->id, 'user' => (string) $users['operasyon']->id,
+            'registration' => $registration->id, 'tenant' => $this->tenant->id, 'stay' => $stay->id, 'bus' => $bus->id, 'flight' => $flight->id, 'user' => (string) $users['operasyon']->id,
         ];
 
         $visited = 0;
