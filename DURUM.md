@@ -103,6 +103,8 @@ Ortam değişkenleri yerelde `.env.staging` dosyasında (git'e girmez).
    Otel listesi formatı: müşteri örneği yok; genel format yapıldı, geri bildirime göre güncellenecek.
 4. **Faz 3**: uçuş listeleri (`flight_lists`), yaka kartı (`badge_generation`; logo + fotoğraf hazır).
 5. **Faz 4**: `/api/v1` (iş kuralları `app/Actions` içinde hazır), WhatsApp/SMS, muhasebe, vize takibi.
+6. **Fikir havuzu** ([FIKIRLER.md](FIKIRLER.md)): pasaportu NFC ile okuyup taslak kayıt + onay (premium, üst paket;
+   öneri: Faz 4 API'sinden sonra "Faz 5 — Mobil tarayıcı", önce kamerayla MRZ okuma ara çözümü).
 
 ## Değerlendirme: iyi gidenler ve iyileştirilebilecekler (2026-10-04)
 
