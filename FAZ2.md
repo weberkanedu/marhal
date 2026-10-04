@@ -99,3 +99,14 @@ Not (soru 4): bir otobüste birden çok grup olabilir mi — cevapta açıkça y
 - **Otomatik dağıt**: 65+ yaş ve aileleri öne; aileler ikişer ikişer yan yana ve art arda sıralarda;
   tek yolcular yabancı karşı cinsin yanına düşmeyecek şekilde. Önizleme → onay.
 - **Raporlar**: otobüs yolcu listesi (koltuk sırasıyla, Excel/PDF) ve otobüse asılacak koltuk planı PDF'i.
+
+## Uygulama notları (4. adım — toparlama, 2026-10-04) · Faz 2 tamamlandı
+
+- **Tur yolcu listesi**: her yolcunun odası (konaklama sırasıyla "Mekke 501 · Medine 302") ve otobüs koltuğu;
+  rehber de kendi yolcuları için görür. Yolcu listesi Excel/PDF'ine "Oda no" ve "Otobüs / koltuk" sütunları
+  (modül kapalıysa sütun yok). Ortak hesap: `App\Support\Placements`.
+- **Başka otelden kopyala** (`CopyRoomPlan`): kaynak oteldeki oda arkadaşları hedef otelde boş bir odaya birlikte
+  yerleşir (önce aynı tür ve büyüklük); sadece odası olmayan, o otelde kalması beklenen yolcular. Önizleme → onay.
+- **Telefon**: konaklama / otobüs satırları alt satıra kayar, otobüs çizimi 375 px'e sığar (arka sıra genişliği paylaşır),
+  yerleşmemiş yolcu listesi telefonda kısaltıldı.
+- Kalan (müşteri geri bildirimine bağlı): otel / transfer listesi formatının müşteri örneğine uyarlanması.

@@ -102,7 +102,7 @@ const cityVariant = (city: string) =>
                     <Badge :variant="cityVariant(stay.city)" class="w-16">
                         {{ stay.city_label }}
                     </Badge>
-                    <div class="min-w-0 flex-1">
+                    <div class="min-w-48 flex-1">
                         <div class="font-medium">{{ stay.hotel_name }}</div>
                         <div class="text-xs text-muted-foreground">
                             {{ formatDate(stay.check_in) }} –

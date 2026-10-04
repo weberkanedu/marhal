@@ -67,6 +67,8 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::get('stays/{stay}/rooms', [RoomPlanController::class, 'show'])->name('stays.room-plan');
         Route::get('stays/{stay}/auto-assign', [RoomPlanController::class, 'preview'])->name('stays.auto-assign-preview');
         Route::post('stays/{stay}/auto-assign', [RoomPlanController::class, 'apply'])->name('stays.auto-assign');
+        Route::get('stays/{stay}/copy-preview', [RoomPlanController::class, 'copyPreview'])->name('stays.copy-preview');
+        Route::post('stays/{stay}/copy', [RoomPlanController::class, 'copy'])->name('stays.copy');
         Route::post('stays/{stay}/rooms', [RoomController::class, 'store'])->name('stays.rooms.store');
         Route::put('rooms/{room}', [RoomController::class, 'update'])->name('rooms.update');
         Route::delete('rooms/{room}', [RoomController::class, 'destroy'])->name('rooms.destroy');

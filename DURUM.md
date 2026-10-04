@@ -17,7 +17,7 @@
 | 5   | Kullanıcı yönetimi, platform paneli (acente açma, paket)           | ✅    |
 | 6   | Türkçeleştirme + **görsel tasarım** (kullanıcı onayladı) + kontrol | ✅    |
 
-Sonraki fazlar: Faz 2 oda/otobüs, Faz 3 uçuş/yaka kartı, Faz 4 API/entegrasyonlar.
+Faz 2 (oda / otobüs) ✅ tamamlandı (2026-10-04). Sonraki: Faz 3 uçuş/yaka kartı, Faz 4 API/entegrasyonlar.
 
 **Faz 2 adımları** (tasarım ve müşteri kararları: [FAZ2.md](FAZ2.md))
 
@@ -26,29 +26,29 @@ Sonraki fazlar: Faz 2 oda/otobüs, Faz 3 uçuş/yaka kartı, Faz 4 API/entegrasy
 | 1   | Oteller ekranı + tura grup bazında konaklama (Mekke / Medine)                             | ✅    |
 | 2   | Yakınlıklar (genişletilmiş liste) + oda planı (kurallar, ekran, otomatik dağıt, raporlar) | ✅    |
 | 3   | Araç tipleri + otobüs / koltuk planı                                                      | ✅    |
-| 4   | Rehber görünümü, telefon uyumu, otel/transfer listesi (müşteri örneğine göre)             | ⏳    |
+| 4   | Toparlama: tur listesinde oda/koltuk (rehber dahil), Mekke→Medine kopyala, telefon uyumu  | ✅    |
 
 ## Gereksinim takibi (müşterinin ilk listesi)
 
 Her adım sonunda güncellenir. ✅ bitti · 🟡 kısmen · ⏳ planlı
 
-| Modül / madde                                     | Durum | Nerede / ne zaman                                                       |
-| ------------------------------------------------- | ----- | ----------------------------------------------------------------------- |
-| 1. Ad soyad, iletişim, TC/pasaport, doğum tarihi  | ✅    | Yolcular                                                                |
-| 1. Kişi fotoğrafı, acil durum bilgisi             | ✅    | Yolcular                                                                |
-| 1. Kayıt ve grup bilgileri, yolcu durum takibi    | ✅    | Tur detayı (kayıt durumu)                                               |
-| 1. Mekke / Medine otel bilgileri                  | ✅    | Oteller + tur sayfası "Konaklama" (grup bazında)                        |
-| 2. Toplam ücret, kalan bakiye                     | ✅    | Tur detayı, yolcu detayı                                                |
-| 2. Ödeme girişi, yöntem, tarih, geçmiş            | ✅    | Kayıt ödeme sayfası                                                     |
-| 2. Taksit takibi                                  | ✅    | Taksit planı + gecikme                                                  |
-| 2. Borçlu / tamamlanan listeleri, tahsilat raporu | ✅    | Tahsilat ekranı + Excel/PDF                                             |
-| 3. Oda yerleşim planı (otel/kat/oda, boş/dolu)    | ✅    | Tur → Konaklama → Oda planı (+ otomatik dağıt)                          |
-| 4. Otobüs yerleşim planı (koltuk, rehber)         | ✅    | Araç tipleri + Tur → Otobüsler → Koltuk planı                           |
-| 5. Uçuş listeleri                                 | ⏳    | Faz 3                                                                   |
-| 6. Yaka kartı (tekli/toplu PDF, logo)             | ⏳    | Faz 3 (logo alanı hazır)                                                |
-| 7. Tur, tarih, grup, yolcu atama, rehber          | ✅    | Turlar                                                                  |
-| 7. Grup bazında oda/otobüs/uçuş organizasyonu     | 🟡    | Oda ✅, otobüs ✅ (grup bazında); uçuş Faz 3                            |
-| 8. Özet sayılar (yolcu, alacak)                   | ✅    | Ana panel, tur ve tahsilat                                              |
+| Modül / madde                                     | Durum | Nerede / ne zaman                                                           |
+| ------------------------------------------------- | ----- | --------------------------------------------------------------------------- |
+| 1. Ad soyad, iletişim, TC/pasaport, doğum tarihi  | ✅    | Yolcular                                                                    |
+| 1. Kişi fotoğrafı, acil durum bilgisi             | ✅    | Yolcular                                                                    |
+| 1. Kayıt ve grup bilgileri, yolcu durum takibi    | ✅    | Tur detayı (kayıt durumu)                                                   |
+| 1. Mekke / Medine otel bilgileri                  | ✅    | Oteller + tur sayfası "Konaklama" (grup bazında)                            |
+| 2. Toplam ücret, kalan bakiye                     | ✅    | Tur detayı, yolcu detayı                                                    |
+| 2. Ödeme girişi, yöntem, tarih, geçmiş            | ✅    | Kayıt ödeme sayfası                                                         |
+| 2. Taksit takibi                                  | ✅    | Taksit planı + gecikme                                                      |
+| 2. Borçlu / tamamlanan listeleri, tahsilat raporu | ✅    | Tahsilat ekranı + Excel/PDF                                                 |
+| 3. Oda yerleşim planı (otel/kat/oda, boş/dolu)    | ✅    | Tur → Konaklama → Oda planı (+ otomatik dağıt)                              |
+| 4. Otobüs yerleşim planı (koltuk, rehber)         | ✅    | Araç tipleri + Tur → Otobüsler → Koltuk planı                               |
+| 5. Uçuş listeleri                                 | ⏳    | Faz 3                                                                       |
+| 6. Yaka kartı (tekli/toplu PDF, logo)             | ⏳    | Faz 3 (logo alanı hazır)                                                    |
+| 7. Tur, tarih, grup, yolcu atama, rehber          | ✅    | Turlar                                                                      |
+| 7. Grup bazında oda/otobüs/uçuş organizasyonu     | 🟡    | Oda ✅, otobüs ✅ (grup bazında); uçuş Faz 3                                |
+| 8. Özet sayılar (yolcu, alacak)                   | ✅    | Ana panel, tur ve tahsilat                                                  |
 | 8. Excel / PDF çıktıları                          | 🟡    | Yolcu, ödeme, tahsilat, otel, doluluk, otobüs + koltuk planı ✅; uçuş sonra |
 
 **Raporlar `app/Reports` içinde**: her rapor bir `Report` nesnesi; aynı nesne Excel ve PDF'e dönüşür, her indirme audit log'a yazılır. Faz 2–3 listeleri (oda, otobüs, uçuş, yaka kartı) bu altyapıyı kullanacak.
@@ -99,7 +99,7 @@ Ortam değişkenleri yerelde `.env.staging` dosyasında (git'e girmez).
 3. **Faz 2** (müşteri kararları alındı, [FAZ2.md](FAZ2.md)): ✅ 1. adım oteller + konaklama,
    ✅ 2. adım yakınlıklar + oda planı + otel oda listesi / doluluk raporları.
    ✅ 3. adım araç tipleri + otobüs / koltuk planı + otobüs listesi ve koltuk planı PDF'i.
-   Sıradaki: **4. adım (toparlama)** — telefonda kullanım, rehber ekranı (oda / koltuk), "Mekke yerleşimini Medine'ye kopyala", yolcu listesinde oda / koltuk sütunları.
+   ✅ 4. adım toparlama: tur listesi + yolcu raporunda oda / koltuk (rehber de görür), "Başka otelden kopyala", telefon düzeltmeleri. **Faz 2 tamamlandı.**
    Otel listesi formatı: müşteri örneği yok; genel format yapıldı, geri bildirime göre güncellenecek.
 4. **Faz 3**: uçuş listeleri (`flight_lists`), yaka kartı (`badge_generation`; logo + fotoğraf hazır).
 5. **Faz 4**: `/api/v1` (iş kuralları `app/Actions` içinde hazır), WhatsApp/SMS, muhasebe, vize takibi.

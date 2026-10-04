@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Rooms\AutoAssignRooms;
+use App\Actions\Rooms\CopyRoomPlan;
 use App\Actions\Rooms\StayOccupancy;
 use App\Enums\RegistrationStatus;
 use App\Enums\RoomKind;
@@ -98,6 +99,20 @@ class RoomPlanController extends Controller
                 'kinds' => RoomKind::options(),
                 'roomTypes' => RoomType::options(),
             ],
+            // Oda düzeni kopyalanabilecek diğer oteller (aynı tur, en az bir yerleşimi olan).
+            'copySources' => $canUpdate ? TourHotel::query()
+                ->where('tour_id', $stay->tour_id)
+                ->whereKeyNot($stay->getKey())
+                ->whereHas('roomAssignments')
+                ->with('hotel')
+                ->withCount('roomAssignments')
+                ->orderBy('check_in')
+                ->get()
+                ->map(fn (TourHotel $s) => [
+                    'id' => $s->id,
+                    'label' => "{$s->hotel->city->label()} — {$s->hotel->name} ({$s->room_assignments_count} kişi)",
+                ])
+                ->values() : [],
             'can' => [
                 'update' => $canUpdate,
                 'reports' => $canUpdate,
@@ -144,6 +159,62 @@ class RoomPlanController extends Controller
         ]);
 
         return back();
+    }
+
+    /**
+     * Başka bir otelin oda düzenini kopyalama önizlemesi (kaydetmez). ?from=<konaklama id>
+     */
+    public function copyPreview(Request $request, TourHotel $stay, CopyRoomPlan $copy): JsonResponse
+    {
+        Gate::authorize('update', $stay->tour);
+
+        $plan = $copy->plan($this->copySource($request, $stay), $stay);
+
+        return response()->json([
+            'placed' => count($plan['placements']),
+            'placements' => collect($plan['placements'])
+                ->groupBy(fn (array $p) => $p['room']->id)
+                ->map(fn (Collection $items) => [
+                    'room_no' => $items->first()['room']->room_no,
+                    'from' => $items->first()['from'],
+                    'names' => $items->map(fn (array $p) => $p['registration']->person->full_name)->values(),
+                ])
+                ->sortBy('room_no', SORT_NATURAL)
+                ->values(),
+            'unplaced' => collect($plan['unplaced'])->map(fn (array $u) => [
+                'name' => $u['registration']->person->full_name,
+                'reason' => $u['reason'],
+            ])->values(),
+        ]);
+    }
+
+    public function copy(Request $request, TourHotel $stay, CopyRoomPlan $copy): RedirectResponse
+    {
+        Gate::authorize('update', $stay->tour);
+
+        $result = $copy->apply($this->copySource($request, $stay), $stay);
+
+        Inertia::flash('toast', [
+            'type' => $result['unplaced'] > 0 ? 'warning' : 'success',
+            'message' => "{$result['placed']} yolcu kopyalanan düzene göre yerleştirildi.".($result['unplaced'] > 0 ? " {$result['unplaced']} yolcu için boş oda yetmedi." : ''),
+        ]);
+
+        return back();
+    }
+
+    /**
+     * Kopyalanacak konaklama aynı turdan, farklı bir konaklama olmalı (başka tur / acente → 404).
+     */
+    private function copySource(Request $request, TourHotel $stay): TourHotel
+    {
+        // Önce biçim kontrolü: geçersiz kimlik PostgreSQL'de sorgu hatası (500) verirdi.
+        $from = $request->validate(['from' => ['required', 'uuid']], [], ['from' => 'kopyalanacak otel'])['from'];
+
+        return TourHotel::query()
+            ->where('tour_id', $stay->tour_id)
+            ->whereKeyNot($stay->getKey())
+            ->whereKey($from)
+            ->firstOrFail();
     }
 
     /**

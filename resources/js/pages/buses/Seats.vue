@@ -366,7 +366,7 @@ function applyAuto(): void {
                         Herkesin koltuğu var.
                     </p>
                     <ul
-                        class="flex max-h-[60vh] flex-col gap-0.5 overflow-y-auto"
+                        class="flex max-h-[35vh] flex-col gap-0.5 overflow-y-auto lg:max-h-[60vh]"
                     >
                         <li v-for="p in filtered" :key="p.registration_id">
                             <button

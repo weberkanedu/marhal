@@ -20,6 +20,7 @@ use App\Models\TourHotel;
 use App\Models\User;
 use App\Models\VehicleType;
 use App\Support\Money;
+use App\Support\Placements;
 use App\Support\Tenancy\CurrentTenant;
 use App\Support\TurkishText;
 use Illuminate\Database\Eloquent\Builder;
@@ -117,9 +118,15 @@ class TourController extends Controller
                 'registrations_count' => $group->registrations_count,
             ]);
 
+        $rooms = $currentTenant->get()?->hasFeature(Feature::RoomPlanning) ?? false;
+        $busPlanning = $currentTenant->get()?->hasFeature(Feature::BusPlanning) ?? false;
+
         $registrations = $tour->registrations()
             ->when($guideOf !== null, fn (Builder $q) => $q->whereIn('group_id', $guideOf ?? [])->where('status', '!=', RegistrationStatus::Cancelled))
             ->with(['person', 'group:id,name'])
+            // Oda / koltuk bilgisi (modülü açıksa): listede ve rehber ekranında görünür.
+            ->when($rooms, fn (Builder $q) => $q->with(Placements::ROOM_RELATIONS))
+            ->when($busPlanning, fn (Builder $q) => $q->with(Placements::SEAT_RELATIONS))
             ->withPaidTotal()
             ->get()
             ->sort(fn (Registration $a, Registration $b) => ($a->status === RegistrationStatus::Cancelled) <=> ($b->status === RegistrationStatus::Cancelled)
@@ -130,7 +137,6 @@ class TourController extends Controller
         $active = $registrations->where('status', '!=', RegistrationStatus::Cancelled->value);
 
         // Konaklama (oda planı modülü açıksa): rehber sadece kendi gruplarının otellerini görür.
-        $rooms = $currentTenant->get()?->hasFeature(Feature::RoomPlanning) ?? false;
         $stays = $rooms ? $tour->stays()
             ->when($guideOf !== null, fn (Builder $q) => $q->whereHas('groups', fn (Builder $g) => $g->whereIn('groups.id', $guideOf ?? [])))
             ->with(['hotel', 'groups:id,name'])
@@ -155,7 +161,6 @@ class TourController extends Controller
             ]) : null;
 
         // Otobüsler (otobüs planı modülü açıksa): rehber sadece kendi gruplarının otobüslerini görür.
-        $busPlanning = $currentTenant->get()?->hasFeature(Feature::BusPlanning) ?? false;
         $buses = $busPlanning ? $tour->buses()
             ->when($guideOf !== null, fn (Builder $q) => $q->whereHas('groups', fn (Builder $g) => $g->whereIn('groups.id', $guideOf ?? [])))
             ->with(['groups:id,name', 'vehicleType:id,name'])
@@ -312,6 +317,7 @@ class TourController extends Controller
             'group_id' => $registration->group_id,
             'group_name' => $registration->group?->name,
             'room_type' => $registration->room_type?->value,
+            'placements' => Placements::all($registration),
             'status' => $registration->status->value,
             ...$money,
             'currency' => $registration->currency,

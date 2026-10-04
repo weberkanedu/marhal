@@ -177,7 +177,7 @@ function remove(type: VehicleTypeRow): void {
                             compact
                             class="hidden scale-75 sm:inline-flex"
                         />
-                        <div class="min-w-0 flex-1">
+                        <div class="min-w-48 flex-1">
                             <div class="font-medium">{{ type.name }}</div>
                             <div class="text-xs text-muted-foreground">
                                 {{ type.label }} · {{ type.rows }} sıra

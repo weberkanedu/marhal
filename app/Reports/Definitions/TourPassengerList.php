@@ -2,12 +2,15 @@
 
 namespace App\Reports\Definitions;
 
+use App\Enums\Feature;
 use App\Enums\RegistrationStatus;
 use App\Models\Group;
 use App\Models\Registration;
 use App\Models\Tour;
 use App\Reports\Column;
 use App\Reports\Report;
+use App\Support\Placements;
+use App\Support\Tenancy\CurrentTenant;
 use App\Support\TurkishText;
 
 /**
@@ -16,12 +19,20 @@ use App\Support\TurkishText;
  */
 class TourPassengerList
 {
+    public function __construct(private readonly CurrentTenant $currentTenant) {}
+
     public function build(Tour $tour, ?Group $group, bool $revealIds): Report
     {
+        // Oda / otobüs sütunları yalnızca ilgili modül açıksa.
+        $rooms = $this->currentTenant->get()?->hasFeature(Feature::RoomPlanning) ?? false;
+        $buses = $this->currentTenant->get()?->hasFeature(Feature::BusPlanning) ?? false;
+
         $registrations = $tour->registrations()
             ->where('status', '!=', RegistrationStatus::Cancelled)
             ->when($group, fn ($q) => $q->where('group_id', $group?->getKey()))
             ->with(['person', 'group:id,name'])
+            ->when($rooms, fn ($q) => $q->with(Placements::ROOM_RELATIONS))
+            ->when($buses, fn ($q) => $q->with(Placements::SEAT_RELATIONS))
             ->get()
             // Önce grup (grupsuzlar en sonda), sonra Türkçe alfabeyle soyad + ad.
             ->sort(fn (Registration $a, Registration $b) => ($a->group->name ?? "\u{FFFF}") <=> ($b->group->name ?? "\u{FFFF}")
@@ -38,6 +49,8 @@ class TourPassengerList
                 'birth_date' => $person->birth_date?->toDateString(),
                 'group' => $r->group?->name,
                 'room_type' => $r->room_type?->label(),
+                'rooms' => Placements::text(Placements::rooms($r)),
+                'bus' => Placements::text(array_filter([Placements::seat($r)])),
                 'phone' => $person->phone,
                 'national_id' => $revealIds ? $person->national_id : $person->masked_national_id,
                 'passport_no' => $revealIds ? $person->passport_no : $person->masked_passport_no,
@@ -56,7 +69,9 @@ class TourPassengerList
                 Column::text('gender', 'Cinsiyet', 5),
                 Column::date('birth_date', 'Doğum tarihi'),
                 Column::text('group', 'Grup', 6),
-                Column::text('room_type', 'Oda', 6),
+                Column::text('room_type', 'Oda tipi', 6),
+                ...($rooms ? [Column::text('rooms', 'Oda no', 8)] : []),
+                ...($buses ? [Column::text('bus', 'Otobüs / koltuk', 7)] : []),
                 Column::text('phone', 'Telefon', 8),
                 Column::text('national_id', 'T.C. Kimlik No', 8),
                 Column::text('passport_no', 'Pasaport No', 7),

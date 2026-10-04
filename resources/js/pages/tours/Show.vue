@@ -510,6 +510,25 @@ const occupancyText = computed(() =>
                                               ]
                                             : '—'
                                     }}
+                                    <div
+                                        v-if="registration.placements.length"
+                                        class="text-xs whitespace-nowrap text-muted-foreground"
+                                    >
+                                        <span
+                                            v-for="(
+                                                place, i
+                                            ) in registration.placements"
+                                            :key="place.label"
+                                        >
+                                            <template v-if="i > 0">
+                                                ·
+                                            </template>
+                                            {{ place.label }}
+                                            <strong class="text-foreground">{{
+                                                place.value
+                                            }}</strong>
+                                        </span>
+                                    </div>
                                 </td>
                                 <td class="px-4 py-2">
                                     <Badge
@@ -663,6 +682,18 @@ const occupancyText = computed(() =>
                                     ·
                                     {{ roomTypeLabels[registration.room_type] }}
                                 </template>
+                            </div>
+                            <div
+                                v-if="registration.placements.length"
+                                class="flex flex-wrap gap-1.5"
+                            >
+                                <Badge
+                                    v-for="place in registration.placements"
+                                    :key="place.label"
+                                    variant="secondary"
+                                >
+                                    {{ place.label }} {{ place.value }}
+                                </Badge>
                             </div>
                             <div
                                 class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm"

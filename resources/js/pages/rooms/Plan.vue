@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     BedDouble,
+    Copy,
     Plus,
     Search,
     Users,
@@ -14,6 +15,7 @@ import { toast } from 'vue-sonner';
 import RoomAssignmentController from '@/actions/App/Http/Controllers/RoomAssignmentController';
 import RoomPlanController from '@/actions/App/Http/Controllers/RoomPlanController';
 import ExportButtons from '@/components/ExportButtons.vue';
+import CopyPlanDialog from '@/components/rooms/CopyPlanDialog.vue';
 import RoomCard from '@/components/rooms/RoomCard.vue';
 import RoomDialogs from '@/components/rooms/RoomDialogs.vue';
 import { Button } from '@/components/ui/button';
@@ -54,6 +56,8 @@ const props = defineProps<{
     others: OtherPassenger[];
     stats: PlanStats;
     options: PlanOptions;
+    // Oda düzeni kopyalanabilecek diğer oteller (ör. Mekke → Medine).
+    copySources: { id: string; label: string }[];
     can: { update: boolean; reports: boolean };
 }>();
 
@@ -143,6 +147,8 @@ function editRoom(room: PlanRoom): void {
     editOpen.value = true;
 }
 
+const copyOpen = ref(false);
+
 // Otomatik dağıt: önce önizleme, onaylanınca kaydet.
 const autoOpen = ref(false);
 const preview = ref<AutoAssignPreview | null>(null);
@@ -212,6 +218,14 @@ const free = computed(() => props.stats.beds - props.stats.occupied);
             <div v-if="can.update" class="flex flex-wrap gap-2">
                 <Button variant="outline" @click="addOpen = true">
                     <Plus /> Oda ekle
+                </Button>
+                <Button
+                    v-if="copySources.length"
+                    variant="outline"
+                    :disabled="rooms.length === 0 || stats.unassigned === 0"
+                    @click="copyOpen = true"
+                >
+                    <Copy /> Başka otelden kopyala
                 </Button>
                 <Button
                     :disabled="rooms.length === 0 || stats.unassigned === 0"
@@ -316,7 +330,7 @@ const free = computed(() => props.stats.beds - props.stats.occupied);
                         Herkes yerleşti.
                     </p>
                     <ul
-                        class="flex max-h-[60vh] flex-col gap-0.5 overflow-y-auto"
+                        class="flex max-h-[35vh] flex-col gap-0.5 overflow-y-auto lg:max-h-[60vh]"
                     >
                         <li
                             v-for="p in filteredUnassigned"
@@ -449,6 +463,13 @@ const free = computed(() => props.stats.beds - props.stats.occupied);
         :stay-id="stay.id"
         :kinds="options.kinds"
         :editing="editingRoom"
+    />
+
+    <CopyPlanDialog
+        v-if="can.update && copySources.length"
+        v-model:open="copyOpen"
+        :stay-id="stay.id"
+        :sources="copySources"
     />
 
     <Dialog v-model:open="autoOpen">

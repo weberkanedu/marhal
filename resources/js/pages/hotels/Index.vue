@@ -120,7 +120,7 @@ function remove(hotel: HotelRow): void {
                         :key="hotel.id"
                         class="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-sm"
                     >
-                        <div class="min-w-0 flex-1">
+                        <div class="min-w-48 flex-1">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="font-medium">{{
                                     hotel.name

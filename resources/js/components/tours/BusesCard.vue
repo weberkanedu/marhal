@@ -92,7 +92,7 @@ function remove(bus: TourBus): void {
                     :key="bus.id"
                     class="flex flex-wrap items-center gap-x-4 gap-y-1 py-2"
                 >
-                    <div class="min-w-0 flex-1">
+                    <div class="min-w-48 flex-1">
                         <div class="font-medium">
                             {{ bus.name }}
                             <span
