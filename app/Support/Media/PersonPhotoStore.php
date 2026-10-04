@@ -48,6 +48,44 @@ class PersonPhotoStore
         ]);
     }
 
+    /**
+     * PDF'e gömmek için küçültülmüş JPEG (data URI). Yaka kartı gibi toplu çıktılarda dosya boyutu
+     * makul kalsın diye fotoğraf en fazla $maxSize piksele indirilir. Fotoğraf yoksa / okunamazsa null.
+     */
+    public function dataUri(Person $person, int $maxSize = 320): ?string
+    {
+        if (! $person->photo_path || ! $this->disk()->exists($person->photo_path)) {
+            return null;
+        }
+
+        $image = @imagecreatefromstring((string) $this->disk()->get($person->photo_path));
+
+        if ($image === false) {
+            return null;
+        }
+
+        $width = imagesx($image);
+        $height = imagesy($image);
+        $scale = min(1, $maxSize / max($width, $height));
+
+        if ($scale < 1) {
+            $resized = imagescale($image, max(1, (int) round($width * $scale)), max(1, (int) round($height * $scale)));
+            imagedestroy($image);
+
+            if ($resized === false) {
+                return null;
+            }
+
+            $image = $resized;
+        }
+
+        ob_start();
+        imagejpeg($image, null, 82);
+        imagedestroy($image);
+
+        return 'data:image/jpeg;base64,'.base64_encode((string) ob_get_clean());
+    }
+
     private function disk(): Filesystem
     {
         return Storage::disk(config('marhal.media_disk'));

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Tenant;
 use App\Support\Tenancy\CurrentTenant;
+use Database\Seeders\Demo\BadgeDemo;
 use Database\Seeders\Demo\BusPlanDemo;
 use Database\Seeders\Demo\FixParentAgesDemo;
 use Database\Seeders\Demo\FlightDemo;
@@ -29,6 +30,7 @@ class UpdateDemoData extends Command
         'faz2-otobus-plani' => BusPlanDemo::class,
         'faz2-yakinlik-yas-duzeltme' => FixParentAgesDemo::class,
         'faz3-ucuslar' => FlightDemo::class,
+        'faz3-yaka-karti' => BadgeDemo::class,
     ];
 
     public function handle(CurrentTenant $currentTenant): int

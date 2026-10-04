@@ -129,6 +129,9 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
             Route::get('buses/{bus}/passengers', [ReportController::class, 'busPassengers'])->name('buses.passengers');
             Route::get('buses/{bus}/seat-chart', [ReportController::class, 'busSeatChart'])->name('buses.seat-chart');
         });
+        Route::get('tours/{tour}/badges', [ReportController::class, 'tourBadges'])
+            ->middleware('feature:badge_generation')
+            ->name('tours.badges');
         Route::get('flights/{flight}/manifest', [ReportController::class, 'flightManifest'])
             ->middleware('feature:flight_lists')
             ->name('flights.manifest');

@@ -14,10 +14,12 @@ use App\Reports\Definitions\CollectionReport;
 use App\Reports\Definitions\FlightManifest;
 use App\Reports\Definitions\StayRoomingList;
 use App\Reports\Definitions\StayRoomOccupancy;
+use App\Reports\Definitions\TourBadges;
 use App\Reports\Definitions\TourPassengerList;
 use App\Reports\Definitions\TourPaymentStatus;
 use App\Reports\ReportResponder;
 use App\Support\Collections\CollectionFilters;
+use App\Support\Tenancy\CurrentTenant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -28,7 +30,10 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class ReportController extends Controller
 {
-    public function __construct(private readonly ReportResponder $responder) {}
+    public function __construct(
+        private readonly ReportResponder $responder,
+        private readonly CurrentTenant $currentTenant,
+    ) {}
 
     public function tourPassengers(Request $request, Tour $tour, TourPassengerList $definition): Response
     {
@@ -135,6 +140,34 @@ class ReportController extends Controller
         $revealIds = $request->user()?->role->canRevealSensitiveData() ?? false;
 
         return $this->responder->download($definition->build($flight, $revealIds), $this->format($request));
+    }
+
+    /**
+     * Yaka kartları (PDF). ?group=<id> bir grup, ?registration=<id> tek yolcu; ikisi de yoksa bütün tur.
+     */
+    public function tourBadges(Request $request, Tour $tour, TourBadges $definition): Response
+    {
+        Gate::authorize('update', $tour);
+
+        $filters = $request->validate([
+            'group' => ['nullable', 'uuid'],
+            'registration' => ['nullable', 'uuid'],
+        ]);
+
+        // Başka turun / acentenin grubu veya kaydı → 404.
+        $group = isset($filters['group']) ? $tour->groups()->whereKey($filters['group'])->firstOrFail() : null;
+        $registration = isset($filters['registration']) ? $tour->registrations()->whereKey($filters['registration'])->firstOrFail() : null;
+
+        $badges = $definition->build($tour, $group, $registration);
+        $suffix = $registration ? Str::slug($registration->person->full_name, '-', 'tr') : ($group ? Str::slug($group->name, '-', 'tr') : 'tum-tur');
+
+        return $this->responder->pdfView('tour_badges', "yaka-karti-{$suffix}.pdf", 'reports.badges', [
+            'title' => "{$tour->name} Yaka Kartları",
+            'badges' => $badges,
+            'tourName' => $tour->name,
+            'tourDates' => $tour->start_date->format('d.m.Y').' – '.$tour->end_date->format('d.m.Y'),
+            'emergencyPhone' => $this->currentTenant->get()?->phone,
+        ]);
     }
 
     private function format(Request $request): string

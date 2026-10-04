@@ -3,6 +3,7 @@ import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
     AlertTriangle,
     CalendarDays,
+    IdCard,
     Pencil,
     Plus,
     Trash2,
@@ -32,6 +33,7 @@ import { formatDate, formatMoney } from '@/lib/format';
 import { show as showPerson } from '@/routes/persons';
 import { show as showRegistration } from '@/routes/registrations';
 import {
+    badges as badgeReport,
     passengers as passengerReports,
     payments as paymentReports,
 } from '@/routes/reports/tours';
@@ -95,6 +97,22 @@ const paymentsEnabled = computed(() =>
 const reportsEnabled = computed(() =>
     (page.props.features ?? []).includes('basic_reports'),
 );
+// Yaka kartı (Kurumsal paket): personel basar.
+const badgesEnabled = computed(
+    () =>
+        (page.props.features ?? []).includes('badge_generation') &&
+        props.can.update,
+);
+
+function badgeUrl(registrationId: string | null = null): string {
+    return badgeReport.url(props.tour.id, {
+        query: registrationId
+            ? { registration: registrationId }
+            : groupFilter.value !== 'all' && groupFilter.value !== 'none'
+              ? { group: groupFilter.value }
+              : {},
+    });
+}
 
 // Grup filtresi: 'all' | 'none' | grup id
 const groupFilter = ref<string>('all');
@@ -242,6 +260,18 @@ const occupancyText = computed(() =>
                 :url="paymentReports.url(tour.id)"
                 label="Ödeme durumu"
             />
+        </div>
+        <div v-if="badgesEnabled">
+            <Button variant="outline" size="sm" as-child>
+                <a :href="badgeUrl()">
+                    <IdCard />
+                    {{
+                        groupFilter !== 'all' && groupFilter !== 'none'
+                            ? 'Yaka kartları — seçili grup (PDF)'
+                            : 'Yaka kartları — tüm tur (PDF)'
+                    }}
+                </a>
+            </Button>
         </div>
 
         <!-- Özet -->
@@ -612,6 +642,20 @@ const occupancyText = computed(() =>
                                 <td class="px-2 py-2 whitespace-nowrap">
                                     <Button
                                         v-if="
+                                            badgesEnabled &&
+                                            registration.status !== 'iptal'
+                                        "
+                                        variant="ghost"
+                                        size="icon-sm"
+                                        title="Yaka kartı (PDF)"
+                                        as-child
+                                    >
+                                        <a :href="badgeUrl(registration.id)">
+                                            <IdCard />
+                                        </a>
+                                    </Button>
+                                    <Button
+                                        v-if="
                                             paymentsEnabled && can.viewFinance
                                         "
                                         variant="ghost"
@@ -774,6 +818,19 @@ const occupancyText = computed(() =>
                                     @click="openRegistration(registration)"
                                 >
                                     <Pencil /> Düzenle
+                                </Button>
+                                <Button
+                                    v-if="
+                                        badgesEnabled &&
+                                        registration.status !== 'iptal'
+                                    "
+                                    variant="outline"
+                                    size="sm"
+                                    as-child
+                                >
+                                    <a :href="badgeUrl(registration.id)">
+                                        <IdCard /> Yaka kartı
+                                    </a>
                                 </Button>
                             </div>
                         </li>
