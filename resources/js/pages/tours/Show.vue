@@ -48,7 +48,12 @@ const props = defineProps<{
     groups: TourGroup[];
     registrations: RegistrationRow[];
     options: TourShowOptions;
-    can: { update: boolean; delete: boolean };
+    can: {
+        update: boolean;
+        delete: boolean;
+        viewFinance: boolean;
+        viewPersons: boolean;
+    };
 }>();
 
 defineOptions({
@@ -216,7 +221,7 @@ const occupancyText = computed(() =>
                 "
             />
             <ExportButtons
-                v-if="paymentsEnabled"
+                v-if="paymentsEnabled && can.viewFinance"
                 :url="paymentReports.url(tour.id)"
                 label="Ödeme durumu"
             />
@@ -237,7 +242,7 @@ const occupancyText = computed(() =>
                     </p>
                 </CardHeader>
             </Card>
-            <Card>
+            <Card v-if="can.viewFinance">
                 <CardHeader>
                     <CardDescription>Toplam tutar</CardDescription>
                     <CardTitle class="text-2xl">
@@ -245,7 +250,7 @@ const occupancyText = computed(() =>
                     </CardTitle>
                 </CardHeader>
             </Card>
-            <Card>
+            <Card v-if="can.viewFinance">
                 <CardHeader>
                     <CardDescription>Tahsil edilen</CardDescription>
                     <CardTitle class="text-2xl text-emerald-600">
@@ -253,7 +258,7 @@ const occupancyText = computed(() =>
                     </CardTitle>
                 </CardHeader>
             </Card>
-            <Card>
+            <Card v-if="can.viewFinance">
                 <CardHeader>
                     <CardDescription>Kalan alacak</CardDescription>
                     <CardTitle class="text-2xl text-amber-600">
@@ -393,10 +398,28 @@ const occupancyText = computed(() =>
                                 <th class="px-4 py-2 font-medium">Grup</th>
                                 <th class="px-4 py-2 font-medium">Oda</th>
                                 <th class="px-4 py-2 font-medium">Durum</th>
-                                <th class="px-4 py-2 text-right font-medium">
+                                <th
+                                    v-if="!can.viewFinance"
+                                    class="px-4 py-2 font-medium"
+                                >
+                                    Telefon
+                                </th>
+                                <th
+                                    v-if="!can.viewFinance"
+                                    class="px-4 py-2 font-medium"
+                                >
+                                    Acil durum
+                                </th>
+                                <th
+                                    v-if="can.viewFinance"
+                                    class="px-4 py-2 text-right font-medium"
+                                >
                                     Ücret
                                 </th>
-                                <th class="px-4 py-2 text-right font-medium">
+                                <th
+                                    v-if="can.viewFinance"
+                                    class="px-4 py-2 text-right font-medium"
+                                >
                                     Kalan
                                 </th>
                                 <th class="w-0 px-2 py-2"></th>
@@ -414,6 +437,7 @@ const occupancyText = computed(() =>
                             >
                                 <td class="px-4 py-2">
                                     <Link
+                                        v-if="can.viewPersons"
                                         :href="
                                             showPerson(registration.person.id)
                                         "
@@ -421,6 +445,9 @@ const occupancyText = computed(() =>
                                     >
                                         {{ registration.person.full_name }}
                                     </Link>
+                                    <span v-else class="font-medium">
+                                        {{ registration.person.full_name }}
+                                    </span>
                                     <div
                                         v-if="
                                             registration.person
@@ -474,7 +501,29 @@ const occupancyText = computed(() =>
                                         }}
                                     </Badge>
                                 </td>
-                                <td class="px-4 py-2 text-right tabular-nums">
+                                <td
+                                    v-if="!can.viewFinance"
+                                    class="px-4 py-2 tabular-nums"
+                                >
+                                    <a
+                                        v-if="registration.person.phone"
+                                        :href="`tel:${registration.person.phone}`"
+                                        class="hover:underline"
+                                    >
+                                        {{ registration.person.phone }}
+                                    </a>
+                                    <template v-else>—</template>
+                                </td>
+                                <td v-if="!can.viewFinance" class="px-4 py-2">
+                                    {{
+                                        registration.person.emergency_contact ??
+                                        '—'
+                                    }}
+                                </td>
+                                <td
+                                    v-if="can.viewFinance"
+                                    class="px-4 py-2 text-right tabular-nums"
+                                >
                                     {{
                                         formatMoney(
                                             registration.net_price,
@@ -483,6 +532,7 @@ const occupancyText = computed(() =>
                                     }}
                                 </td>
                                 <td
+                                    v-if="can.viewFinance"
                                     class="px-4 py-2 text-right font-medium tabular-nums"
                                     :class="
                                         Number(registration.balance) > 0
@@ -499,7 +549,9 @@ const occupancyText = computed(() =>
                                 </td>
                                 <td class="px-2 py-2 whitespace-nowrap">
                                     <Button
-                                        v-if="paymentsEnabled"
+                                        v-if="
+                                            paymentsEnabled && can.viewFinance
+                                        "
                                         variant="ghost"
                                         size="icon-sm"
                                         title="Ödemeler"

@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Building2, LayoutGrid, Plane, Users, Wallet } from '@lucide/vue';
+import {
+    Building2,
+    LayoutGrid,
+    Plane,
+    UserCog,
+    Users,
+    Wallet,
+} from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -15,10 +22,12 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { edit as agencyEdit } from '@/routes/agency';
 import { index as collectionsIndex } from '@/routes/collections';
 import { index as personsIndex } from '@/routes/persons';
 import { index as tenantsIndex } from '@/routes/platform/tenants';
 import { index as toursIndex } from '@/routes/tours';
+import { index as usersIndex } from '@/routes/users';
 import type { NavItem } from '@/types';
 
 const page = usePage();
@@ -38,6 +47,14 @@ const mainNavItems = computed<NavItem[]>(() => {
 
     const role = page.props.auth.user?.role;
     const features = page.props.features ?? [];
+
+    // Rehber: sadece kendi grupları (para / kimlik bilgisi yok).
+    if (role === 'rehber') {
+        return features.includes('passengers')
+            ? [{ title: 'Gruplarım', href: toursIndex(), icon: Plane }]
+            : [];
+    }
+
     const items: NavItem[] = [
         { title: 'Ana Panel', href: dashboard(), icon: LayoutGrid },
     ];
@@ -61,6 +78,13 @@ const mainNavItems = computed<NavItem[]>(() => {
             href: collectionsIndex(),
             icon: Wallet,
         });
+    }
+
+    if (role === 'admin') {
+        items.push(
+            { title: 'Personel', href: usersIndex(), icon: UserCog },
+            { title: 'Acente ayarları', href: agencyEdit(), icon: Building2 },
+        );
     }
 
     return items;

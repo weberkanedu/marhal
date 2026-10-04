@@ -9,11 +9,13 @@ use App\Enums\TourType;
 use App\Enums\UserRole;
 use App\Http\Requests\TourRequest;
 use App\Models\Group;
+use App\Models\Person;
 use App\Models\Registration;
 use App\Models\Tour;
 use App\Models\User;
 use App\Support\Money;
 use App\Support\Tenancy\CurrentTenant;
+use App\Support\TurkishText;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,8 +30,12 @@ class TourController extends Controller
         Gate::authorize('viewAny', Tour::class);
 
         $filter = $request->query('filter', 'active');
+        $user = $request->user();
+        $isGuide = $user?->hasRole(UserRole::Guide) ?? false;
 
         $tours = Tour::query()
+            // Rehber sadece rehberi olduğu grubun bulunduğu turları görür.
+            ->when($isGuide, fn (Builder $query) => $query->whereHas('groups', fn (Builder $q) => $q->where('guide_user_id', $user?->getKey())))
             ->when($filter === 'active', fn (Builder $query) => $query->active())
             ->when($filter === 'past', fn (Builder $query) => $query->where(fn (Builder $q) => $q
                 ->whereNotIn('status', TourStatus::active())
@@ -41,7 +47,7 @@ class TourController extends Controller
             ->orderBy('start_date', $filter === 'past' ? 'desc' : 'asc')
             ->get()
             ->map(fn (Tour $tour) => [
-                ...$this->summary($tour),
+                ...$this->summary($tour, ! $isGuide),
                 'groups_count' => $tour->groups_count,
                 'registrations_count' => $tour->registrations_count,
             ]);
@@ -51,10 +57,11 @@ class TourController extends Controller
         return Inertia::render('tours/Index', [
             'tours' => $tours,
             'filter' => $filter,
-            'limits' => [
+            'limits' => $isGuide ? null : [
                 'active' => $tenant?->activeTourCount() ?? 0,
                 'max' => $tenant?->plan->active_tour_limit,
             ],
+            'can' => ['create' => $user?->can('create', Tour::class) ?? false],
         ]);
     }
 
@@ -86,7 +93,15 @@ class TourController extends Controller
     {
         Gate::authorize('view', $tour);
 
+        $user = $request->user();
+        $finance = $user?->can('viewFinance', $tour) ?? false;
+        // Rehber modu: sadece kendi grupları, para bilgisi yok.
+        $guideOf = $user?->hasRole(UserRole::Guide)
+            ? $tour->groups()->where('guide_user_id', $user->getKey())->pluck('id')->all()
+            : null;
+
         $groups = $tour->groups()
+            ->when($guideOf !== null, fn (Builder $q) => $q->whereIn('id', $guideOf ?? []))
             ->withCount(['registrations' => fn (Builder $q) => $q->where('status', '!=', RegistrationStatus::Cancelled)])
             ->orderBy('name')
             ->get()
@@ -97,18 +112,20 @@ class TourController extends Controller
             ]);
 
         $registrations = $tour->registrations()
+            ->when($guideOf !== null, fn (Builder $q) => $q->whereIn('group_id', $guideOf ?? [])->where('status', '!=', RegistrationStatus::Cancelled))
             ->with(['person', 'group:id,name'])
             ->withPaidTotal()
             ->get()
-            ->sortBy(fn (Registration $r) => [$r->status === RegistrationStatus::Cancelled ? 1 : 0, mb_strtolower($r->person->last_name.' '.$r->person->first_name)])
+            ->sort(fn (Registration $a, Registration $b) => ($a->status === RegistrationStatus::Cancelled) <=> ($b->status === RegistrationStatus::Cancelled)
+                ?: TurkishText::compare($a->person->last_name.' '.$a->person->first_name, $b->person->last_name.' '.$b->person->first_name))
             ->values()
-            ->map(fn (Registration $registration) => $this->registrationRow($registration, $tour));
+            ->map(fn (Registration $registration) => $this->registrationRow($registration, $tour, $finance));
 
         $active = $registrations->where('status', '!=', RegistrationStatus::Cancelled->value);
 
         return Inertia::render('tours/Show', [
             'tour' => [
-                ...$this->summary($tour),
+                ...$this->summary($tour, $finance),
                 'notes' => $tour->notes,
             ],
             'stats' => [
@@ -117,9 +134,9 @@ class TourController extends Controller
                 'pending' => $active->where('status', RegistrationStatus::Pending->value)->count(),
                 'cancelled' => $registrations->count() - $active->count(),
                 'unassigned' => $active->whereNull('group_id')->count(),
-                'total' => $active->reduce(fn (string $c, array $r) => Money::add($c, $r['net_price']), '0.00'),
-                'paid' => $active->reduce(fn (string $c, array $r) => Money::add($c, $r['paid']), '0.00'),
-                'balance' => $active->reduce(fn (string $c, array $r) => Money::add($c, $r['balance']), '0.00'),
+                'total' => $finance ? $active->reduce(fn (string $c, array $r) => Money::add($c, $r['net_price']), '0.00') : null,
+                'paid' => $finance ? $active->reduce(fn (string $c, array $r) => Money::add($c, $r['paid']), '0.00') : null,
+                'balance' => $finance ? $active->reduce(fn (string $c, array $r) => Money::add($c, $r['balance']), '0.00') : null,
             ],
             'groups' => $groups,
             'registrations' => $registrations,
@@ -135,8 +152,10 @@ class TourController extends Controller
                     ->get(['id', 'name']),
             ],
             'can' => [
-                'update' => $request->user()?->can('update', $tour) ?? false,
-                'delete' => $request->user()?->can('delete', $tour) ?? false,
+                'update' => $user?->can('update', $tour) ?? false,
+                'delete' => $user?->can('delete', $tour) ?? false,
+                'viewFinance' => $finance,
+                'viewPersons' => $user?->can('viewAny', Person::class) ?? false,
             ],
         ]);
     }
@@ -182,7 +201,7 @@ class TourController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function summary(Tour $tour): array
+    private function summary(Tour $tour, bool $finance = true): array
     {
         return [
             'id' => $tour->id,
@@ -193,7 +212,8 @@ class TourController extends Controller
             'start_date' => $tour->start_date->toDateString(),
             'end_date' => $tour->end_date->toDateString(),
             'capacity' => $tour->capacity,
-            'default_price' => $tour->default_price,
+            // Fiyat, para bilgisi yetkisi olmayan (rehber) kullanıcıya gönderilmez.
+            'default_price' => $finance ? $tour->default_price : null,
             'currency' => $tour->currency,
         ];
     }
@@ -201,9 +221,18 @@ class TourController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function registrationRow(Registration $registration, Tour $tour): array
+    private function registrationRow(Registration $registration, Tour $tour, bool $finance): array
     {
         $person = $registration->person;
+
+        // Para bilgisi yetkisi olmayan (rehber) kullanıcıya ücret / bakiye gönderilmez.
+        $money = $finance ? [
+            'price' => $registration->price,
+            'discount' => $registration->discount,
+            'net_price' => $registration->netPrice(),
+            'paid' => $registration->paidTotal(),
+            'balance' => $registration->balance(),
+        ] : ['price' => null, 'discount' => null, 'net_price' => null, 'paid' => null, 'balance' => null];
 
         return [
             'id' => $registration->id,
@@ -212,7 +241,8 @@ class TourController extends Controller
                 'full_name' => $person->full_name,
                 'gender' => $person->gender->value,
                 'phone' => $person->phone,
-                'masked_passport_no' => $person->masked_passport_no,
+                'emergency_contact' => trim(($person->emergency_contact_name ?? '').' '.($person->emergency_contact_phone ?? '')) ?: null,
+                'masked_passport_no' => $finance ? $person->masked_passport_no : null,
                 // Vize için pasaport tur başlangıcından itibaren en az 6 ay geçerli olmalı.
                 'passport_expiring' => $person->passport_expiry_date !== null && ! $person->passportValidFor($tour->start_date),
                 'passport_missing' => $person->passport_expiry_date === null,
@@ -221,11 +251,7 @@ class TourController extends Controller
             'group_name' => $registration->group?->name,
             'room_type' => $registration->room_type?->value,
             'status' => $registration->status->value,
-            'price' => $registration->price,
-            'discount' => $registration->discount,
-            'net_price' => $registration->netPrice(),
-            'paid' => $registration->paidTotal(),
-            'balance' => $registration->balance(),
+            ...$money,
             'currency' => $registration->currency,
             'cancel_reason' => $registration->cancel_reason,
             'notes' => $registration->notes,

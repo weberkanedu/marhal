@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Models\Group;
 use App\Models\Tour;
 use App\Reports\Definitions\CollectionReport;
@@ -24,10 +25,18 @@ class ReportController extends Controller
     {
         Gate::authorize('view', $tour);
 
+        $user = $request->user();
+        $groups = Group::query()
+            ->where('tour_id', $tour->getKey())
+            // Rehber sadece kendi grubunun listesini alabilir.
+            ->when($user?->hasRole(UserRole::Guide), fn ($q) => $q->where('guide_user_id', $user?->getKey()));
+
         $groupId = $request->query('group');
-        $group = is_string($groupId) && $groupId !== ''
-            ? Group::query()->where('tour_id', $tour->getKey())->whereKey($groupId)->firstOrFail()
-            : null;
+        $group = match (true) {
+            is_string($groupId) && $groupId !== '' => $groups->whereKey($groupId)->firstOrFail(),
+            $user?->hasRole(UserRole::Guide) ?? false => $groups->firstOrFail(),
+            default => null,
+        };
 
         // Tam kimlik / pasaport no sadece maskesiz görme yetkisi olan kullanıcıya.
         $revealIds = $request->user()?->role->canRevealSensitiveData() ?? false;
@@ -37,14 +46,14 @@ class ReportController extends Controller
 
     public function tourPayments(Request $request, Tour $tour, TourPaymentStatus $definition): Response
     {
-        Gate::authorize('view', $tour);
+        Gate::authorize('viewFinance', $tour);
 
         return $this->responder->download($definition->build($tour), $this->format($request));
     }
 
     public function collections(Request $request, CollectionReport $definition): Response
     {
-        Gate::authorize('viewAny', Tour::class);
+        Gate::authorize('viewAnyFinance', Tour::class);
 
         return $this->responder->download(
             $definition->build(CollectionFilters::fromRequest($request)),

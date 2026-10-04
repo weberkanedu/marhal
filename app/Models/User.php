@@ -26,6 +26,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string $password
  * @property UserRole $role
  * @property bool $is_active
+ * @property bool $must_change_password
  * @property Carbon|null $last_login_at
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
@@ -43,6 +44,16 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     use HasFactory, Notifiable, PasskeyAuthenticatable, SoftDeletes, TwoFactorAuthenticatable;
 
     /**
+     * Veritabanı varsayılanlarıyla aynı; yeni oluşturulan (henüz yeniden okunmamış) modelde de dolu olsun.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'is_active' => true,
+        'must_change_password' => false,
+    ];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -54,6 +65,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'password' => 'hashed',
             'role' => UserRole::class,
             'is_active' => 'boolean',
+            'must_change_password' => 'boolean',
             'last_login_at' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
         ];

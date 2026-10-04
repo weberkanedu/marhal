@@ -12,7 +12,8 @@ import type { TourListItem } from '@/types/tour';
 defineProps<{
     tours: TourListItem[];
     filter: 'active' | 'past' | 'all';
-    limits: { active: number; max: number | null };
+    limits: { active: number; max: number | null } | null;
+    can: { create: boolean };
 }>();
 
 defineOptions({
@@ -43,15 +44,20 @@ function occupancy(tour: TourListItem): number | null {
     <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h1 class="text-xl font-semibold tracking-tight">Turlar</h1>
-                <p class="text-sm text-muted-foreground">
+                <h1 class="text-xl font-semibold tracking-tight">
+                    {{ limits ? 'Turlar' : 'Gruplarım' }}
+                </h1>
+                <p v-if="limits" class="text-sm text-muted-foreground">
                     Aktif tur: {{ limits.active }}
                     <template v-if="limits.max !== null">
                         / {{ limits.max }} (paket sınırı)
                     </template>
                 </p>
+                <p v-else class="text-sm text-muted-foreground">
+                    Rehberi olduğunuz grupların turları
+                </p>
             </div>
-            <Button as-child>
+            <Button v-if="can.create" as-child>
                 <Link :href="create()"><Plus /> Yeni tur</Link>
             </Button>
         </div>

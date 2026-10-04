@@ -18,7 +18,7 @@ class CollectionController extends Controller
 {
     public function __invoke(Request $request, CollectionQuery $query): Response
     {
-        Gate::authorize('viewAny', Tour::class);
+        Gate::authorize('viewAnyFinance', Tour::class);
 
         $filters = CollectionFilters::fromRequest($request);
 

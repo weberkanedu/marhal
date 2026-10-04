@@ -3,18 +3,26 @@
 namespace App\Http\Controllers;
 
 use App\Enums\RegistrationStatus;
+use App\Enums\UserRole;
 use App\Models\Person;
 use App\Models\Registration;
 use App\Models\Tour;
 use App\Support\Money;
 use App\Support\Tenancy\CurrentTenant;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __invoke(CurrentTenant $currentTenant): Response
+    public function __invoke(Request $request, CurrentTenant $currentTenant): Response|RedirectResponse
     {
+        // Ana panel finans özeti içerir; rehber doğrudan kendi turlarına gider.
+        if ($request->user()?->hasRole(UserRole::Guide)) {
+            return to_route('tours.index');
+        }
+
         $tenant = $currentTenant->get();
 
         // İptal edilmemiş kayıtların kalan bakiyesi, para birimine göre.

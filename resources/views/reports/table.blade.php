@@ -32,6 +32,9 @@
                 @endforeach
             </td>
             <td style="text-align: right;">
+                @if (! empty($logo))
+                    <img src="{{ $logo }}" alt="" style="max-height: 42px; max-width: 160px; margin-bottom: 4px;"><br>
+                @endif
                 @if ($tenant)
                     <div class="agency">{{ $tenant->name }}</div>
                     @if ($tenant->phone)<div class="muted">{{ $tenant->phone }}</div>@endif

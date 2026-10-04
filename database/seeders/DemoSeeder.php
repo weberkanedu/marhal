@@ -64,6 +64,12 @@ class DemoSeeder extends Seeder
             'password' => $password('operasyon@marhal.test'),
         ]);
 
+        $guide = User::factory()->forTenant($tenant)->role(UserRole::Guide)->create([
+            'name' => 'Ahmet Rehber',
+            'email' => 'rehber@marhal.test',
+            'password' => $password('rehber@marhal.test'),
+        ]);
+
         if (! app()->isLocal()) {
             $this->command->warn('Demo hesaplar (şifreleri bir yere not edin, tekrar gösterilmez):');
             foreach ($accounts as $email => $plain) {
@@ -71,7 +77,7 @@ class DemoSeeder extends Seeder
             }
         }
 
-        app(CurrentTenant::class)->run($tenant, function () use ($tenant): void {
+        app(CurrentTenant::class)->run($tenant, function () use ($tenant, $guide): void {
             $tour = Tour::factory()->create([
                 'tenant_id' => $tenant->id,
                 'name' => 'Ekim 2026 Umre Turu',
@@ -85,7 +91,12 @@ class DemoSeeder extends Seeder
             ]);
 
             $groups = [
-                Group::factory()->create(['tour_id' => $tour->id, 'name' => 'A Grubu']),
+                Group::factory()->create([
+                    'tour_id' => $tour->id,
+                    'name' => 'A Grubu',
+                    'guide_user_id' => $guide->id,
+                    'guide_name' => $guide->name,
+                ]),
                 Group::factory()->create(['tour_id' => $tour->id, 'name' => 'B Grubu']),
             ];
 

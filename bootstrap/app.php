@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureFeatureEnabled;
+use App\Http\Middleware\EnsurePasswordChanged;
 use App\Http\Middleware\EnsureTenantContext;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\HandleAppearance;
@@ -41,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            EnsurePasswordChanged::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

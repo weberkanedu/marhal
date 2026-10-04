@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AgencySettingsController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GroupController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Platform\TenantController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TourController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -51,6 +53,20 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::get('tours/{tour}/payments', [ReportController::class, 'tourPayments'])->name('tours.payments');
         Route::get('collections', [ReportController::class, 'collections'])->name('collections');
     });
+
+    // Acente yönetimi (sadece acente yöneticisi)
+    Route::middleware('role:admin')->group(function () {
+        Route::get('users', [UserController::class, 'index'])->name('users.index');
+        Route::post('users', [UserController::class, 'store'])->name('users.store');
+        Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword'])
+            ->middleware('throttle:10,1')
+            ->name('users.reset-password');
+
+        Route::get('agency', [AgencySettingsController::class, 'edit'])->name('agency.edit');
+        Route::post('agency', [AgencySettingsController::class, 'update'])->name('agency.update');
+    });
+    Route::get('agency/logo', [AgencySettingsController::class, 'logo'])->name('agency.logo');
 });
 
 // Platform yönetimi (super_admin)
@@ -59,6 +75,13 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
     ->name('platform.')
     ->group(function () {
         Route::get('tenants', [TenantController::class, 'index'])->name('tenants.index');
+        Route::post('tenants', [TenantController::class, 'store'])->name('tenants.store');
+        Route::get('tenants/{tenant}', [TenantController::class, 'show'])->name('tenants.show');
+        Route::put('tenants/{tenant}', [TenantController::class, 'update'])->name('tenants.update');
+        Route::put('tenants/{tenant}/features', [TenantController::class, 'updateFeature'])->name('tenants.features.update');
+        Route::post('tenants/{tenant}/users/{user}/reset-password', [TenantController::class, 'resetUserPassword'])
+            ->middleware('throttle:10,1')
+            ->name('tenants.users.reset-password');
     });
 
 require __DIR__.'/settings.php';

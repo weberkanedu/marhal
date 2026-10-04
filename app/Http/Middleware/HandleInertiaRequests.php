@@ -40,7 +40,8 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                // İlişkiler (acente, paket vb.) her sayfaya gönderilmesin; sadece kullanıcı alanları.
+                'user' => $request->user()?->withoutRelations(),
             ],
             // Tembel: `tenant` middleware'i çalıştıktan sonra, sayfa render edilirken değerlendirilir.
             'tenant' => fn () => app(CurrentTenant::class)->get()?->only(['id', 'name', 'default_currency']),

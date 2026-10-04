@@ -8,6 +8,7 @@ use App\Support\Audit\AuditLogger;
 use App\Support\Tenancy\CurrentTenant;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -37,6 +38,7 @@ class ReportResponder
                 'report' => $report,
                 'tenant' => $tenant,
                 'header' => $header,
+                'logo' => $this->logoDataUri($tenant),
                 'generatedAt' => now(),
                 'formatValue' => $this->formatter(),
             ])
@@ -47,6 +49,22 @@ class ReportResponder
         }
 
         return Excel::download(new XlsxExport($report, $header), $report->filename('xlsx'));
+    }
+
+    /**
+     * Logo PDF'e gömülü (data URI) olarak verilir; dompdf'te uzak/yerel dosya erişimi kapalı kalır.
+     */
+    private function logoDataUri(?Tenant $tenant): ?string
+    {
+        $disk = Storage::disk(config('marhal.media_disk'));
+
+        if (! $tenant?->logo_path || ! $disk->exists($tenant->logo_path)) {
+            return null;
+        }
+
+        $mime = $disk->mimeType($tenant->logo_path) ?: 'image/png';
+
+        return 'data:'.$mime.';base64,'.base64_encode((string) $disk->get($tenant->logo_path));
     }
 
     /**

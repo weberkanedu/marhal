@@ -51,6 +51,7 @@ export type RegistrationRow = {
         full_name: string;
         gender: Gender;
         phone: string | null;
+        emergency_contact: string | null;
         masked_passport_no: string | null;
         passport_expiring: boolean;
         passport_missing: boolean;
@@ -59,11 +60,12 @@ export type RegistrationRow = {
     group_name: string | null;
     room_type: string | null;
     status: RegistrationStatus;
-    price: string;
-    discount: string;
-    net_price: string;
-    paid: string;
-    balance: string;
+    // Rehber (finans yetkisi yok) için null gelir.
+    price: string | null;
+    discount: string | null;
+    net_price: string | null;
+    paid: string | null;
+    balance: string | null;
     currency: string;
     cancel_reason: string | null;
     notes: string | null;
@@ -81,9 +83,9 @@ export type TourStats = {
     pending: number;
     cancelled: number;
     unassigned: number;
-    total: string;
-    paid: string;
-    balance: string;
+    total: string | null;
+    paid: string | null;
+    balance: string | null;
 };
 
 export const tourStatusVariant: Record<

@@ -14,8 +14,8 @@
 | 2   | Turlar ve gruplar, yolcuların tura/gruba kaydı                     | ✅          |
 | 3   | Ödemeler ve taksit planı                                           | ✅          |
 | 4   | Raporlar (Excel / PDF)                                             | ✅          |
-| 5   | Kullanıcı yönetimi, platform paneli (acente açma, paket)           | 🚧 sıradaki |
-| 6   | Türkçeleştirme + **görsel tasarım** (kullanıcı onayladı) + kontrol | ⏳          |
+| 5   | Kullanıcı yönetimi, platform paneli (acente açma, paket)           | ✅          |
+| 6   | Türkçeleştirme + **görsel tasarım** (kullanıcı onayladı) + kontrol | 🚧 sıradaki |
 
 Sonraki fazlar: Faz 2 oda/otobüs, Faz 3 uçuş/yaka kartı, Faz 4 API/entegrasyonlar.
 
@@ -45,7 +45,7 @@ Her adım sonunda güncellenir. ✅ bitti · 🟡 kısmen · ⏳ planlı
 **Raporlar `app/Reports` içinde**: her rapor bir `Report` nesnesi; aynı nesne Excel ve PDF'e dönüşür, her indirme audit log'a yazılır. Faz 2–3 listeleri (oda, otobüs, uçuş, yaka kartı) bu altyapıyı kullanacak.
 
 **İş kuralları `app/Actions` içinde** (kayıt, iptal, kapasite, grup silme, ödeme, taksit). Ekranlar ve Faz 4 API'si aynı sınıfları kullanır.
-**SPEC'te olup henüz yapılmayan:** rehberin kendi grubunu görmesi (Adım 5).
+**Rehber ekranı yapıldı:** rehber sadece kendi grubunun yolcularını görür; fiyat, ödeme ve kimlik bilgisi sunucudan hiç gönderilmez (testlerle korunur).
 
 ## Alınan kararlar
 

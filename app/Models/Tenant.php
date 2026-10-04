@@ -120,7 +120,8 @@ class Tenant extends Model
     {
         $limit = $this->plan->user_limit;
 
-        return $limit === null || $this->users()->count() < $limit;
+        // Pasif kullanıcılar limite sayılmaz.
+        return $limit === null || $this->users()->where('is_active', true)->count() < $limit;
     }
 
     public function activeTourCount(): int

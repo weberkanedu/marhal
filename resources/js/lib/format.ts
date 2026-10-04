@@ -10,7 +10,14 @@ export function formatDate(date: string | null | undefined): string {
     });
 }
 
-export function formatMoney(amount: string | number, currency: string): string {
+export function formatMoney(
+    amount: string | number | null | undefined,
+    currency: string,
+): string {
+    if (amount === null || amount === undefined || amount === '') {
+        return '—';
+    }
+
     return new Intl.NumberFormat('tr-TR', {
         style: 'currency',
         currency,

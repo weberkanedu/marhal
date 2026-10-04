@@ -27,7 +27,7 @@ class RegistrationController extends Controller
 {
     public function show(Request $request, Registration $registration): Response
     {
-        Gate::authorize('view', $registration->tour);
+        Gate::authorize('viewFinance', $registration->tour);
 
         $registration->load(['tour', 'group:id,name', 'person']);
         $tour = $registration->tour;
