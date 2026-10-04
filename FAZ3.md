@@ -1,6 +1,6 @@
 # Faz 3 — Uçuş listeleri ve yaka kartı
 
-Durum: **Uygulama başladı (2026-10-04).** Müşteri listesindeki karşılığı: Modül 5 (uçuş listeleri),
+Durum: **Tamamlandı (2026-10-04).** Müşteri listesindeki karşılığı: Modül 5 (uçuş listeleri),
 Modül 6 (yaka kartı), Modül 7 (uçuş organizasyonu), Modül 8 (uçuş listesi çıktıları).
 
 Müşteriye ayrıca soru sorulmadan, sektörde yaygın uygulamaya göre **varsayılanlar** seçildi; hepsi sonradan
@@ -13,7 +13,7 @@ değiştirilebilir şekilde tasarlandı (CLAUDE.md "güncellemeye açık yapı")
 | --- | ---------------------------------------------------------------------------------------------- | ----- |
 | 1   | Uçuşlar: tura uçuş ekleme, yolcuları gruplarla / tek tek ekleme, PNR / bilet, havayolu listesi | ✅    |
 | 2   | Yaka kartı: tekli / toplu PDF (logo, fotoğraf, grup, rehber, otel / oda, otobüs / koltuk)      | ✅    |
-| 3   | Toparlama: rehber görünümü, telefon, demo verisi                                               | ⏳    |
+| 3   | Toparlama: rehber görünümü, telefon, demo verisi                                               | ✅    |
 
 ## Veri modeli (yeni migration'larla)
 
@@ -57,3 +57,11 @@ değiştirilebilir şekilde tasarlandı (CLAUDE.md "güncellemeye açık yapı")
 - Kimlik / pasaport bilgisi karta yazılmaz. Fotoğraflar PDF'e küçültülerek (en fazla 320 px) gömülür.
 - Sadece personel basar (rehber basamaz); iptal edilen yolcuya kart çıkmaz; her indirme audit log'a yazılır.
 - Kurumsal paket özelliği; staging'deki demo acenteye `faz3-yaka-karti` paketiyle ayrıca açıldı.
+
+## Uygulama notları (3. adım — toparlama) · Faz 3 tamamlandı
+
+- Uçuş yolcu sayfası telefonda tablo yerine kart (unvan, ad, grup, maskeli pasaport, uyarılar, PNR / bilet kutuları).
+- Rehber gözüyle kontrol edildi: tur sayfasında kendi grubunun oda / koltuğu, uçuşlar (yolcu sayısı kendi grubuyla),
+  ücret / kimlik bilgisi yok (PageSmokeTest ile de korunuyor).
+- Açık (müşteri geri bildirimine bağlı): havayolu listesi ve yaka kartı içeriği / tasarımı; kalıcı disk ayarlanmadan
+  staging'de yüklenen fotoğraflar her yayında silinir (DURUM.md açık işler).

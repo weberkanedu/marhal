@@ -17,7 +17,7 @@
 | 5   | Kullanıcı yönetimi, platform paneli (acente açma, paket)           | ✅    |
 | 6   | Türkçeleştirme + **görsel tasarım** (kullanıcı onayladı) + kontrol | ✅    |
 
-Faz 2 (oda / otobüs) ✅ tamamlandı (2026-10-04). Sonraki: Faz 3 uçuş/yaka kartı, Faz 4 API/entegrasyonlar.
+Faz 2 (oda / otobüs) ✅ ve Faz 3 (uçuş / yaka kartı) ✅ tamamlandı (2026-10-04). Sonraki: Faz 4 API/entegrasyonlar.
 
 **Faz 2 adımları** (tasarım ve müşteri kararları: [FAZ2.md](FAZ2.md))
 
@@ -45,11 +45,11 @@ Her adım sonunda güncellenir. ✅ bitti · 🟡 kısmen · ⏳ planlı
 | 3. Oda yerleşim planı (otel/kat/oda, boş/dolu)    | ✅    | Tur → Konaklama → Oda planı (+ otomatik dağıt)                              |
 | 4. Otobüs yerleşim planı (koltuk, rehber)         | ✅    | Araç tipleri + Tur → Otobüsler → Koltuk planı                               |
 | 5. Uçuş listeleri                                 | ✅    | Tur → Uçuşlar → yolcular, PNR / bilet, havayolu listesi                     |
-| 6. Yaka kartı (tekli/toplu PDF, logo)             | ✅    | Tur sayfası → Yaka kartları (tur / grup / tek yolcu)                    |
+| 6. Yaka kartı (tekli/toplu PDF, logo)             | ✅    | Tur sayfası → Yaka kartları (tur / grup / tek yolcu)                        |
 | 7. Tur, tarih, grup, yolcu atama, rehber          | ✅    | Turlar                                                                      |
-| 7. Grup bazında oda/otobüs/uçuş organizasyonu     | 🟡    | Oda ✅, otobüs ✅ (grup bazında); uçuş Faz 3                                |
+| 7. Grup bazında oda/otobüs/uçuş organizasyonu     | ✅    | Oda, otobüs, uçuş grup bazında (+ yolcu istisnaları)                    |
 | 8. Özet sayılar (yolcu, alacak)                   | ✅    | Ana panel, tur ve tahsilat                                                  |
-| 8. Excel / PDF çıktıları                          | 🟡    | Yolcu, ödeme, tahsilat, otel, doluluk, otobüs + koltuk planı ✅; uçuş sonra |
+| 8. Excel / PDF çıktıları                          | ✅    | Yolcu, ödeme, tahsilat, otel, doluluk, otobüs, koltuk planı, uçuş, yaka kartı |
 
 **Raporlar `app/Reports` içinde**: her rapor bir `Report` nesnesi; aynı nesne Excel ve PDF'e dönüşür, her indirme audit log'a yazılır. Faz 2–3 listeleri (oda, otobüs, uçuş, yaka kartı) bu altyapıyı kullanacak.
 
@@ -101,8 +101,8 @@ Ortam değişkenleri yerelde `.env.staging` dosyasında (git'e girmez).
    ✅ 3. adım araç tipleri + otobüs / koltuk planı + otobüs listesi ve koltuk planı PDF'i.
    ✅ 4. adım toparlama: tur listesi + yolcu raporunda oda / koltuk (rehber de görür), "Başka otelden kopyala", telefon düzeltmeleri. **Faz 2 tamamlandı.**
    Otel listesi formatı: müşteri örneği yok; genel format yapıldı, geri bildirime göre güncellenecek.
-4. **Faz 3** ([FAZ3.md](FAZ3.md)): ✅ 1. adım uçuşlar + havayolu listesi, ✅ 2. adım yaka kartı.
-   Sıradaki: **3. adım toparlama** (telefon kontrolü, rehber görünümü, uçuş / yaka kartı ince ayarlar).
+4. **Faz 3** ([FAZ3.md](FAZ3.md)): ✅ uçuşlar + havayolu listesi, ✅ yaka kartı, ✅ toparlama. **Faz 3 tamamlandı.**
+   Müşterinin ilk listesindeki 8 modülün hepsi çalışıyor; sıradaki büyük iş production hazırlığı (madde 1) ve Faz 4.
 5. **Faz 4**: `/api/v1` (iş kuralları `app/Actions` içinde hazır), WhatsApp/SMS, muhasebe, vize takibi.
 6. **Fikir havuzu** ([FIKIRLER.md](FIKIRLER.md)): pasaportu NFC ile okuyup taslak kayıt + onay (premium, üst paket;
    öneri: Faz 4 API'sinden sonra "Faz 5 — Mobil tarayıcı", önce kamerayla MRZ okuma ara çözümü).

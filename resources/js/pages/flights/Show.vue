@@ -179,7 +179,7 @@ function add(): void {
                         <Plus /> Yolcu ekle
                     </Button>
                 </div>
-                <table v-else class="w-full text-sm">
+                <table v-else class="hidden w-full text-sm sm:table">
                     <thead class="bg-muted/50 text-left text-muted-foreground">
                         <tr>
                             <th class="px-3 py-2 font-medium">Unvan</th>
@@ -285,6 +285,85 @@ function add(): void {
                         </tr>
                     </tbody>
                 </table>
+
+                <!-- Telefon: tablo yerine kartlar -->
+                <ul v-if="passengers.length > 0" class="divide-y sm:hidden">
+                    <li
+                        v-for="row in passengers"
+                        :key="row.id"
+                        class="space-y-2 px-4 py-3"
+                    >
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <Badge variant="outline" class="mr-1">{{
+                                    row.title
+                                }}</Badge>
+                                <span class="font-medium">{{
+                                    row.full_name
+                                }}</span>
+                                <div class="text-xs text-muted-foreground">
+                                    {{ row.group_name }}
+                                    <template v-if="row.masked_passport_no">
+                                        · {{ row.masked_passport_no }}
+                                    </template>
+                                </div>
+                            </div>
+                            <Button
+                                v-if="can.update"
+                                variant="ghost"
+                                size="icon-sm"
+                                class="text-destructive"
+                                title="Uçuştan çıkar"
+                                @click="remove(row)"
+                            >
+                                <Trash2 />
+                            </Button>
+                        </div>
+                        <div
+                            v-for="w in row.warnings"
+                            :key="w"
+                            class="flex items-center gap-1 text-xs text-warning"
+                        >
+                            <AlertTriangle class="size-3" /> {{ w }}
+                        </div>
+                        <div v-if="can.update" class="grid grid-cols-2 gap-2">
+                            <Input
+                                :default-value="row.pnr ?? ''"
+                                :placeholder="`PNR ${flight.pnr ?? ''}`"
+                                class="h-9 uppercase"
+                                :aria-label="`${row.full_name} PNR`"
+                                @change="
+                                    save(
+                                        row,
+                                        'pnr',
+                                        ($event.target as HTMLInputElement)
+                                            .value,
+                                    )
+                                "
+                            />
+                            <Input
+                                :default-value="row.ticket_no ?? ''"
+                                placeholder="Bilet no"
+                                class="h-9"
+                                :aria-label="`${row.full_name} bilet no`"
+                                @change="
+                                    save(
+                                        row,
+                                        'ticket_no',
+                                        ($event.target as HTMLInputElement)
+                                            .value,
+                                    )
+                                "
+                            />
+                        </div>
+                        <div v-else class="text-sm">
+                            PNR {{ row.pnr ?? flight.pnr ?? '—' }}
+                            <template v-if="row.ticket_no">
+                                · Bilet {{ row.ticket_no }}</template
+                            >
+                        </div>
+                    </li>
+                </ul>
             </CardContent>
         </Card>
         <p
