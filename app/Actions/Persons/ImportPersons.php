@@ -72,7 +72,7 @@ class ImportPersons
             $rows[] = $this->check($data, $offset + 2, $seenIds);
         }
 
-        return ['rows' => $rows, 'unknown_headers' => $unknown, 'missing_headers' => []];
+        return ['rows' => $rows, 'unknown_headers' => array_values($unknown), 'missing_headers' => []];
     }
 
     /**
@@ -128,7 +128,7 @@ class ImportPersons
             try {
                 $this->registerPerson->handle($tour, [
                     'person_id' => $person->id,
-                    'group_id' => $registration['group']?->id ?? null,
+                    'group_id' => $registration['group']?->id,
                     'room_type' => $data['room_type'] ?? null,
                     'price' => $data['price'] ?? $registration['price'] ?? $tour->default_price ?? 0,
                     'status' => $registration['status'] ?? RegistrationStatus::Pending->value,

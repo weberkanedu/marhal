@@ -116,7 +116,9 @@ Sıra ve anlatım kullanıcıyla konuşuldu; başlarken bu sırayla, adım adım
    turlarda oda / koltuk / uçuş / ön kayıt eksikleri dahil), "Son hareketler" (audit_logs — **acente elle filtrelenir**,
    AuditLog global scope kullanmaz), "Turların durumu" tablosu (tahsilat %, oda, koltuk, uçuş, pasaport, Hazır / Eksik var),
    aylık tahsilat grafiği (son 6 ay, para birimi başına). İkinci kenar listesi ve yeni tema şimdilik yapılmadı (isteğe bağlı).
-3. ⏳ Excel'den toplu yolcu aktarma.
+3. ✅ Excel'den toplu yolcu aktarma (Yolcular → "Excel'den aktar"): şablon indir → yükle → satır satır önizleme
+   (yeni / zaten kayıtlı / hatalı, kimlik maskeli) → onay; istenirse aynı anda tura + gruba kayıt. Önizleme verisi
+   şifreli önbellekte 30 dk, kullanıcıya özel. Başlık eş anlamlıları ve Excel biçim düzeltmeleri `PersonRowNormalizer`.
 4. ⏳ Üst çubukta hızlı arama (ad / T.C. / pasaport) ve ilk kullanım rehberi (logo, otel, ilk tur).
 5. ⏳ Yolcu sayfasında tur kayıtlarında oda / koltuk / uçuş bilgisi.
 
@@ -166,7 +168,6 @@ Sıra ve anlatım kullanıcıyla konuşuldu; başlarken bu sırayla, adım adım
 - [x] Tur yolcu listesi telefonda kart görünümü.
 - [ ] Arayüz metinleri Vue dosyalarında sabit Türkçe; çok dilli olacaksa çeviri dosyalarına taşınmalı.
 - [ ] Ana panel sade; grafik (aylık tahsilat, tur doluluk) eklenebilir.
-- [ ] Yolcu listesinde Excel'den toplu yolcu içe aktarma yok (acenteler için büyük kolaylık olur).
 - [ ] Erişilebilirlik (klavye, ekran okuyucu) denetlenmedi.
 
 ## Çalışma notları (Claude Code / geliştirici için)

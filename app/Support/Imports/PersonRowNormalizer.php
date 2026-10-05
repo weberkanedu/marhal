@@ -220,7 +220,7 @@ final class PersonRowNormalizer
         $digit = (int) preg_replace('/\D/', '', $text);
         $match = collect(RoomType::cases())->first(fn (RoomType $t) => $t->capacity() === $digit);
 
-        return $match?->value ?? $text;
+        return $match instanceof RoomType ? $match->value : $text;
     }
 
     private static function price(mixed $value): mixed
