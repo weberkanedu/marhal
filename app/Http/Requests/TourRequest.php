@@ -26,6 +26,7 @@ class TourRequest extends FormRequest
             'capacity' => ['nullable', 'integer', 'min:1', 'max:10000'],
             'default_price' => ['nullable', 'numeric', 'min:0', 'max:9999999'],
             'currency' => ['required', Rule::in(config('marhal.currencies'))],
+            'whatsapp_link' => ['nullable', 'url:https', 'starts_with:https://chat.whatsapp.com/', 'max:255'],
             'notes' => ['nullable', 'string', 'max:5000'],
         ];
     }
@@ -44,6 +45,7 @@ class TourRequest extends FormRequest
             'capacity' => 'kapasite',
             'default_price' => 'varsayılan fiyat',
             'currency' => 'para birimi',
+            'whatsapp_link' => 'WhatsApp grup bağlantısı',
             'notes' => 'notlar',
         ];
     }

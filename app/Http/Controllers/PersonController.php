@@ -11,6 +11,7 @@ use App\Models\PersonRelation;
 use App\Models\Registration;
 use App\Support\Audit\AuditLogger;
 use App\Support\Media\PersonPhotoStore;
+use App\Support\Persons\PersonListFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -27,9 +28,12 @@ class PersonController extends Controller
         Gate::authorize('viewAny', Person::class);
 
         $search = trim((string) $request->query('q', ''));
+        $filter = PersonListFilter::tryFrom((string) $request->query('filtre', ''));
 
         $persons = Person::query()
             ->when($search !== '', fn (Builder $query) => $this->applySearch($query, $search))
+            ->when($filter !== null, fn (Builder $query) => $filter?->apply($query))
+            ->withCount(['registrations as active_registrations_count' => fn (Builder $q) => PersonListFilter::OnTour->registrationScope($q)])
             ->orderByName()
             ->paginate(20)
             ->withQueryString()
@@ -37,7 +41,11 @@ class PersonController extends Controller
 
         return Inertia::render('persons/Index', [
             'persons' => $persons,
-            'filters' => ['q' => $search],
+            'filters' => ['q' => $search, 'filtre' => $filter?->value],
+            'filterOptions' => PersonListFilter::options(),
+            'stats' => collect(PersonListFilter::cases())
+                ->mapWithKeys(fn (PersonListFilter $f) => [$f->value => $f->apply(Person::query())->count()])
+                ->put('total', Person::count()),
         ]);
     }
 
@@ -277,11 +285,12 @@ class PersonController extends Controller
             'full_name' => $person->full_name,
             'gender' => $person->gender->value,
             'birth_date' => $person->birth_date?->toDateString(),
-            'phone' => $person->phone,
+            'masked_phone' => $person->masked_phone,
             'masked_national_id' => $person->masked_national_id,
             'masked_passport_no' => $person->masked_passport_no,
             'passport_expiry_date' => $person->passport_expiry_date?->toDateString(),
-            'passport_expiring' => $person->passport_expiry_date !== null && ! $person->passportValidFor(now()),
+            'passport_issue' => $person->passportIssue(),
+            'on_tour' => (int) ($person->getAttributes()['active_registrations_count'] ?? 0) > 0,
             'has_photo' => $person->photo_path !== null,
         ];
     }

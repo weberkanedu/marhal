@@ -30,12 +30,14 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $nationality
  * @property string|null $national_id
  * @property string|null $passport_no
+ * @property string|null $passport_no_hash
  * @property Carbon|null $passport_issue_date
  * @property Carbon|null $passport_expiry_date
  * @property string|null $phone
  * @property string|null $email
  * @property Carbon|null $kvkk_consent_at
  * @property-read string $full_name
+ * @property-read string|null $masked_phone
  * @property-read string|null $masked_national_id
  * @property-read string|null $masked_passport_no
  */
@@ -143,11 +145,53 @@ class Person extends Model
     }
 
     /**
+     * Pasaport sorunu (yolcu listesi süzgeci, "Pasaport kontrol listesi"): pasaport no yok, bitiş tarihi yok
+     * veya bugünden itibaren 6 aydan az geçerli. Tura özel kontrol FlightPassengers::warnings'te (tur tarihine göre).
+     */
+    public function passportIssue(?CarbonInterface $from = null): ?string
+    {
+        return match (true) {
+            $this->passport_no_hash === null => 'Pasaport no yok',
+            $this->passport_expiry_date === null => 'Bitiş tarihi yok',
+            ! $this->passportValidFor($from ?? now()) => '6 aydan az geçerli',
+            default => null,
+        };
+    }
+
+    /**
+     * passportIssue() ile aynı kural, sorgu olarak.
+     *
+     * @param  Builder<Person>  $query
+     * @return Builder<Person>
+     */
+    public function scopeWithPassportIssue(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $q) => $q
+            ->whereNull('passport_no_hash')
+            ->orWhereNull('passport_expiry_date')
+            ->orWhereDate('passport_expiry_date', '<', now()->addMonths(6)->toDateString()));
+    }
+
+    /**
      * @return Attribute<string, never>
      */
     protected function fullName(): Attribute
     {
         return Attribute::get(fn () => trim("{$this->first_name} {$this->last_name}"));
+    }
+
+    /**
+     * Listelerde telefon: ilk 4 ve son 2 hane görünür (0532 *** ** 67); tamamı yolcu sayfasında.
+     *
+     * @return Attribute<string|null, never>
+     */
+    protected function maskedPhone(): Attribute
+    {
+        return Attribute::get(function (): ?string {
+            $digits = preg_replace('/\D/', '', (string) $this->phone) ?? '';
+
+            return strlen($digits) < 7 ? $this->phone : substr($digits, 0, 4).' *** ** '.substr($digits, -2);
+        });
     }
 
     /**

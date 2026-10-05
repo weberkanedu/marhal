@@ -7,16 +7,14 @@ use App\Enums\RegistrationStatus;
 use App\Enums\UserRole;
 use App\Models\Installment;
 use App\Models\Person;
-use App\Models\Registration;
 use App\Models\Tour;
+use App\Support\Collections\CollectionSummary;
 use App\Support\Dashboard\ActivityFeed;
 use App\Support\Dashboard\CollectionTrend;
 use App\Support\Dashboard\TourReadiness;
-use App\Support\Money;
 use App\Support\Tenancy\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -35,6 +33,7 @@ class DashboardController extends Controller
         TourReadiness $readiness,
         ActivityFeed $activity,
         CollectionTrend $trend,
+        CollectionSummary $money,
     ): Response|RedirectResponse {
         if ($request->user()?->hasRole(UserRole::Guide)) {
             return to_route('tours.index');
@@ -43,14 +42,7 @@ class DashboardController extends Controller
         $tenant = $currentTenant->get();
         $payments = $tenant?->hasFeature(Feature::Payments) ?? false;
 
-        $active = Registration::query()
-            ->where('status', '!=', RegistrationStatus::Cancelled)
-            ->withPaidTotal()
-            ->withDueTotal()
-            ->get();
-
-        $outstanding = $this->sumByCurrency($active, fn (Registration $r) => $r->balance());
-        $overdueRegistrations = $active->filter(fn (Registration $r) => ! Money::isZero($r->overdue()));
+        $overdue = $payments ? $money->overdue() : null;
 
         $upcoming = Tour::query()
             ->active()
@@ -63,11 +55,11 @@ class DashboardController extends Controller
                 'persons' => Person::count(),
                 'activeTours' => $tenant?->activeTourCount() ?? 0,
                 'activeTourLimit' => $tenant?->plan->active_tour_limit,
-                'outstanding' => $payments ? $outstanding : [],
+                'outstanding' => $payments ? $money->outstanding() : [],
             ],
-            'payments' => $payments ? [
-                'overdue_count' => $overdueRegistrations->count(),
-                'overdue' => $this->sumByCurrency($overdueRegistrations, fn (Registration $r) => $r->overdue()),
+            'payments' => $overdue ? [
+                'overdue_count' => $overdue['count'],
+                'overdue' => $overdue['amounts'],
                 // Önümüzdeki 7 günde vadesi gelen taksitler (bugün hariç; bugünkü "vadesi geçmiş"e dahil).
                 'due_soon_count' => Installment::query()
                     ->whereDate('due_date', '>', today())
@@ -89,19 +81,5 @@ class DashboardController extends Controller
                 ...$readiness->for($tour, $tenant),
             ]),
         ]);
-    }
-
-    /**
-     * @param  Collection<int, Registration>  $registrations
-     * @param  callable(Registration): string  $amount
-     * @return array<string, string>
-     */
-    private function sumByCurrency(Collection $registrations, callable $amount): array
-    {
-        return $registrations
-            ->groupBy('currency')
-            ->map(fn (Collection $items) => $items->reduce(fn (string $carry, Registration $r) => Money::add($carry, $amount($r)), '0.00'))
-            ->reject(fn (string $total) => Money::isZero($total))
-            ->all();
     }
 }

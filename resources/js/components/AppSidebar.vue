@@ -2,15 +2,18 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     Building2,
+    Inbox,
     LayoutGrid,
+    MessageSquareHeart,
     Package,
     Plane,
     Settings,
     Users,
     Wallet,
 } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
+import FeedbackDialog from '@/components/FeedbackDialog.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import {
@@ -26,6 +29,7 @@ import { agencySettingsPages, agencySettingsTabs } from '@/lib/agencySettings';
 import { dashboard } from '@/routes';
 import { index as collectionsIndex } from '@/routes/collections';
 import { index as personsIndex } from '@/routes/persons';
+import { index as feedbackIndex } from '@/routes/platform/feedback';
 import { index as plansIndex } from '@/routes/platform/plans';
 import { index as tenantsIndex } from '@/routes/platform/tenants';
 import { index as toursIndex } from '@/routes/tours';
@@ -41,11 +45,14 @@ const homeLink = computed(() =>
     isSuperAdmin.value ? tenantsIndex() : dashboard(),
 );
 
+const feedbackOpen = ref(false);
+
 const mainNavItems = computed<NavItem[]>(() => {
     if (isSuperAdmin.value) {
         return [
             { title: 'Acenteler', href: tenantsIndex(), icon: Building2 },
             { title: 'Paketler', href: plansIndex(), icon: Package },
+            { title: 'Geri bildirimler', href: feedbackIndex(), icon: Inbox },
         ];
     }
 
@@ -134,8 +141,20 @@ const mainNavItems = computed<NavItem[]>(() => {
         </SidebarContent>
 
         <SidebarFooter>
+            <SidebarMenu v-if="!isSuperAdmin">
+                <SidebarMenuItem>
+                    <SidebarMenuButton
+                        tooltip="Görüşünü paylaş"
+                        @click="feedbackOpen = true"
+                    >
+                        <MessageSquareHeart />
+                        <span>Görüşünü paylaş</span>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            </SidebarMenu>
             <NavUser />
         </SidebarFooter>
+        <FeedbackDialog v-if="!isSuperAdmin" v-model:open="feedbackOpen" />
     </Sidebar>
     <slot />
 </template>

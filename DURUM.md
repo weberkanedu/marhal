@@ -133,7 +133,20 @@ Kural: her adım onaylanınca yazılır; dış servis gerektirenlerde önce seç
 Yerleşim bilgisi (otel / oda / koltuk) yaka kartı, tur tablosu ve aile ekranına **tek kaynaktan** (`App\Support\Placements`) gider.
 
 1. ✅ İki tema (Gece Zümrüdü, Şafak) + ortak görünüm katmanı. Migration: `users.theme` değerleri taşındı. Demo paketi gerekmedi (veri yok).
-2. ⏳ Ana Panel, Tur (yolculuk çizelgesi, halkalar), Yolcular, Tahsilat (Ödeme al penceresi) + her ekranda "Çıktı al" menüsü; "Görüşünü paylaş".
+2. ✅ Ekranlar (2026-10-05). Ortak parçalar: `ExportMenu` ("Çıktı al": her çıktı Excel + PDF), `ProgressRing`, `kpi-tile`, `PersonAvatar`.
+   - **Tur**: yolculuk çizelgesi `App\Support\Tours\TourJourney` (Hazırlık → gidiş → şehir konaklamaları → dönüş; aynı şehirdeki
+     grup otelleri tek adım; uçuş / konaklama yoksa tur tarihleri) — **tek kaynak**: tur sayfası, "Tur programı" çıktısı, ileride aile ekranı.
+     Halkalar (Kayıt, Tahsilat, Oda, Koltuk, Uçuş) ana paneldeki `TourReadiness` ile aynı hesap; rehbere gösterilmez.
+     "WhatsApp grubu" davet bağlantısını kopyalar (`tours.whatsapp_link`, yalnız https://chat.whatsapp.com/).
+   - **Yolcular**: sayı kartları = süzgeçler (`App\Support\Persons\PersonListFilter`: pasaport sorunlu / aktif turda / KVKK yok);
+     pasaport kuralı tek yerde (`Person::passportIssue()` + `withPassportIssue()`); listede telefon da maskeli (`masked_phone`).
+     Çıktılar: Yolcu listesi, Pasaport kontrol listesi (`PersonList`). "Yeni yolcu": elle / Excel / ön kayıt linki (7. adımda).
+   - **Tahsilat**: özet `App\Support\Collections\CollectionSummary` (ana panel de bunu kullanır): bu ay tahsil edilen (geçen aya göre %),
+     bu ay vadesi gelen taksit, gecikmiş, kalan. "Ödeme al": satırdan ya da üstten yolcu seçerek (`PaymentDialog` ortak).
+     **Aylık hedef girilmedi** (tablo eklenmedi): hedef yerine "bu ay vadesi gelen" ile karşılaştırılıyor — kullanıcıya soruldu.
+   - **Ana Panel**: selam + "Yeni kayıt" menüsü + "Sıradaki tur" kartı (geri sayım, hazırlık halkası, oda/koltuk/uçuş/tahsilat çubukları).
+   - **Görüşünü paylaş** (menü altı): `feedback` tablosu, takip no = id; platform yöneticisi "Geri bildirimler"de listeler (yanıt: paketler aşaması).
+   Migration: `tours.whatsapp_link`, `feedback`. Demo paketi `tasarim-2-ekranlar`.
 3. ⏳ Araç tipleri (gövde, şoför yanı) ve uçak tipleri + sürükle-bırak yerleştirme.
 4. ⏳ Otel kat planı (`hotels.floors_count`, `tour_hotel_floors`, `rooms.near_elevator`) + ihtiyaç profili (`person_needs`, şifreli, açık rıza).
 5. ⏳ Yaka kartı yenileme (`badge_settings`, `groups.color`).
@@ -141,7 +154,7 @@ Yerleşim bilgisi (otel / oda / koltuk) yaka kartı, tur tablosu ve aile ekranı
 7. ⏳ Aile ekranı + fotoğrafla ön kayıt (MRZ okuma servisi için önce seçenek / maliyet).
 8. ⏳ WhatsApp tahsilat asistanı (önce sağlayıcı + sanal POS seçenekleri / maliyet).
 9. ⏳ Faz 4 entegrasyonlar + NFC (`tenant_integrations`, acente ayarından aç/kapa; önce seçenek / maliyet).
-Son: paketler, hesap paylaşımı koruması, iyzico abonelik, platform paneli (ayrı plan).
+   Son: paketler, hesap paylaşımı koruması, iyzico abonelik, platform paneli (ayrı plan).
 
 ## Sıradaki iş (önerilen sıra)
 

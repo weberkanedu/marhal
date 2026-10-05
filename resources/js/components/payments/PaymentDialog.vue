@@ -18,10 +18,15 @@ import { selectClass, textareaClass } from '@/lib/formClasses';
 import { store } from '@/routes/registrations/payments';
 import type { PaymentOptions, RegistrationDetail } from '@/types/payment';
 
+/**
+ * Ödeme al / iade penceresi. Kayıt sayfasından ve Tahsilat ekranından açılır;
+ * `person` verilirse başlıkta kimden alındığı yazar.
+ */
 const props = defineProps<{
-    registration: RegistrationDetail;
-    options: PaymentOptions;
+    registration: Pick<RegistrationDetail, 'id' | 'currency' | 'balance'>;
+    options: Pick<PaymentOptions, 'methods' | 'currencies'>;
     type: 'tahsilat' | 'iade';
+    person?: string;
 }>();
 
 const open = defineModel<boolean>('open', { required: true });
@@ -73,6 +78,7 @@ const today = new Date().toISOString().slice(0, 10);
                         {{ type === 'iade' ? 'İade yap' : 'Ödeme al' }}
                     </DialogTitle>
                     <DialogDescription>
+                        <template v-if="person">{{ person }} · </template>
                         Kalan borç:
                         {{
                             formatMoney(

@@ -5,6 +5,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BusController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\FlightController;
 use App\Http\Controllers\FlightPassengerController;
 use App\Http\Controllers\GroupController;
@@ -34,6 +35,9 @@ Route::get('/', fn () => auth()->check() ? to_route('dashboard') : to_route('log
 // Acente ekranları
 Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+
+    // "Görüşünü paylaş" (her kullanıcı)
+    Route::post('feedback', [FeedbackController::class, 'store'])->middleware('throttle:10,1')->name('feedback.store');
 
     // Yolcular
     Route::middleware('feature:passengers')->group(function () {
@@ -128,7 +132,10 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::middleware(['feature:basic_reports', 'throttle:30,1'])->prefix('reports')->name('reports.')->group(function () {
         Route::get('tours/{tour}/passengers', [ReportController::class, 'tourPassengers'])->name('tours.passengers');
         Route::get('tours/{tour}/payments', [ReportController::class, 'tourPayments'])->name('tours.payments');
+        Route::get('tours/{tour}/program', [ReportController::class, 'tourProgram'])->name('tours.program');
         Route::get('collections', [ReportController::class, 'collections'])->name('collections');
+        Route::get('persons', [ReportController::class, 'persons'])->name('persons.list');
+        Route::get('persons/passports', [ReportController::class, 'passports'])->name('persons.passports');
         Route::middleware('feature:room_planning')->group(function () {
             Route::get('stays/{stay}/rooming-list', [ReportController::class, 'roomingList'])->name('stays.rooming-list');
             Route::get('stays/{stay}/room-occupancy', [ReportController::class, 'roomOccupancy'])->name('stays.room-occupancy');
@@ -167,6 +174,7 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
     ->prefix('platform')
     ->name('platform.')
     ->group(function () {
+        Route::get('feedback', [FeedbackController::class, 'index'])->name('feedback.index');
         Route::get('plans', [PlanController::class, 'index'])->name('plans.index');
         Route::put('plans/{plan}', [PlanController::class, 'update'])->name('plans.update');
         Route::get('tenants', [TenantController::class, 'index'])->name('tenants.index');

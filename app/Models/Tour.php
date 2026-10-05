@@ -28,6 +28,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int|null $capacity
  * @property string|null $default_price
  * @property string $currency
+ * @property string|null $whatsapp_link
  */
 class Tour extends Model
 {

@@ -1,17 +1,35 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import {
+    AlertTriangle,
+    CalendarClock,
+    HandCoins,
+    Search,
+    TrendingDown,
+    TrendingUp,
+    Wallet,
+} from '@lucide/vue';
 import { computed, ref } from 'vue';
-import ExportButtons from '@/components/ExportButtons.vue';
+import ExportMenu from '@/components/ExportMenu.vue';
+import PaymentDialog from '@/components/payments/PaymentDialog.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatDate, formatMoney } from '@/lib/format';
 import { selectClass } from '@/lib/formClasses';
 import { index } from '@/routes/collections';
 import { show as showRegistration } from '@/routes/registrations';
-import type { Paginated } from '@/types/person';
 import { collections as collectionsReport } from '@/routes/reports';
+import type { ExportItem } from '@/types/export';
+import type { Option, Paginated } from '@/types/person';
 
 type Tab = 'borclu' | 'tamamlanan' | 'tahsilatlar';
 
@@ -41,6 +59,21 @@ type PaymentItem = {
     received_by: string | null;
 };
 
+type Debtor = {
+    id: string;
+    label: string;
+    tour: string;
+    currency: string;
+    balance: string;
+};
+
+type PayTarget = {
+    id: string;
+    currency: string;
+    balance: string;
+    person: string;
+};
+
 const props = defineProps<{
     tab: Tab;
     filters: { tour: string | null; from: string; to: string };
@@ -49,6 +82,17 @@ const props = defineProps<{
         items: Paginated<RegistrationItem | PaymentItem>;
         totals: Record<string, Record<string, string>>;
     };
+    // Ana paneldeki hesapla aynı (App\Support\Collections\CollectionSummary).
+    summary: {
+        outstanding: Record<string, string>;
+        overdue: { count: number; amounts: Record<string, string> };
+        due_this_month: Record<string, string>;
+        collected: Record<string, { this: string; last: string }>;
+    };
+    // Ertelenmiş: sayfa açıldıktan sonra gelir.
+    debtors?: Debtor[];
+    paymentOptions: { methods: Option[]; currencies: string[] };
+    canPay: boolean;
 }>();
 
 defineOptions({
@@ -86,18 +130,87 @@ const reportsEnabled = computed(() =>
     (page.props.features ?? []).includes('basic_reports'),
 );
 
-// Rapor, ekranda uygulanmış filtrelerle aynı veriyi üretir.
-const exportUrl = computed(() =>
-    collectionsReport.url({
-        query: {
-            tab: props.tab,
-            ...(props.filters.tour ? { tour: props.filters.tour } : {}),
-            ...(props.tab === 'tahsilatlar'
-                ? { from: props.filters.from, to: props.filters.to }
-                : {}),
+// "Çıktı al": üç liste, ekrandaki tur / tarih süzgeciyle aynı veri.
+const exportItems = computed<ExportItem[]>(() => {
+    if (!reportsEnabled.value) {
+        return [];
+    }
+
+    const tourQuery = props.filters.tour ? { tour: props.filters.tour } : {};
+    const scope =
+        props.tours.find((t) => t.id === props.filters.tour)?.name ??
+        'Tüm turlar';
+
+    return [
+        {
+            title: 'Borçlu yolcular',
+            description: `${scope} · kalan ve gecikmiş`,
+            url: collectionsReport.url({
+                query: { tab: 'borclu', ...tourQuery },
+            }),
         },
-    }),
+        {
+            title: 'Tahsilat raporu',
+            description: `${formatDate(props.filters.from)} – ${formatDate(props.filters.to)} · makbuz no`,
+            url: collectionsReport.url({
+                query: {
+                    tab: 'tahsilatlar',
+                    ...tourQuery,
+                    from: props.filters.from,
+                    to: props.filters.to,
+                },
+            }),
+        },
+        {
+            title: 'Ödemesi tamamlananlar',
+            description: scope,
+            url: collectionsReport.url({
+                query: { tab: 'tamamlanan', ...tourQuery },
+            }),
+        },
+    ];
+});
+
+// Bu ay / geçen ay karşılaştırması (para birimi başına).
+const collectedCurrencies = computed(() =>
+    Object.keys(props.summary.collected),
 );
+
+function change(currency: string): number | null {
+    const month = props.summary.collected[currency];
+
+    if (!month || Number(month.last) <= 0) {
+        return null;
+    }
+
+    return Math.round(
+        ((Number(month.this) - Number(month.last)) / Number(month.last)) * 100,
+    );
+}
+
+// Ödeme al: satırdaki düğmeden doğrudan, üstteki düğmeden önce yolcu seçilerek.
+const payOpen = ref(false);
+const pickOpen = ref(false);
+const pickSearch = ref('');
+const payTarget = ref<PayTarget | null>(null);
+
+function pay(target: PayTarget): void {
+    payTarget.value = target;
+    pickOpen.value = false;
+    payOpen.value = true;
+}
+
+const pickList = computed(() => {
+    const term = pickSearch.value.trim().toLocaleLowerCase('tr');
+
+    return (props.debtors ?? [])
+        .filter(
+            (d) =>
+                term === '' ||
+                `${d.label} ${d.tour}`.toLocaleLowerCase('tr').includes(term),
+        )
+        .slice(0, 50);
+});
 
 const asRegistrations = (items: unknown) => items as RegistrationItem[];
 const asPayments = (items: unknown) => items as PaymentItem[];
@@ -107,19 +220,165 @@ const asPayments = (items: unknown) => items as PaymentItem[];
     <Head title="Tahsilat" />
 
     <div class="flex h-full flex-1 flex-col gap-4 p-4">
-        <h1 class="text-xl font-semibold tracking-tight">Tahsilat</h1>
+        <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-semibold tracking-tight">Tahsilat</h1>
+                <p class="text-sm text-muted-foreground">
+                    Borçlar, gecikmeler ve alınan ödemeler. Para birimleri ayrı
+                    tutulur.
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <ExportMenu :items="exportItems" />
+                <Button v-if="canPay" @click="pickOpen = true">
+                    <HandCoins /> Ödeme al
+                </Button>
+            </div>
+        </div>
 
-        <div class="flex flex-wrap gap-1">
-            <Button
+        <!-- Özet: bu ay tahsilat, bu ay vadesi gelen, gecikmiş, kalan -->
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="kpi-tile items-start">
+                <span
+                    class="grid size-10 shrink-0 place-items-center rounded-xl bg-success-soft text-success"
+                >
+                    <Wallet class="size-5" />
+                </span>
+                <div class="min-w-0">
+                    <small>Bu ay tahsil edilen</small>
+                    <span
+                        v-if="collectedCurrencies.length === 0"
+                        class="kpi-value num"
+                        >—</span
+                    >
+                    <span
+                        v-for="currency in collectedCurrencies"
+                        :key="currency"
+                        class="kpi-value num"
+                    >
+                        {{
+                            formatMoney(
+                                summary.collected[currency]?.this ?? '0',
+                                currency,
+                            )
+                        }}
+                        <span
+                            v-if="change(currency) !== null"
+                            class="ml-1 inline-flex items-center gap-0.5 text-xs font-semibold"
+                            :class="
+                                (change(currency) ?? 0) >= 0
+                                    ? 'text-success'
+                                    : 'text-danger'
+                            "
+                            :title="`Geçen ay: ${formatMoney(summary.collected[currency]?.last ?? '0', currency)}`"
+                        >
+                            <component
+                                :is="
+                                    (change(currency) ?? 0) >= 0
+                                        ? TrendingUp
+                                        : TrendingDown
+                                "
+                                class="size-3"
+                            />
+                            %{{ Math.abs(change(currency) ?? 0) }}
+                        </span>
+                    </span>
+                </div>
+            </div>
+            <div class="kpi-tile items-start">
+                <span
+                    class="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-accent-foreground"
+                >
+                    <CalendarClock class="size-5" />
+                </span>
+                <div class="min-w-0">
+                    <small>Bu ay vadesi gelen taksit</small>
+                    <span
+                        v-if="Object.keys(summary.due_this_month).length === 0"
+                        class="kpi-value num"
+                        >—</span
+                    >
+                    <span
+                        v-for="(amount, currency) in summary.due_this_month"
+                        :key="currency"
+                        class="kpi-value num"
+                    >
+                        {{ formatMoney(amount, String(currency)) }}
+                    </span>
+                </div>
+            </div>
+            <button
+                type="button"
+                class="kpi-tile items-start"
+                @click="go('borclu')"
+            >
+                <span
+                    class="grid size-10 shrink-0 place-items-center rounded-xl bg-danger-soft text-danger"
+                >
+                    <AlertTriangle class="size-5" />
+                </span>
+                <div class="min-w-0">
+                    <small>Gecikmiş · {{ summary.overdue.count }} yolcu</small>
+                    <span
+                        v-if="summary.overdue.count === 0"
+                        class="kpi-value num text-success"
+                        >Gecikme yok</span
+                    >
+                    <span
+                        v-for="(amount, currency) in summary.overdue.amounts"
+                        :key="currency"
+                        class="kpi-value num text-danger"
+                    >
+                        {{ formatMoney(amount, String(currency)) }}
+                    </span>
+                </div>
+            </button>
+            <div class="kpi-tile items-start">
+                <span
+                    class="grid size-10 shrink-0 place-items-center rounded-xl bg-warning-soft text-warning"
+                >
+                    <HandCoins class="size-5" />
+                </span>
+                <div class="min-w-0">
+                    <small>Toplam kalan alacak</small>
+                    <span
+                        v-if="Object.keys(summary.outstanding).length === 0"
+                        class="kpi-value num"
+                        >—</span
+                    >
+                    <span
+                        v-for="(amount, currency) in summary.outstanding"
+                        :key="currency"
+                        class="kpi-value num text-warning"
+                    >
+                        {{ formatMoney(amount, String(currency)) }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <nav
+            class="flex gap-1 overflow-x-auto border-b"
+            role="tablist"
+            aria-label="Tahsilat listeleri"
+        >
+            <button
                 v-for="item in tabs"
                 :key="item.value"
-                size="sm"
-                :variant="tab === item.value ? 'secondary' : 'ghost'"
+                type="button"
+                role="tab"
+                :aria-selected="tab === item.value"
+                class="shrink-0 border-b-2 px-3 py-2 text-sm whitespace-nowrap transition-colors"
+                :class="
+                    tab === item.value
+                        ? 'border-primary font-medium text-foreground'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                "
                 @click="go(item.value)"
             >
                 {{ item.label }}
-            </Button>
-        </div>
+            </button>
+        </nav>
 
         <div class="flex flex-wrap items-end gap-3">
             <div class="grid gap-1">
@@ -152,15 +411,12 @@ const asPayments = (items: unknown) => items as PaymentItem[];
             </template>
         </div>
 
-        <ExportButtons
-            v-if="reportsEnabled && rows.items.total > 0"
-            :url="exportUrl"
-            label="Bu listeyi indir"
-        />
-
-        <!-- Toplamlar -->
+        <!-- Bu listenin toplamları (tur seçilmemiş borçlu listesi üstteki özetle aynı olduğundan gösterilmez) -->
         <div
-            v-if="Object.keys(rows.totals).length > 0"
+            v-if="
+                Object.keys(rows.totals).length > 0 &&
+                (tab !== 'borclu' || filters.tour)
+            "
             class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
         >
             <Card v-for="(total, currency) in rows.totals" :key="currency">
@@ -169,7 +425,7 @@ const asPayments = (items: unknown) => items as PaymentItem[];
                         <p class="text-sm text-muted-foreground">
                             Net tahsilat ({{ total.count }} işlem)
                         </p>
-                        <CardTitle class="text-2xl text-success">
+                        <CardTitle class="num text-2xl text-success">
                             {{ formatMoney(total.net, String(currency)) }}
                         </CardTitle>
                     </template>
@@ -177,7 +433,7 @@ const asPayments = (items: unknown) => items as PaymentItem[];
                         <p class="text-sm text-muted-foreground">
                             Kalan alacak ({{ currency }})
                         </p>
-                        <CardTitle class="text-2xl text-warning">
+                        <CardTitle class="num text-2xl text-warning">
                             {{ formatMoney(total.balance, String(currency)) }}
                         </CardTitle>
                         <p
@@ -192,7 +448,7 @@ const asPayments = (items: unknown) => items as PaymentItem[];
                         <p class="text-sm text-muted-foreground">
                             Tahsil edilen ({{ currency }})
                         </p>
-                        <CardTitle class="text-2xl text-success">
+                        <CardTitle class="num text-2xl text-success">
                             {{ formatMoney(total.paid, String(currency)) }}
                         </CardTitle>
                     </template>
@@ -214,27 +470,33 @@ const asPayments = (items: unknown) => items as PaymentItem[];
                     v-else-if="tab !== 'tahsilatlar'"
                     class="w-full text-sm whitespace-nowrap"
                 >
-                    <thead class="bg-muted/50 text-left text-muted-foreground">
+                    <thead class="text-left text-xs text-muted-foreground">
                         <tr>
-                            <th class="px-4 py-2 font-medium">Yolcu</th>
-                            <th class="px-4 py-2 font-medium">Tur / grup</th>
-                            <th class="px-4 py-2 text-right font-medium">
+                            <th class="px-4 py-2.5 font-medium">Yolcu</th>
+                            <th class="px-4 py-2.5 font-medium">Tur / grup</th>
+                            <th class="px-4 py-2.5 text-right font-medium">
                                 Net
                             </th>
-                            <th class="px-4 py-2 text-right font-medium">
+                            <th class="px-4 py-2.5 text-right font-medium">
                                 Ödenen
                             </th>
                             <th
                                 v-if="tab === 'borclu'"
-                                class="px-4 py-2 text-right font-medium"
+                                class="px-4 py-2.5 text-right font-medium"
                             >
                                 Kalan
                             </th>
                             <th
                                 v-if="tab === 'borclu'"
-                                class="px-4 py-2 text-right font-medium"
+                                class="px-4 py-2.5 text-right font-medium"
                             >
                                 Gecikmiş
+                            </th>
+                            <th
+                                v-if="tab === 'borclu' && canPay"
+                                class="px-4 py-2.5"
+                            >
+                                <span class="sr-only">İşlem</span>
                             </th>
                         </tr>
                     </thead>
@@ -242,7 +504,7 @@ const asPayments = (items: unknown) => items as PaymentItem[];
                         <tr
                             v-for="row in asRegistrations(rows.items.data)"
                             :key="row.id"
-                            class="cursor-pointer border-t hover:bg-muted/40"
+                            class="cursor-pointer border-t hover:bg-muted"
                             @click="router.visit(showRegistration(row.id))"
                         >
                             <td class="px-4 py-2">
@@ -293,20 +555,39 @@ const asPayments = (items: unknown) => items as PaymentItem[];
                                         : '—'
                                 }}
                             </td>
+                            <td
+                                v-if="tab === 'borclu' && canPay"
+                                class="px-4 py-2 text-right"
+                            >
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    @click.stop="
+                                        pay({
+                                            id: row.id,
+                                            currency: row.currency,
+                                            balance: row.balance,
+                                            person: row.person.full_name,
+                                        })
+                                    "
+                                >
+                                    Ödeme al
+                                </Button>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
 
                 <!-- Tahsilatlar -->
                 <table v-else class="w-full text-sm whitespace-nowrap">
-                    <thead class="bg-muted/50 text-left text-muted-foreground">
+                    <thead class="text-left text-xs text-muted-foreground">
                         <tr>
-                            <th class="px-4 py-2 font-medium">Tarih</th>
-                            <th class="px-4 py-2 font-medium">Yolcu</th>
-                            <th class="px-4 py-2 font-medium">Tur</th>
-                            <th class="px-4 py-2 font-medium">Yöntem</th>
-                            <th class="px-4 py-2 font-medium">Makbuz</th>
-                            <th class="px-4 py-2 text-right font-medium">
+                            <th class="px-4 py-2.5 font-medium">Tarih</th>
+                            <th class="px-4 py-2.5 font-medium">Yolcu</th>
+                            <th class="px-4 py-2.5 font-medium">Tur</th>
+                            <th class="px-4 py-2.5 font-medium">Yöntem</th>
+                            <th class="px-4 py-2.5 font-medium">Makbuz no</th>
+                            <th class="px-4 py-2.5 text-right font-medium">
                                 Tutar
                             </th>
                         </tr>
@@ -315,7 +596,7 @@ const asPayments = (items: unknown) => items as PaymentItem[];
                         <tr
                             v-for="row in asPayments(rows.items.data)"
                             :key="row.id"
-                            class="cursor-pointer border-t hover:bg-muted/40"
+                            class="cursor-pointer border-t hover:bg-muted"
                             @click="
                                 router.visit(
                                     showRegistration(row.registration_id),
@@ -338,7 +619,7 @@ const asPayments = (items: unknown) => items as PaymentItem[];
                                     · {{ row.received_by }}
                                 </span>
                             </td>
-                            <td class="px-4 py-2">
+                            <td class="px-4 py-2 font-mono text-xs">
                                 {{ row.reference ?? '—' }}
                             </td>
                             <td
@@ -396,4 +677,80 @@ const asPayments = (items: unknown) => items as PaymentItem[];
             </div>
         </div>
     </div>
+
+    <!-- Ödeme al: önce yolcu seç -->
+    <Dialog v-model:open="pickOpen">
+        <DialogContent class="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Ödeme al</DialogTitle>
+                <DialogDescription>
+                    Borcu olan yolcuyu seçin; tutar, yöntem ve tarihi sonra
+                    girersiniz.
+                </DialogDescription>
+            </DialogHeader>
+            <div class="relative">
+                <Search
+                    class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                />
+                <Input
+                    v-model="pickSearch"
+                    class="pl-9"
+                    placeholder="Yolcu veya tur ara"
+                />
+            </div>
+            <ul class="-mx-2 max-h-80 overflow-y-auto">
+                <li
+                    v-if="debtors === undefined"
+                    class="p-4 text-center text-sm text-muted-foreground"
+                >
+                    Yükleniyor…
+                </li>
+                <li
+                    v-else-if="pickList.length === 0"
+                    class="p-4 text-center text-sm text-muted-foreground"
+                >
+                    Borcu olan yolcu bulunamadı.
+                </li>
+                <li v-for="debtor in pickList" :key="debtor.id">
+                    <button
+                        type="button"
+                        class="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-muted"
+                        @click="
+                            pay({
+                                id: debtor.id,
+                                currency: debtor.currency,
+                                balance: debtor.balance,
+                                person: debtor.label,
+                            })
+                        "
+                    >
+                        <span class="min-w-0">
+                            <span class="block truncate font-medium">
+                                {{ debtor.label }}
+                            </span>
+                            <span
+                                class="block truncate text-xs text-muted-foreground"
+                            >
+                                {{ debtor.tour }}
+                            </span>
+                        </span>
+                        <span
+                            class="shrink-0 font-semibold text-warning tabular-nums"
+                        >
+                            {{ formatMoney(debtor.balance, debtor.currency) }}
+                        </span>
+                    </button>
+                </li>
+            </ul>
+        </DialogContent>
+    </Dialog>
+
+    <PaymentDialog
+        v-if="payTarget"
+        v-model:open="payOpen"
+        :registration="payTarget"
+        :person="payTarget.person"
+        :options="paymentOptions"
+        type="tahsilat"
+    />
 </template>

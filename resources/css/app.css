@@ -437,6 +437,154 @@
     background: var(--destructive);
 }
 
+/* Gösterge halkası (components/ProgressRing.vue) */
+.m-ring {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: conic-gradient(
+        var(--primary) calc(var(--p) * 1%),
+        var(--border) 0
+    );
+    mask: radial-gradient(
+        farthest-side,
+        transparent calc(100% - 5px),
+        #000 calc(100% - 4px)
+    );
+}
+.m-ring.full {
+    background: var(--success);
+}
+
+/* Yolculuk çizelgesi (components/tours/TourJourney.vue) */
+.journey {
+    --line-inset: calc(50% / var(--steps));
+    display: grid;
+    grid-template-columns: repeat(var(--steps), minmax(0, 1fr));
+    position: relative;
+    padding-top: 4px;
+}
+.journey::before,
+.journey::after {
+    content: '';
+    position: absolute;
+    left: var(--line-inset);
+    top: 23px;
+    height: 2px;
+    border-radius: 2px;
+}
+.journey::before {
+    right: var(--line-inset);
+    background: var(--border);
+}
+.journey::after {
+    width: calc((100% - 2 * var(--line-inset)) * var(--prog));
+    background: linear-gradient(
+        90deg,
+        var(--primary),
+        color-mix(in srgb, var(--primary) 30%, transparent)
+    );
+}
+.journey .st {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 0 4px;
+    text-align: center;
+}
+.journey .dot {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--background);
+    border: 2px solid var(--border);
+    color: var(--primary);
+}
+[data-theme='safak'] .journey .dot {
+    background: #ffffff;
+}
+.journey .st.done .dot {
+    border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+}
+.journey .st.next {
+    opacity: 0.75;
+}
+.journey .st.now .dot {
+    border-color: var(--primary);
+    animation: journey-pulse 2.4s ease-out infinite;
+}
+.journey .st.now b {
+    color: var(--primary);
+}
+@keyframes journey-pulse {
+    0% {
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 50%, transparent);
+    }
+    100% {
+        box-shadow: 0 0 0 14px transparent;
+    }
+}
+@media (max-width: 640px) {
+    .journey {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: 10px;
+    }
+    .journey::before,
+    .journey::after {
+        display: none;
+    }
+    .journey .st {
+        flex-direction: row;
+        text-align: left;
+    }
+    .journey .dot {
+        flex: none;
+    }
+}
+
+/* Gösterge kutusu (halka + yazı): tur sayfası, ana panel */
+.kpi-tile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border-radius: calc(var(--card-radius) - 4px);
+    background: var(--card);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    text-align: left;
+    min-width: 0;
+}
+[data-theme='safak'] .kpi-tile {
+    border-color: rgba(255, 255, 255, 0.75);
+}
+button.kpi-tile {
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+button.kpi-tile:hover {
+    border-color: var(--primary);
+}
+.kpi-tile small {
+    display: block;
+    font-size: 11.5px;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.kpi-tile .kpi-value {
+    display: block;
+    font-weight: 600;
+    font-size: 1.05rem;
+    line-height: 1.3;
+}
+
 /* Sayılar */
 .num {
     font-family: var(--font-number);
@@ -460,6 +608,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
     .app-backdrop .blob,
+    .journey .st.now .dot,
     [data-slot='card'].card-glow,
     [data-slot='sidebar-inset'] h1 {
         animation: none !important;

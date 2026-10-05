@@ -21,9 +21,11 @@ use App\Models\Tour;
 use App\Models\TourHotel;
 use App\Models\User;
 use App\Models\VehicleType;
+use App\Support\Dashboard\TourReadiness;
 use App\Support\Money;
 use App\Support\Placements;
 use App\Support\Tenancy\CurrentTenant;
+use App\Support\Tours\TourJourney;
 use App\Support\TurkishText;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -98,7 +100,7 @@ class TourController extends Controller
         return to_route('tours.show', $tour);
     }
 
-    public function show(Request $request, Tour $tour, CurrentTenant $currentTenant): Response
+    public function show(Request $request, Tour $tour, CurrentTenant $currentTenant, TourJourney $journey, TourReadiness $readiness): Response
     {
         Gate::authorize('view', $tour);
 
@@ -201,6 +203,10 @@ class TourController extends Controller
                 'paid' => $finance ? $active->reduce(fn (string $c, array $r) => Money::add($c, $r['paid']), '0.00') : null,
                 'balance' => $finance ? $active->reduce(fn (string $c, array $r) => Money::add($c, $r['balance']), '0.00') : null,
             ],
+            'journey' => $journey->for($tour, $currentTenant->get()),
+            // Hazırlık halkaları (oda / koltuk / uçuş / tahsilat): ana paneldeki "Turların durumu" ile aynı hesap.
+            // Rehber tur genelini değil kendi grubunu görür; halkalar personele.
+            'readiness' => $guideOf === null ? $this->readiness($readiness->for($tour, $currentTenant->get()), $finance) : null,
             'groups' => $groups,
             'registrations' => $registrations,
             'stays' => $stays,
@@ -277,6 +283,15 @@ class TourController extends Controller
     }
 
     /**
+     * @param  array<string, mixed>  $readiness
+     * @return array<string, mixed>
+     */
+    private function readiness(array $readiness, bool $finance): array
+    {
+        return $finance ? $readiness : [...$readiness, 'collection' => null];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function summary(Tour $tour, bool $finance = true): array
@@ -293,6 +308,7 @@ class TourController extends Controller
             // Fiyat, para bilgisi yetkisi olmayan (rehber) kullanıcıya gönderilmez.
             'default_price' => $finance ? $tour->default_price : null,
             'currency' => $tour->currency,
+            'whatsapp_link' => $tour->whatsapp_link,
         ];
     }
 

@@ -1,18 +1,39 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import { CalendarDays, Users, Wallet } from '@lucide/vue';
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import {
+    CalendarDays,
+    ChevronDown,
+    HandCoins,
+    Plane,
+    Plus,
+    UserPlus,
+    Users,
+    Wallet,
+} from '@lucide/vue';
+import { computed } from 'vue';
 import ActivityList from '@/components/dashboard/ActivityList.vue';
 import AttentionPanel from '@/components/dashboard/AttentionPanel.vue';
 import CollectionChart from '@/components/dashboard/CollectionChart.vue';
+import NextTourCard from '@/components/dashboard/NextTourCard.vue';
 import ToursStatus from '@/components/dashboard/ToursStatus.vue';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardDescription,
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { formatMoney } from '@/lib/format';
 import { dashboard } from '@/routes';
+import { index as collectionsIndex } from '@/routes/collections';
+import { create as createPerson } from '@/routes/persons';
+import { create as createTour } from '@/routes/tours';
 import type {
     ActivityItem,
     DashboardPayments,
@@ -22,7 +43,7 @@ import type {
 /**
  * Ana panel: özet, dikkat edilmesi gerekenler (düğmeli), son hareketler, turların durumu, aylık tahsilat.
  */
-defineProps<{
+const props = defineProps<{
     stats: {
         persons: number;
         activeTours: number;
@@ -44,12 +65,76 @@ defineOptions({
         breadcrumbs: [{ title: 'Ana Panel', href: dashboard() }],
     },
 });
+
+const page = usePage();
+
+// "Hayırlı günler, Zeynep": günün saatine göre selam, kullanıcının ilk adı.
+const greeting = computed(() => {
+    const hour = new Date().getHours();
+    const salute =
+        hour < 5
+            ? 'İyi geceler'
+            : hour < 11
+              ? 'Günaydın'
+              : hour < 18
+                ? 'Hayırlı günler'
+                : 'İyi akşamlar';
+    const name = (page.props.auth.user?.name ?? '').split(' ')[0];
+
+    return name ? `${salute}, ${name}` : salute;
+});
+
+const today = new Date().toLocaleDateString('tr-TR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+});
+
+const passengers = computed(() =>
+    (page.props.features ?? []).includes('passengers'),
+);
+
+// Sıradaki tur: henüz bitmemiş, en erken başlayan (liste başlangıç tarihine göre sıralı gelir).
+const nextTour = computed(() => props.tours[0] ?? null);
 </script>
 
 <template>
     <Head title="Ana Panel" />
 
     <div class="flex h-full flex-1 flex-col gap-4 p-4">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-semibold tracking-tight">
+                    {{ greeting }}
+                </h1>
+                <p class="text-sm text-muted-foreground first-letter:uppercase">
+                    {{ today }}
+                </p>
+            </div>
+            <DropdownMenu v-if="passengers">
+                <DropdownMenuTrigger as-child>
+                    <Button>
+                        <Plus /> Yeni kayıt <ChevronDown class="-mr-1" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" class="w-52">
+                    <DropdownMenuItem as-child>
+                        <Link :href="createPerson()"><UserPlus /> Yolcu</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem as-child>
+                        <Link :href="createTour()"><Plane /> Tur</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem v-if="payments" as-child>
+                        <Link :href="collectionsIndex()"
+                            ><HandCoins /> Ödeme</Link
+                        >
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
+
+        <NextTourCard v-if="nextTour" :tour="nextTour" />
+
         <!-- Özet -->
         <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
             <Card>

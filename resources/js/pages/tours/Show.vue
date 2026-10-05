@@ -7,6 +7,7 @@ import {
     CalendarDays,
     FileDown,
     IdCard,
+    MessageCircle,
     Pencil,
     Plus,
     Trash2,
@@ -22,30 +23,36 @@ import RegistrationDialog from '@/components/tours/RegistrationDialog.vue';
 import BusesCard from '@/components/tours/BusesCard.vue';
 import FlightsCard from '@/components/tours/FlightsCard.vue';
 import StaysCard from '@/components/tours/StaysCard.vue';
+import ExportMenu from '@/components/ExportMenu.vue';
 import TourExports from '@/components/tours/TourExports.vue';
+import TourJourney from '@/components/tours/TourJourney.vue';
+import TourKpis from '@/components/tours/TourKpis.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDate, formatMoney } from '@/lib/format';
 import { show as showPerson } from '@/routes/persons';
 import { show as showRegistration } from '@/routes/registrations';
-import { badges as badgeReport } from '@/routes/reports/tours';
+import {
+    badges as badgeReport,
+    passengers as passengerReport,
+    payments as paymentReport,
+    program as programReport,
+} from '@/routes/reports/tours';
 import { destroy, edit, index } from '@/routes/tours';
 import type { TourBus, VehicleTypeOption } from '@/types/bus';
 import type { TourFlight } from '@/types/flight';
 import type { Option } from '@/types/person';
 import type { HotelOption, TourStay } from '@/types/hotel';
+import { toast } from 'vue-sonner';
+import type { ExportItem } from '@/types/export';
 import { tourStatusVariant } from '@/types/tour';
 import type {
+    JourneyStep,
     RegistrationRow,
     TourGroup,
     TourShowOptions,
+    TourReadinessSummary,
     TourStats,
     TourSummary,
 } from '@/types/tour';
@@ -53,6 +60,9 @@ import type {
 const props = defineProps<{
     tour: TourSummary;
     stats: TourStats;
+    journey: JourneyStep[];
+    // Rehberde null (tur geneli değil kendi grubu).
+    readiness: TourReadinessSummary | null;
     groups: TourGroup[];
     registrations: RegistrationRow[];
     // Oda planı modülü kapalıysa null.
@@ -108,6 +118,63 @@ function badgeUrl(registrationId: string): string {
     return badgeReport.url(props.tour.id, {
         query: { registration: registrationId },
     });
+}
+
+// "Çıktı al" menüsü: turun en sık kullanılan listeleri (hepsi "Çıktılar" sekmesinde).
+const exportItems = computed<ExportItem[]>(() => {
+    if (!reportsEnabled.value) {
+        return [];
+    }
+
+    const items: ExportItem[] = [
+        {
+            title: 'Yolcu listesi',
+            description: props.can.update ? 'Tüm tur' : 'Grubunuz',
+            url: passengerReport.url(props.tour.id),
+        },
+        {
+            title: 'Tur programı',
+            description: 'Tarihler, oteller, uçuşlar',
+            url: programReport.url(props.tour.id),
+        },
+    ];
+
+    if (paymentsEnabled.value && props.can.viewFinance) {
+        items.push({
+            title: 'Ödeme durumu',
+            description: 'Yolcu bazında ödenen / kalan',
+            url: paymentReport.url(props.tour.id),
+        });
+    }
+
+    if (badgesEnabled.value) {
+        items.push({
+            title: 'Yaka kartları',
+            description: 'Tüm tur, A4 sayfaya dizili',
+            url: badgeReport.url(props.tour.id),
+            pdfOnly: true,
+        });
+    }
+
+    return items;
+});
+
+// WhatsApp grubu: davet bağlantısını panoya kopyalar (yolcuya iletmek için).
+async function copyWhatsappLink(): Promise<void> {
+    if (!props.tour.whatsapp_link) {
+        toast.info(
+            'Bu turun WhatsApp grup bağlantısı yok. "Düzenle"den ekleyebilirsiniz.',
+        );
+
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(props.tour.whatsapp_link);
+        toast.success('WhatsApp grubunun davet bağlantısı kopyalandı.');
+    } catch {
+        window.prompt('Bağlantıyı kopyalayın:', props.tour.whatsapp_link);
+    }
 }
 
 // Grup filtresi: 'all' | 'none' | grup id. Adresten açılabilir: ?grup=yok (grupsuzlar) veya ?grup=<id>
@@ -178,8 +245,12 @@ const tab = ref<TabKey>(
         : 'yolcular',
 );
 
-function selectTab(key: TabKey): void {
-    tab.value = key;
+function selectTab(key: TabKey | string): void {
+    if (!tabs.value.some((t) => t.key === key)) {
+        return;
+    }
+
+    tab.value = key as TabKey;
     const url = new URL(window.location.href);
 
     if (key === 'yolcular') {
@@ -288,12 +359,25 @@ const occupancyText = computed(() =>
                     </template>
                 </p>
             </div>
-            <div class="flex gap-2">
-                <Button v-if="can.update" @click="openRegistration(null)">
-                    <UserPlus /> Yolcu ekle
+            <div class="flex flex-wrap gap-2">
+                <Button v-if="badgesEnabled" variant="outline" as-child>
+                    <a :href="badgeReport.url(tour.id)"
+                        ><IdCard /> Yaka kartları</a
+                    >
                 </Button>
+                <Button
+                    v-if="tour.whatsapp_link || can.update"
+                    variant="outline"
+                    @click="copyWhatsappLink"
+                >
+                    <MessageCircle /> WhatsApp grubu
+                </Button>
+                <ExportMenu :items="exportItems" />
                 <Button v-if="can.update" variant="outline" as-child>
                     <Link :href="edit(tour.id)"><Pencil /> Düzenle</Link>
+                </Button>
+                <Button v-if="can.update" @click="openRegistration(null)">
+                    <UserPlus /> Yolcu kaydet
                 </Button>
                 <Button
                     v-if="can.delete"
@@ -306,48 +390,24 @@ const occupancyText = computed(() =>
             </div>
         </div>
 
-        <!-- Özet -->
-        <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-            <Card>
-                <CardHeader>
-                    <CardDescription>Yolcu</CardDescription>
-                    <CardTitle class="text-xl sm:text-2xl">{{
-                        occupancyText
-                    }}</CardTitle>
-                    <p class="text-xs text-muted-foreground">
-                        {{ stats.confirmed }} kesin · {{ stats.pending }} ön
-                        kayıt
-                        <template v-if="stats.cancelled">
-                            · {{ stats.cancelled }} iptal
-                        </template>
-                    </p>
-                </CardHeader>
-            </Card>
-            <Card v-if="can.viewFinance">
-                <CardHeader>
-                    <CardDescription>Toplam tutar</CardDescription>
-                    <CardTitle class="text-xl sm:text-2xl">
-                        {{ formatMoney(stats.total, tour.currency) }}
-                    </CardTitle>
-                </CardHeader>
-            </Card>
-            <Card v-if="can.viewFinance">
-                <CardHeader>
-                    <CardDescription>Tahsil edilen</CardDescription>
-                    <CardTitle class="text-xl text-success sm:text-2xl">
-                        {{ formatMoney(stats.paid, tour.currency) }}
-                    </CardTitle>
-                </CardHeader>
-            </Card>
-            <Card v-if="can.viewFinance">
-                <CardHeader>
-                    <CardDescription>Kalan alacak</CardDescription>
-                    <CardTitle class="text-xl text-warning sm:text-2xl">
-                        {{ formatMoney(stats.balance, tour.currency) }}
-                    </CardTitle>
-                </CardHeader>
-            </Card>
-        </div>
+        <!-- Yolculuk çizelgesi -->
+        <Card class="py-5">
+            <CardContent>
+                <TourJourney :steps="journey" />
+            </CardContent>
+        </Card>
+
+        <!-- Gösterge halkaları (personel); rehber yalnız kendi grubunun sayısını görür -->
+        <TourKpis
+            v-if="readiness"
+            :tour="tour"
+            :stats="stats"
+            :readiness="readiness"
+            @select="selectTab"
+        />
+        <p v-else class="text-sm text-muted-foreground">
+            {{ occupancyText }} yolcu
+        </p>
 
         <!-- Sekmeler -->
         <nav

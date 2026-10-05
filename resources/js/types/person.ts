@@ -10,11 +10,13 @@ export type PersonListItem = {
     full_name: string;
     gender: Gender;
     birth_date: string | null;
-    phone: string | null;
+    masked_phone: string | null;
     masked_national_id: string | null;
     masked_passport_no: string | null;
     passport_expiry_date: string | null;
-    passport_expiring: boolean;
+    // Pasaport no yok / bitiş tarihi yok / 6 aydan az geçerli; sorun yoksa null.
+    passport_issue: string | null;
+    on_tour: boolean;
     has_photo: boolean;
 };
 

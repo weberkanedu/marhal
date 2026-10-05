@@ -141,6 +141,22 @@ defineProps<{
                     />
                 </div>
                 <div class="grid gap-2 sm:col-span-2">
+                    <Label for="whatsapp_link">WhatsApp grup bağlantısı</Label>
+                    <Input
+                        id="whatsapp_link"
+                        name="whatsapp_link"
+                        type="url"
+                        inputmode="url"
+                        :default-value="tour?.whatsapp_link ?? undefined"
+                        placeholder="https://chat.whatsapp.com/..."
+                    />
+                    <p class="text-xs text-muted-foreground">
+                        WhatsApp'ta grup → Davet bağlantısı. Tur sayfasındaki
+                        "WhatsApp grubu" düğmesi bunu kopyalar.
+                    </p>
+                    <InputError :message="errors.whatsapp_link" />
+                </div>
+                <div class="grid gap-2 sm:col-span-2">
                     <Label for="notes">Notlar</Label>
                     <textarea
                         id="notes"

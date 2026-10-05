@@ -6,19 +6,23 @@ use App\Enums\UserRole;
 use App\Models\Bus;
 use App\Models\Flight;
 use App\Models\Group;
+use App\Models\Person;
 use App\Models\SeatAssignment;
 use App\Models\Tour;
 use App\Models\TourHotel;
 use App\Reports\Definitions\BusPassengerList;
 use App\Reports\Definitions\CollectionReport;
 use App\Reports\Definitions\FlightManifest;
+use App\Reports\Definitions\PersonList;
 use App\Reports\Definitions\StayRoomingList;
 use App\Reports\Definitions\StayRoomOccupancy;
 use App\Reports\Definitions\TourBadges;
 use App\Reports\Definitions\TourPassengerList;
 use App\Reports\Definitions\TourPaymentStatus;
+use App\Reports\Definitions\TourProgram;
 use App\Reports\ReportResponder;
 use App\Support\Collections\CollectionFilters;
+use App\Support\Persons\PersonListFilter;
 use App\Support\Tenancy\CurrentTenant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -52,10 +56,7 @@ class ReportController extends Controller
             default => null,
         };
 
-        // Tam kimlik / pasaport no sadece maskesiz görme yetkisi olan kullanıcıya.
-        $revealIds = $request->user()?->role->canRevealSensitiveData() ?? false;
-
-        return $this->responder->download($definition->build($tour, $group, $revealIds), $this->format($request));
+        return $this->responder->download($definition->build($tour, $group, $this->revealIds($request)), $this->format($request));
     }
 
     public function tourPayments(Request $request, Tour $tour, TourPaymentStatus $definition): Response
@@ -63,6 +64,42 @@ class ReportController extends Controller
         Gate::authorize('viewFinance', $tour);
 
         return $this->responder->download($definition->build($tour), $this->format($request));
+    }
+
+    /**
+     * Tur programı (tarih, şehir, otel, uçuş); rehber de alabilir.
+     */
+    public function tourProgram(Request $request, Tour $tour, TourProgram $definition): Response
+    {
+        Gate::authorize('view', $tour);
+
+        return $this->responder->download($definition->build($tour, $this->currentTenant->get()), $this->format($request));
+    }
+
+    /**
+     * Yolcular ekranı: tüm yolcular (ekrandaki süzgeçle).
+     */
+    public function persons(Request $request, PersonList $definition): Response
+    {
+        Gate::authorize('viewAny', Person::class);
+
+        return $this->responder->download(
+            $definition->build($this->personFilter($request), $this->revealIds($request)),
+            $this->format($request),
+        );
+    }
+
+    /**
+     * Pasaport kontrol listesi: pasaport no / bitiş tarihi / 6 ay kuralı, sorunlular üstte.
+     */
+    public function passports(Request $request, PersonList $definition): Response
+    {
+        Gate::authorize('viewAny', Person::class);
+
+        return $this->responder->download(
+            $definition->passports($this->personFilter($request), $this->revealIds($request)),
+            $this->format($request),
+        );
     }
 
     public function collections(Request $request, CollectionReport $definition): Response
@@ -168,6 +205,19 @@ class ReportController extends Controller
             'tourDates' => $tour->start_date->format('d.m.Y').' – '.$tour->end_date->format('d.m.Y'),
             'emergencyPhone' => $this->currentTenant->get()?->phone,
         ]);
+    }
+
+    /**
+     * Tam kimlik / pasaport no sadece maskesiz görme yetkisi olan kullanıcıya.
+     */
+    private function revealIds(Request $request): bool
+    {
+        return $request->user()?->role->canRevealSensitiveData() ?? false;
+    }
+
+    private function personFilter(Request $request): ?PersonListFilter
+    {
+        return PersonListFilter::tryFrom((string) $request->query('filtre', ''));
     }
 
     private function format(Request $request): string

@@ -1,3 +1,4 @@
+import type { DashboardTour } from '@/types/dashboard';
 import type { Gender, Option } from '@/types/person';
 
 export type TourStatus =
@@ -20,6 +21,7 @@ export type TourSummary = {
     capacity: number | null;
     default_price: string | null;
     currency: string;
+    whatsapp_link: string | null;
     notes?: string | null;
 };
 
@@ -100,3 +102,25 @@ export const tourStatusVariant: Record<
     tamamlandi: 'secondary',
     iptal: 'destructive',
 };
+
+/** Yolculuk çizelgesinin bir adımı (App\Support\Tours\TourJourney). */
+export type JourneyStep = {
+    key: string;
+    kind: 'prep' | 'outbound' | 'stay' | 'return';
+    title: string;
+    detail: string | null;
+    start: string;
+    end: string;
+    state: 'done' | 'now' | 'next';
+};
+
+/** Tur sayfasındaki hazırlık özeti (ana paneldeki tur satırıyla aynı hesap). */
+export type TourReadinessSummary = Pick<
+    DashboardTour,
+    | 'collection'
+    | 'registered'
+    | 'pending'
+    | 'ungrouped'
+    | 'passport_issues'
+    | 'checks'
+>;

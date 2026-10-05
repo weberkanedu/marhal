@@ -167,7 +167,7 @@ watch(search, (value) => runSearch(value));
                                         <span
                                             class="ml-2 text-muted-foreground"
                                         >
-                                            {{ person.phone }}
+                                            {{ person.masked_phone }}
                                         </span>
                                     </span>
                                     <span
