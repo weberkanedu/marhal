@@ -161,7 +161,20 @@ Yerleşim bilgisi (otel / oda / koltuk) yaka kartı, tur tablosu ve aile ekranı
       Çıktı: **Koltuk tercih listesi** (`FlightSeatPreferences`) — havayoluna gönderilir, kesin koltuğu havayolu verir.
       Uçakta otomatik yerleştirme yok (havayolu tercihi; istenirse eklenir).
       Migration: `add_body_and_front_seats_to_vehicles`, `create_aircraft_types_and_flight_seats`. Demo paketi `tasarim-3-arac-ucak`.
-4. ⏳ Otel kat planı (`hotels.floors_count`, `tour_hotel_floors`, `rooms.near_elevator`) + ihtiyaç profili (`person_needs`, şifreli, açık rıza).
+4. ✅ İhtiyaç profili + otel kat planı (2026-10-05). **Kullanıcı kararları**: ihtiyaçları personel notlarıyla görür, rehber
+   yalnız kendi grubunda adını; ayrı açık rıza (onay + tarih + giren kişi), rıza geri alınınca ihtiyaçlar silinir;
+   türler: hareket, sağlık, beslenme, diğer (acente ekleyip kapatabilir — Acente ayarları → İhtiyaç türleri).
+   - Veri: `need_types` (acenteye kopyalanan varsayılanlar `DefaultNeedTypes`; yeni acentede `CreateTenant` ekler),
+     `person_needs` (kişi başına tek satır, hangi ihtiyaç + not **birlikte şifreli** `encrypted:array`; erişim kaydına içerik yazılmaz),
+     `persons.health_consent_at/_by`. Okumanın tek yolu `App\Support\Needs\NeedProfiles`; kurallar `NeedEffect`e bakar.
+   - Kurallar: araçta hareket güçlüğü → ön bölge (otomatik yerleştirmede öne, değilse uyarı); uçakta acil çıkış uyarısı;
+     otelde asansöre yakın oda (otomatik dağıtmada önce ve oraya; uzak odada uyarı). "Karışık oda" zaten engelleniyor (AssignRoom).
+   - Ekran: yolcu sayfası "İhtiyaçlar" kartı, Yolcular "Özel ihtiyaç" süzgeci, tur / oda / koltuk ekranlarında ihtiyaç adları.
+   - Otel: `hotels.floors_count`, `tour_hotels.used_floors` (plandaki `hotel_floors` tablosu yerine konaklamada liste — her tur
+     farklı kat alabilir), `rooms.near_elevator`. Oda planında kat kulesi + "Oteli tanımla"; oda eklerken "ilk N oda asansöre yakın".
+   - Çıktılar: uçuş **Özel yardım listesi** (WCHR/WCHS/DEAF/BLND/SPML), otel **Kat planı** ve **İhtiyaç listesi** (sağlık verisi: personel).
+   Migration: `create_needs_tables`, `add_floors_and_elevator_to_hotels`. Demo paketi `tasarim-4-ihtiyac-kat`.
+   Not: SQLite tırnaklı bilinmeyen sütunu metin sayıyor — sütun adı içeren testler mutlaka `composer test:pgsql` ile de koşmalı.
 5. ⏳ Yaka kartı yenileme (`badge_settings`, `groups.color`).
 6. ⏳ Hazırlık takibi (`readiness_items`, `readiness_checks`).
 7. ⏳ Aile ekranı + fotoğrafla ön kayıt (MRZ okuma servisi için önce seçenek / maliyet).

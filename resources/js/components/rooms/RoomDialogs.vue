@@ -129,6 +129,22 @@ function removeRoom(): void {
                         <InputError :message="errors.kind" />
                     </div>
                 </div>
+                <div class="grid gap-2">
+                    <Label for="room-elevator">Asansöre yakın oda sayısı</Label>
+                    <Input
+                        id="room-elevator"
+                        name="near_elevator"
+                        type="number"
+                        min="0"
+                        max="100"
+                        :default-value="0"
+                        class="w-32"
+                    />
+                    <p class="text-xs text-muted-foreground">
+                        İlk eklenen odalar (ör. 501, 502) asansöre yakın
+                        işaretlenir; hareket güçlüğü olanlar buraya önerilir.
+                    </p>
+                </div>
                 <p class="text-xs text-muted-foreground">
                     Tür sonradan değiştirilebilir; otomatik dağıtma boş odaların
                     türünü yerleşenlere göre ayarlar.
@@ -229,6 +245,17 @@ function removeRoom(): void {
                     />
                     <InputError :message="errors.notes" />
                 </div>
+                <label class="flex items-center gap-2 text-sm">
+                    <input type="hidden" name="near_elevator" value="0" />
+                    <input
+                        type="checkbox"
+                        name="near_elevator"
+                        value="1"
+                        class="size-4 accent-(--primary)"
+                        :checked="editing.near_elevator"
+                    />
+                    Asansöre yakın
+                </label>
                 <DialogFooter class="sm:justify-between">
                     <Button
                         type="button"

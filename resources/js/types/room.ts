@@ -9,6 +9,8 @@ export type RoomPassenger = {
     group_name: string | null;
     room_type: string | null;
     room_type_label: string | null;
+    // İhtiyaç adları (tekerlekli sandalye, diyabet …).
+    needs?: string[];
 };
 
 export type RoomOccupant = Omit<RoomPassenger, 'registration_id' | 'gender'> & {
@@ -26,6 +28,7 @@ export type PlanRoom = {
     capacity: number;
     kind: RoomKind;
     notes: string | null;
+    near_elevator: boolean;
     occupants: RoomOccupant[];
 };
 
@@ -47,6 +50,9 @@ export type PlanStay = {
     nights: number;
     groups: string[];
     tour: { id: string; name: string };
+    // Binanın kat sayısı (otel geneli) ve bu konaklamada bize verilen katlar.
+    floors_count: number | null;
+    used_floors: number[];
 };
 
 export type PlanStats = {

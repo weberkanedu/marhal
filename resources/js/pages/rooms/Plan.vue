@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     BedDouble,
+    Building,
     Copy,
     Plus,
     Search,
@@ -14,10 +15,12 @@ import { computed, ref } from 'vue';
 import { toast } from 'vue-sonner';
 import RoomAssignmentController from '@/actions/App/Http/Controllers/RoomAssignmentController';
 import RoomPlanController from '@/actions/App/Http/Controllers/RoomPlanController';
-import ExportButtons from '@/components/ExportButtons.vue';
+import ExportMenu from '@/components/ExportMenu.vue';
 import CopyPlanDialog from '@/components/rooms/CopyPlanDialog.vue';
+import HotelTower from '@/components/rooms/HotelTower.vue';
 import RoomCard from '@/components/rooms/RoomCard.vue';
 import RoomDialogs from '@/components/rooms/RoomDialogs.vue';
+import StayFloorsDialog from '@/components/rooms/StayFloorsDialog.vue';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -36,7 +39,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { formatDate } from '@/lib/format';
-import { roomOccupancy, roomingList } from '@/routes/reports/stays';
+import {
+    floorPlan,
+    needs as needsReport,
+    roomOccupancy,
+    roomingList,
+} from '@/routes/reports/stays';
+import type { ExportItem } from '@/types/export';
 import { index as toursIndex, show as showTour } from '@/routes/tours';
 import type {
     AutoAssignPreview,
@@ -66,6 +75,62 @@ defineOptions({
         breadcrumbs: [{ title: 'Turlar', href: toursIndex() }],
     },
 });
+
+// Kat planı: kuledeki seçili kat odaları süzer.
+const floorsOpen = ref(false);
+const selectedFloor = ref<number | null>(null);
+const roomFloors = computed(() => [
+    ...new Set(
+        props.rooms
+            .map((r) => Number(r.floor))
+            .filter((f) => Number.isInteger(f) && f > 0),
+    ),
+]);
+const floorOccupancy = computed(() =>
+    props.rooms.reduce<Record<string, { occupied: number; beds: number }>>(
+        (acc, room) => {
+            const key = String(room.floor ?? '');
+            acc[key] ??= { occupied: 0, beds: 0 };
+            acc[key].occupied += room.occupants.length;
+            acc[key].beds += room.capacity;
+
+            return acc;
+        },
+        {},
+    ),
+);
+const visibleRooms = computed(() =>
+    selectedFloor.value === null
+        ? props.rooms
+        : props.rooms.filter((r) => Number(r.floor) === selectedFloor.value),
+);
+
+const exportItems = computed<ExportItem[]>(() =>
+    props.can.reports
+        ? [
+              {
+                  title: 'Oda listesi',
+                  description: 'Otele verilecek (rooming list)',
+                  url: roomingList.url(props.stay.id),
+              },
+              {
+                  title: 'Kat planı',
+                  description: 'Kat kat odalar ve kalanlar',
+                  url: floorPlan.url(props.stay.id),
+              },
+              {
+                  title: 'İhtiyaç listesi',
+                  description: 'Özel ihtiyacı olanlar ve odaları',
+                  url: needsReport.url(props.stay.id),
+              },
+              {
+                  title: 'Doluluk özeti',
+                  description: 'Oda türü ve boş yatak',
+                  url: roomOccupancy.url(props.stay.id),
+              },
+          ]
+        : [],
+);
 
 const kindLabel = (value: string) =>
     props.options.kinds.find((k) => k.value === value)?.label ?? value;
@@ -217,39 +282,31 @@ const free = computed(() => props.stats.beds - props.stats.occupied);
                     </template>
                 </p>
             </div>
-            <div v-if="can.update" class="flex flex-wrap gap-2">
-                <Button variant="outline" @click="addOpen = true">
-                    <Plus /> Oda ekle
-                </Button>
-                <Button
-                    v-if="copySources.length"
-                    variant="outline"
-                    :disabled="rooms.length === 0 || stats.unassigned === 0"
-                    @click="copyOpen = true"
-                >
-                    <Copy /> Başka otelden kopyala
-                </Button>
-                <Button
-                    :disabled="rooms.length === 0 || stats.unassigned === 0"
-                    @click="openAutoAssign"
-                >
-                    <Wand2 /> Otomatik dağıt
-                </Button>
+            <div class="flex flex-wrap gap-2">
+                <ExportMenu :items="exportItems" />
+                <template v-if="can.update">
+                    <Button variant="outline" @click="floorsOpen = true">
+                        <Building /> Oteli tanımla
+                    </Button>
+                    <Button variant="outline" @click="addOpen = true">
+                        <Plus /> Oda ekle
+                    </Button>
+                    <Button
+                        v-if="copySources.length"
+                        variant="outline"
+                        :disabled="rooms.length === 0 || stats.unassigned === 0"
+                        @click="copyOpen = true"
+                    >
+                        <Copy /> Başka otelden kopyala
+                    </Button>
+                    <Button
+                        :disabled="rooms.length === 0 || stats.unassigned === 0"
+                        @click="openAutoAssign"
+                    >
+                        <Wand2 /> Otomatik dağıt
+                    </Button>
+                </template>
             </div>
-        </div>
-
-        <div
-            v-if="can.reports"
-            class="flex flex-wrap items-center gap-x-6 gap-y-2"
-        >
-            <ExportButtons
-                :url="roomingList.url(stay.id)"
-                label="Otel oda listesi"
-            />
-            <ExportButtons
-                :url="roomOccupancy.url(stay.id)"
-                label="Doluluk özeti"
-            />
         </div>
 
         <!-- Özet -->
@@ -373,6 +430,17 @@ const free = computed(() => props.stats.beds - props.stats.occupied);
                                     }}
                                 </div>
                                 <div
+                                    v-if="p.needs?.length"
+                                    class="mt-0.5 flex flex-wrap gap-1"
+                                >
+                                    <span
+                                        v-for="need in p.needs"
+                                        :key="need"
+                                        class="rounded-full bg-accent px-1.5 text-[10.5px] font-semibold text-accent-foreground"
+                                        >{{ need }}</span
+                                    >
+                                </div>
+                                <div
                                     v-for="f in p.family"
                                     :key="f.name"
                                     class="text-xs text-primary"
@@ -439,24 +507,72 @@ const free = computed(() => props.stats.beds - props.stats.occupied);
                         <Plus /> Oda ekle
                     </Button>
                 </div>
-                <div v-else class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    <RoomCard
-                        v-for="room in rooms"
-                        :key="room.id"
-                        :room="room"
-                        :kind-label="kindLabel(room.kind)"
-                        :can-update="can.update"
-                        :selecting="selected !== null"
-                        :selected-id="selected?.registration_id ?? null"
-                        @place="place"
-                        @pick="select"
-                        @remove="remove"
-                        @edit="editRoom"
+                <div
+                    v-else
+                    class="flex flex-col gap-3 md:flex-row md:items-start"
+                >
+                    <HotelTower
+                        v-if="stay.floors_count"
+                        :floors-count="stay.floors_count"
+                        :used-floors="stay.used_floors"
+                        :occupancy="floorOccupancy"
+                        :selected="selectedFloor"
+                        @select="selectedFloor = $event"
                     />
+                    <div class="min-w-0 flex-1">
+                        <p
+                            v-if="selectedFloor !== null"
+                            class="mb-2 flex items-center gap-2 text-sm"
+                        >
+                            <b>{{ selectedFloor }}. kat</b>
+                            <span class="text-muted-foreground">
+                                {{ visibleRooms.length }} oda
+                            </span>
+                            <button
+                                type="button"
+                                class="text-xs underline"
+                                @click="selectedFloor = null"
+                            >
+                                Bütün katlar
+                            </button>
+                        </p>
+                        <p
+                            v-else-if="!stay.floors_count && can.update"
+                            class="mb-2 text-xs text-muted-foreground"
+                        >
+                            Kat planını görmek için Oteli tanımla düğmesinden
+                            binanın kat sayısını ve bize verilen katları girin.
+                        </p>
+                        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                            <RoomCard
+                                v-for="room in visibleRooms"
+                                :key="room.id"
+                                :room="room"
+                                :kind-label="kindLabel(room.kind)"
+                                :can-update="can.update"
+                                :selecting="selected !== null"
+                                :selected-id="selected?.registration_id ?? null"
+                                @place="place"
+                                @pick="select"
+                                @remove="remove"
+                                @edit="editRoom"
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <StayFloorsDialog
+        v-if="can.update"
+        v-model:open="floorsOpen"
+        :stay-id="stay.id"
+        :hotel-name="stay.hotel_name"
+        :floors-count="stay.floors_count"
+        :used-floors="stay.used_floors"
+        :room-floors="roomFloors"
+    />
 
     <RoomDialogs
         v-if="can.update"

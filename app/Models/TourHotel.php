@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property Carbon $check_in
  * @property Carbon $check_out
  * @property string|null $notes
+ * @property list<int>|null $used_floors
  * @property-read int|null $rooms_count
  * @property-read int|null $room_assignments_count
  * @property-read string|int|null $rooms_sum_capacity
@@ -42,6 +43,7 @@ class TourHotel extends Model
         return [
             'check_in' => 'date',
             'check_out' => 'date',
+            'used_floors' => 'array',
         ];
     }
 

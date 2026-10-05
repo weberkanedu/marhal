@@ -71,7 +71,10 @@ class PersonNeedsTest extends TestCase
         $this->assertSame([['type_id' => $wheelchair->id, 'note' => 'Kendi sandalyesi var']], PersonNeed::sole()->items);
 
         // Erişim kaydına içerik yazılmaz.
-        $this->assertStringNotContainsString('sandalye', (string) DB::table('audit_logs')->where('auditable_type', PersonNeed::class)->value('changes'));
+        $log = (string) DB::table('audit_logs')->where('subject_type', PersonNeed::class)->value('changes');
+        $this->assertNotSame('', $log, 'Değişiklik kaydı yazılır');
+        $this->assertStringNotContainsString('sandalye', $log);
+        $this->assertStringNotContainsString($wheelchair->id, $log);
 
         // Rıza geri alınınca ihtiyaçlar silinir.
         $this->actingAs($this->staff)->put(route('persons.health-consent', $this->person), ['granted' => false]);

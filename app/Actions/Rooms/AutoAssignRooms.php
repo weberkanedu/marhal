@@ -2,12 +2,14 @@
 
 namespace App\Actions\Rooms;
 
+use App\Enums\NeedEffect;
 use App\Enums\RoomKind;
 use App\Models\Registration;
 use App\Models\Room;
 use App\Models\RoomAssignment;
 use App\Models\TourHotel;
 use App\Support\FamilyUnits;
+use App\Support\Needs\NeedProfiles;
 use App\Support\TurkishText;
 use Illuminate\Support\Facades\DB;
 
@@ -17,9 +19,11 @@ use Illuminate\Support\Facades\DB;
  *
  * Öncelikler:
  *  1. Aileler (yakınlık bağıyla bağlı yolcular) birlikte: karma aileler aile odasına, tek cinsiyetli aileler aynı odaya.
- *  2. Ailesinden biri zaten bir odadaysa, yer varsa onun yanına.
- *  3. Ödenen oda tipiyle aynı büyüklükte odalar; önce yarı dolu odalar tamamlanır.
- *  4. Boş odanın türü (erkek / kadın / aile) yerleşen kişilere göre ayarlanır; önceden aile olarak
+ *  2. Asansöre yakın odalar işaretlenmişse hareket güçlüğü olanlar (ve aileleri) önce ve oraya; diğerleri
+ *     o odalara ancak başka yer kalmazsa (yarı dolu oda tamamlamaktan da önce gelir).
+ *  3. Ailesinden biri zaten bir odadaysa, yer varsa onun yanına.
+ *  4. Ödenen oda tipiyle aynı büyüklükte odalar; önce yarı dolu odalar tamamlanır.
+ *  5. Boş odanın türü (erkek / kadın / aile) yerleşen kişilere göre ayarlanır; önceden aile olarak
  *     ayrılmış boş odalar en son kullanılır.
  */
 class AutoAssignRooms
@@ -30,9 +34,15 @@ class AutoAssignRooms
     /** @var array<string, list<string>> */
     private array $links = [];
 
+    /** @var array<string, true> hareket güçlüğü olan person_id'ler */
+    private array $mobility = [];
+
+    private bool $elevatorKnown = false;
+
     public function __construct(
         private readonly StayOccupancy $occupancy,
         private readonly AssignRoom $assign,
+        private readonly NeedProfiles $needs,
     ) {}
 
     /**
@@ -55,6 +65,11 @@ class AutoAssignRooms
         $occupantIds = collect($this->rooms)->flatMap(fn (array $r) => $r['persons']);
         // toBase: boş Eloquent koleksiyonuna metin eklenirken hata vermesin (herkes yerleşmişken).
         $this->links = $this->occupancy->familyLinks($pending->toBase()->map(fn (Registration $r) => $r->person_id)->merge($occupantIds));
+        $this->mobility = array_map(fn () => true, array_filter(
+            $this->needs->forPersons($pending->pluck('person_id')),
+            fn (array $items) => NeedProfiles::has($items, NeedEffect::Mobility),
+        ));
+        $this->elevatorKnown = collect($this->rooms)->contains(fn (array $r) => $r['room']->near_elevator);
 
         $plan = ['placements' => [], 'kinds' => [], 'unplaced' => []];
 
@@ -146,7 +161,10 @@ class AutoAssignRooms
     {
         $units = FamilyUnits::build($pending, $this->links);
 
-        usort($units, fn (array $a, array $b) => FamilyUnits::isMixedGender($b) <=> FamilyUnits::isMixedGender($a) ?: count($b) <=> count($a));
+        // Hareket güçlüğü olan aileler önce (asansöre yakın odalar dolmadan), sonra karma ve kalabalık aileler.
+        usort($units, fn (array $a, array $b) => $this->needsElevator($b) <=> $this->needsElevator($a)
+            ?: FamilyUnits::isMixedGender($b) <=> FamilyUnits::isMixedGender($a)
+            ?: count($b) <=> count($a));
 
         return $units;
     }
@@ -179,7 +197,10 @@ class AutoAssignRooms
                 continue;
             }
 
-            $score = [$tier, abs($capacity - $desired), $room['index']];
+            // Asansöre yakın odalar hareket güçlüğü olanlara; diğerleri için en sona bırakılır.
+            // Ailesinin yanına giden yolcu için asansör tercihi aranmaz.
+            $elevator = $this->elevatorKnown && ! $linked ? ($room['room']->near_elevator === $this->needsElevator($unit) ? 0 : 1) : 0;
+            $score = [$elevator, $tier, abs($capacity - $desired), $room['index']];
 
             if ($bestScore === null || $score < $bestScore) {
                 $best = $key;
@@ -188,6 +209,14 @@ class AutoAssignRooms
         }
 
         return $best;
+    }
+
+    /**
+     * @param  list<Registration>  $unit
+     */
+    private function needsElevator(array $unit): bool
+    {
+        return collect($unit)->contains(fn (Registration $r) => isset($this->mobility[$r->person_id]));
     }
 
     /**

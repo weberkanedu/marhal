@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $address
  * @property string|null $phone
  * @property int|null $stars
+ * @property int|null $floors_count
  * @property string|null $notes
  */
 class Hotel extends Model
@@ -35,6 +36,7 @@ class Hotel extends Model
         return [
             'city' => HotelCity::class,
             'stars' => 'integer',
+            'floors_count' => 'integer',
         ];
     }
 

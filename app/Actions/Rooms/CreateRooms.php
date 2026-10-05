@@ -10,14 +10,14 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Toplu oda ekler: "5. kat, 501'den başlayarak 10 oda, 4 kişilik, erkek" → 501…510.
- * Başlangıç numarası sayı değilse (ör. "A1") tek oda eklenir.
+ * Başlangıç numarası sayı değilse (ör. "A1") tek oda eklenir. İstenirse ilk N oda "asansöre yakın" işaretlenir.
  */
 class CreateRooms
 {
     /**
      * @return list<Room>
      */
-    public function handle(TourHotel $stay, string $startNo, int $count, int $capacity, RoomKind $kind, ?string $floor = null): array
+    public function handle(TourHotel $stay, string $startNo, int $count, int $capacity, RoomKind $kind, ?string $floor = null, int $nearElevator = 0): array
     {
         $numbers = ctype_digit($startNo)
             ? array_map(fn (int $i) => (string) ((int) $startNo + $i), range(0, $count - 1))
@@ -32,13 +32,16 @@ class CreateRooms
         }
 
         return DB::transaction(fn () => array_map(
-            fn (string $no) => $stay->rooms()->create([
+            fn (string $no, int $i) => $stay->rooms()->create([
                 'room_no' => $no,
                 'floor' => $floor,
                 'capacity' => $capacity,
                 'kind' => $kind,
+                // İlk N oda asansöre yakın (genelde koridorun başı).
+                'near_elevator' => $i < $nearElevator,
             ]),
             $numbers,
+            array_keys($numbers),
         ));
     }
 }

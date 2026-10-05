@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AlertTriangle, Pencil, X } from '@lucide/vue';
+import { AlertTriangle, ArrowUpDown, Pencil, X } from '@lucide/vue';
 import { computed } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { roomKindVariant } from '@/types/room';
@@ -58,6 +58,13 @@ const genderShort = (gender: string | null) =>
                 <Badge :variant="roomKindVariant[room.kind]">
                     {{ kindLabel }}
                 </Badge>
+                <span
+                    v-if="room.near_elevator"
+                    class="flex items-center gap-0.5 text-[11px] text-muted-foreground"
+                    title="Asansöre yakın"
+                >
+                    <ArrowUpDown class="size-3" /> Asansör
+                </span>
             </div>
             <div class="flex items-center gap-1">
                 <span
@@ -90,7 +97,14 @@ const genderShort = (gender: string | null) =>
                 }"
             >
                 <span
-                    class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold"
+                    class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
+                    :class="
+                        occupant.gender === 'kadin'
+                            ? 'bg-women/20 text-women'
+                            : occupant.gender === 'erkek'
+                              ? 'bg-men/20 text-men'
+                              : 'bg-muted'
+                    "
                     :title="occupant.gender === 'erkek' ? 'Erkek' : 'Kadın'"
                 >
                     {{ genderShort(occupant.gender) }}
@@ -114,6 +128,17 @@ const genderShort = (gender: string | null) =>
                                 .filter(Boolean)
                                 .join(' · ')
                         }}
+                    </div>
+                    <div
+                        v-if="occupant.needs?.length"
+                        class="mt-0.5 flex flex-wrap gap-1"
+                    >
+                        <span
+                            v-for="need in occupant.needs"
+                            :key="need"
+                            class="rounded-full bg-accent px-1.5 text-[10.5px] font-semibold text-accent-foreground"
+                            >{{ need }}</span
+                        >
                     </div>
                     <div
                         v-for="warning in occupant.warnings"

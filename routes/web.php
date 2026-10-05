@@ -88,6 +88,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
 
         // Oda planı
         Route::get('stays/{stay}/rooms', [RoomPlanController::class, 'show'])->name('stays.room-plan');
+        Route::put('stays/{stay}/floors', [RoomPlanController::class, 'floors'])->name('stays.floors');
         Route::get('stays/{stay}/auto-assign', [RoomPlanController::class, 'preview'])->name('stays.auto-assign-preview');
         Route::post('stays/{stay}/auto-assign', [RoomPlanController::class, 'apply'])->name('stays.auto-assign');
         Route::get('stays/{stay}/copy-preview', [RoomPlanController::class, 'copyPreview'])->name('stays.copy-preview');
@@ -161,6 +162,8 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::middleware('feature:room_planning')->group(function () {
             Route::get('stays/{stay}/rooming-list', [ReportController::class, 'roomingList'])->name('stays.rooming-list');
             Route::get('stays/{stay}/room-occupancy', [ReportController::class, 'roomOccupancy'])->name('stays.room-occupancy');
+            Route::get('stays/{stay}/floor-plan', [ReportController::class, 'floorPlan'])->name('stays.floor-plan');
+            Route::get('stays/{stay}/needs', [ReportController::class, 'stayNeeds'])->name('stays.needs');
         });
         Route::middleware('feature:bus_planning')->group(function () {
             Route::get('buses/{bus}/passengers', [ReportController::class, 'busPassengers'])->name('buses.passengers');

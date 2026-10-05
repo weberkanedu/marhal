@@ -28,9 +28,10 @@ class RoomController extends Controller
             'floor' => ['nullable', 'string', 'max:20'],
             'capacity' => ['required', 'integer', 'min:1', 'max:10'],
             'kind' => ['required', Rule::enum(RoomKind::class)],
-        ], [], $this->attributes() + ['start_no' => 'oda numarası', 'count' => 'oda sayısı']);
+            'near_elevator' => ['nullable', 'integer', 'min:0', 'max:100'],
+        ], [], $this->attributes() + ['start_no' => 'oda numarası', 'count' => 'oda sayısı', 'near_elevator' => 'asansöre yakın oda sayısı']);
 
-        $rooms = $create->handle($stay, $data['start_no'], (int) $data['count'], (int) $data['capacity'], RoomKind::from($data['kind']), $data['floor'] ?? null);
+        $rooms = $create->handle($stay, $data['start_no'], (int) $data['count'], (int) $data['capacity'], RoomKind::from($data['kind']), $data['floor'] ?? null, (int) ($data['near_elevator'] ?? 0));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => count($rooms).' oda eklendi.']);
 
@@ -47,6 +48,7 @@ class RoomController extends Controller
             'capacity' => ['required', 'integer', 'min:1', 'max:10'],
             'kind' => ['required', Rule::enum(RoomKind::class)],
             'notes' => ['nullable', 'string', 'max:500'],
+            'near_elevator' => ['sometimes', 'boolean'],
         ], ['room_no.unique' => 'Bu otelde aynı numaralı oda zaten var.'], $this->attributes());
 
         $update->handle($room, $data);

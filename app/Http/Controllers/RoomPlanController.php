@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Actions\Rooms\AutoAssignRooms;
 use App\Actions\Rooms\CopyRoomPlan;
+use App\Actions\Rooms\DefineStayFloors;
 use App\Actions\Rooms\StayOccupancy;
+use App\Enums\NeedEffect;
 use App\Enums\RegistrationStatus;
 use App\Enums\RoomKind;
 use App\Enums\RoomType;
@@ -15,6 +17,7 @@ use App\Models\Room;
 use App\Models\RoomAssignment;
 use App\Models\TourHotel;
 use App\Models\User;
+use App\Support\Needs\NeedProfiles;
 use App\Support\TurkishText;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -30,7 +33,18 @@ use Inertia\Response;
  */
 class RoomPlanController extends Controller
 {
-    public function __construct(private readonly StayOccupancy $occupancy) {}
+    /** @var array<string, list<string>> person_id → ihtiyaç adları */
+    private array $needLabels = [];
+
+    /** @var array<string, true> hareket güçlüğü olan person_id'ler */
+    private array $mobility = [];
+
+    private bool $elevatorKnown = false;
+
+    public function __construct(
+        private readonly StayOccupancy $occupancy,
+        private readonly NeedProfiles $needs,
+    ) {}
 
     public function show(Request $request, TourHotel $stay): Response
     {
@@ -55,6 +69,13 @@ class RoomPlanController extends Controller
             $unassigned = $unassigned->filter(fn (Registration $r) => in_array($r->group_id, $guideGroups, true));
         }
 
+        // İhtiyaçlar (ad + hareket güçlüğü) ve "asansöre yakın" bilgisinin girilip girilmediği.
+        $profiles = $this->needs->forPersons($rooms->flatMap(fn (Room $room) => $room->assignments->map(fn (RoomAssignment $a) => $a->registration->person_id))
+            ->merge($unassigned->pluck('person_id')));
+        $this->needLabels = NeedProfiles::labels($profiles);
+        $this->mobility = array_map(fn () => true, array_filter($profiles, fn (array $items) => NeedProfiles::has($items, NeedEffect::Mobility)));
+        $this->elevatorKnown = $rooms->contains(fn (Room $room) => $room->near_elevator);
+
         $roomNoByRegistration = $rooms->flatMap(fn (Room $room) => $room->assignments->mapWithKeys(fn (RoomAssignment $a) => [$a->registration_id => $room->room_no]));
 
         return Inertia::render('rooms/Plan', [
@@ -67,6 +88,8 @@ class RoomPlanController extends Controller
                 'nights' => $stay->nights(),
                 'groups' => $stay->groups->pluck('name')->values(),
                 'tour' => ['id' => $stay->tour->id, 'name' => $stay->tour->name],
+                'floors_count' => $stay->hotel->floors_count,
+                'used_floors' => array_map('intval', $stay->used_floors ?? []),
             ],
             'rooms' => $rooms->map(fn (Room $room) => [
                 'id' => $room->id,
@@ -75,6 +98,7 @@ class RoomPlanController extends Controller
                 'capacity' => $room->capacity,
                 'kind' => $room->kind->value,
                 'notes' => $room->notes,
+                'near_elevator' => $room->near_elevator,
                 'occupants' => $room->assignments
                     ->sortBy(fn (RoomAssignment $a) => $a->created_at)
                     ->values()
@@ -118,6 +142,26 @@ class RoomPlanController extends Controller
                 'reports' => $canUpdate,
             ],
         ]);
+    }
+
+    /**
+     * "Oteli tanımla": binanın kat sayısı ve bu konaklamada kullandığımız katlar.
+     */
+    public function floors(Request $request, TourHotel $stay, DefineStayFloors $define): RedirectResponse
+    {
+        Gate::authorize('update', $stay->tour);
+
+        $data = $request->validate([
+            'floors_count' => ['required', 'integer', 'min:1', 'max:150'],
+            'used_floors' => ['array', 'max:150'],
+            'used_floors.*' => ['integer', 'min:0', 'max:150'],
+        ], [], ['floors_count' => 'kat sayısı', 'used_floors' => 'kullandığımız katlar']);
+
+        $define->handle($stay, (int) $data['floors_count'], $data['used_floors'] ?? []);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Otel kat bilgisi kaydedildi.']);
+
+        return back();
     }
 
     /**
@@ -249,6 +293,7 @@ class RoomPlanController extends Controller
             'group_name' => $registration->group?->name,
             'room_type' => $registration->room_type?->value,
             'room_type_label' => $registration->room_type?->label(),
+            'needs' => $this->needLabels[$registration->person_id] ?? [],
         ];
     }
 
@@ -268,6 +313,11 @@ class RoomPlanController extends Controller
 
         if (! in_array($registration->group_id, $stayGroupIds, true)) {
             $warnings[] = 'Grubu bu otelde değil (istisna)';
+        }
+
+        // Asansöre yakın odalar işaretlenmişse: hareket güçlüğü olan yolcu uzak odada olmasın.
+        if ($this->elevatorKnown && isset($this->mobility[$registration->person_id]) && ! $room->near_elevator) {
+            $warnings[] = 'Hareket güçlüğü var; asansöre uzak oda';
         }
 
         return $warnings;

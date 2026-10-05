@@ -17,6 +17,7 @@ use App\Reports\Definitions\FlightManifest;
 use App\Reports\Definitions\FlightSeatPreferences;
 use App\Reports\Definitions\FlightSpecialAssistance;
 use App\Reports\Definitions\PersonList;
+use App\Reports\Definitions\StayFloorReports;
 use App\Reports\Definitions\StayRoomingList;
 use App\Reports\Definitions\StayRoomOccupancy;
 use App\Reports\Definitions\TourBadges;
@@ -128,6 +129,23 @@ class ReportController extends Controller
     /**
      * Otele verilecek oda listesi (rooming list).
      */
+    public function floorPlan(Request $request, TourHotel $stay, StayFloorReports $definition): Response
+    {
+        Gate::authorize('update', $stay->tour);
+
+        return $this->responder->download($definition->floorPlan($stay), $this->format($request));
+    }
+
+    /**
+     * Otelde özel ihtiyacı olan yolcular (sağlık verisi: yalnız personel).
+     */
+    public function stayNeeds(Request $request, TourHotel $stay, StayFloorReports $definition): Response
+    {
+        Gate::authorize('update', $stay->tour);
+
+        return $this->responder->download($definition->needsList($stay), $this->format($request));
+    }
+
     public function roomingList(Request $request, TourHotel $stay, StayRoomingList $definition): Response
     {
         Gate::authorize('update', $stay->tour);

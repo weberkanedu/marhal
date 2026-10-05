@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $capacity
  * @property RoomKind $kind
  * @property string|null $notes
+ * @property bool $near_elevator
  * @property-read TourHotel $stay
  */
 class Room extends Model
@@ -37,6 +38,7 @@ class Room extends Model
         return [
             'kind' => RoomKind::class,
             'capacity' => 'integer',
+            'near_elevator' => 'boolean',
         ];
     }
 

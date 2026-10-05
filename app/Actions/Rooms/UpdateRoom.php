@@ -17,7 +17,7 @@ class UpdateRoom
     public function __construct(private readonly StayOccupancy $occupancy) {}
 
     /**
-     * @param  array{room_no: string, floor?: string|null, capacity: int, kind: string, notes?: string|null}  $data
+     * @param  array{room_no: string, floor?: string|null, capacity: int, kind: string, notes?: string|null, near_elevator?: bool}  $data
      */
     public function handle(Room $room, array $data): Room
     {

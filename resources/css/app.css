@@ -640,6 +640,19 @@ button.kpi-tile:hover {
     }
 }
 
+/* Otel kulesi (components/rooms/HotelTower.vue) */
+.tower > div {
+    border-color: var(--border);
+}
+.tower-roof {
+    background: var(--border);
+}
+.tower-ours {
+    background: color-mix(in srgb, var(--primary) 22%, transparent);
+    color: var(--foreground);
+    box-shadow: inset 3px 0 0 var(--primary);
+}
+
 /* Ön bölge koltuğu (hareket güçlüğü / yaşlı yolcular için önerilen) */
 .seat-front {
     box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--men) 55%, transparent);
