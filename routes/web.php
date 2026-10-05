@@ -12,9 +12,11 @@ use App\Http\Controllers\FlightPassengerController;
 use App\Http\Controllers\FlightSeatPlanController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\HotelController;
+use App\Http\Controllers\NeedTypeController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PersonController;
 use App\Http\Controllers\PersonImportController;
+use App\Http\Controllers\PersonNeedController;
 use App\Http\Controllers\PersonRelationController;
 use App\Http\Controllers\Platform\PlanController;
 use App\Http\Controllers\Platform\TenantController;
@@ -57,6 +59,11 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::get('persons/{person}/photo', [PersonController::class, 'photo'])->name('persons.photo');
         Route::get('persons-lookup', [PersonController::class, 'lookup'])->name('persons.lookup');
         Route::post('persons/{person}/relations', [PersonRelationController::class, 'store'])->name('persons.relations.store');
+        Route::put('persons/{person}/needs', [PersonNeedController::class, 'update'])->name('persons.needs.update');
+        Route::put('persons/{person}/health-consent', [PersonNeedController::class, 'consent'])->name('persons.health-consent');
+        Route::get('need-types', [NeedTypeController::class, 'index'])->name('need-types.index');
+        Route::post('need-types', [NeedTypeController::class, 'store'])->name('need-types.store');
+        Route::put('need-types/{needType}', [NeedTypeController::class, 'update'])->name('need-types.update');
         Route::delete('person-relations/{relation}', [PersonRelationController::class, 'destroy'])->name('person-relations.destroy');
 
         // Turlar, gruplar ve kayıtlar
@@ -169,6 +176,9 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::get('flights/{flight}/seats', [ReportController::class, 'flightSeats'])
             ->middleware('feature:flight_lists')
             ->name('flights.seats');
+        Route::get('flights/{flight}/assistance', [ReportController::class, 'flightAssistance'])
+            ->middleware('feature:flight_lists')
+            ->name('flights.assistance');
     });
 
     // Acente yönetimi (sadece acente yöneticisi)

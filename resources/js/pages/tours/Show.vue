@@ -685,6 +685,18 @@ const occupancyText = computed(() =>
                                                     : 'Pasaport süresi yetersiz'
                                             }}
                                         </div>
+                                        <div
+                                            v-if="registration.needs.length"
+                                            class="mt-0.5 flex flex-wrap gap-1"
+                                        >
+                                            <span
+                                                v-for="need in registration.needs"
+                                                :key="need"
+                                                class="rounded-full bg-accent px-1.5 text-[11px] font-semibold text-accent-foreground"
+                                            >
+                                                {{ need }}
+                                            </span>
+                                        </div>
                                     </td>
                                     <td class="px-4 py-2">
                                         <span v-if="registration.group_name">

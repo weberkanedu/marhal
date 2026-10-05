@@ -15,6 +15,7 @@ use App\Reports\Definitions\BusPassengerList;
 use App\Reports\Definitions\CollectionReport;
 use App\Reports\Definitions\FlightManifest;
 use App\Reports\Definitions\FlightSeatPreferences;
+use App\Reports\Definitions\FlightSpecialAssistance;
 use App\Reports\Definitions\PersonList;
 use App\Reports\Definitions\StayRoomingList;
 use App\Reports\Definitions\StayRoomOccupancy;
@@ -217,6 +218,16 @@ class ReportController extends Controller
             'tourDates' => $tour->start_date->format('d.m.Y').' – '.$tour->end_date->format('d.m.Y'),
             'emergencyPhone' => $this->currentTenant->get()?->phone,
         ]);
+    }
+
+    /**
+     * Havayoluna özel yardım / yemek bildirimi (sağlık verisi içerir: yalnız personel).
+     */
+    public function flightAssistance(Request $request, Flight $flight, FlightSpecialAssistance $definition): Response
+    {
+        Gate::authorize('update', $flight->tour);
+
+        return $this->responder->download($definition->build($flight), $this->format($request));
     }
 
     /**

@@ -6,11 +6,13 @@ use App\Enums\Gender;
 use App\Enums\RegistrationStatus;
 use App\Enums\Relation;
 use App\Http\Requests\PersonRequest;
+use App\Models\NeedType;
 use App\Models\Person;
 use App\Models\PersonRelation;
 use App\Models\Registration;
 use App\Support\Audit\AuditLogger;
 use App\Support\Media\PersonPhotoStore;
+use App\Support\Needs\NeedProfiles;
 use App\Support\Persons\PersonListFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -23,7 +25,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PersonController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, NeedProfiles $profiles): Response
     {
         Gate::authorize('viewAny', Person::class);
 
@@ -36,8 +38,11 @@ class PersonController extends Controller
             ->withCount(['registrations as active_registrations_count' => fn (Builder $q) => PersonListFilter::OnTour->registrationScope($q)])
             ->orderByName()
             ->paginate(20)
-            ->withQueryString()
-            ->through(fn (Person $person) => $this->listItem($person));
+            ->withQueryString();
+
+        // İhtiyaç etiketleri (sadece adlar; notlar yolcu sayfasında).
+        $needs = NeedProfiles::labels($profiles->forPersons(collect($persons->items())->pluck('id')));
+        $persons->through(fn (Person $person) => [...$this->listItem($person), 'needs' => $needs[$person->id] ?? []]);
 
         return Inertia::render('persons/Index', [
             'persons' => $persons,
@@ -75,7 +80,7 @@ class PersonController extends Controller
         return to_route('persons.show', $person);
     }
 
-    public function show(Request $request, Person $person): Response
+    public function show(Request $request, Person $person, NeedProfiles $profiles): Response
     {
         Gate::authorize('view', $person);
 
@@ -115,6 +120,21 @@ class PersonController extends Controller
                 ])
                 ->values(),
             'relationOptions' => Relation::options(),
+            // İhtiyaç profili (sağlık verisi): ayrı açık rıza; içerik şifreli saklanır.
+            'needs' => [
+                'consent_at' => $person->health_consent_at?->toIso8601String(),
+                'items' => array_map(
+                    fn (array $item) => ['type_id' => $item['type_id'], 'note' => $item['note']],
+                    $profiles->forPersons([$person->id])[$person->id] ?? [],
+                ),
+                'types' => NeedType::query()->where('is_active', true)->orderBy('sort')->orderBy('name')->get()
+                    ->map(fn (NeedType $t) => [
+                        'id' => $t->id,
+                        'name' => $t->name,
+                        'category' => $t->category->value,
+                        'category_label' => $t->category->label(),
+                    ])->values(),
+            ],
             'can' => [
                 'update' => $request->user()?->can('update', $person) ?? false,
                 'delete' => $request->user()?->can('delete', $person) ?? false,

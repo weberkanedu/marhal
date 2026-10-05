@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -36,6 +37,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null $phone
  * @property string|null $email
  * @property Carbon|null $kvkk_consent_at
+ * @property Carbon|null $health_consent_at
+ * @property int|null $health_consent_by
  * @property-read string $full_name
  * @property-read string|null $masked_phone
  * @property-read string|null $masked_national_id
@@ -48,7 +51,7 @@ class Person extends Model
 
     protected $table = 'persons';
 
-    protected $guarded = ['id', 'tenant_id', 'national_id_hash', 'passport_no_hash'];
+    protected $guarded = ['id', 'tenant_id', 'national_id_hash', 'passport_no_hash', 'health_consent_at', 'health_consent_by'];
 
     /**
      * Hassas alanlar varsayılan olarak dışarı verilmez; maskeli halleri eklenir.
@@ -75,6 +78,7 @@ class Person extends Model
             'passport_issue_date' => 'date',
             'passport_expiry_date' => 'date',
             'kvkk_consent_at' => 'datetime',
+            'health_consent_at' => 'datetime',
             'national_id' => EncryptedWithBlindIndex::class,
             'passport_no' => EncryptedWithBlindIndex::class,
         ];
@@ -86,6 +90,16 @@ class Person extends Model
     public function registrations(): HasMany
     {
         return $this->hasMany(Registration::class);
+    }
+
+    /**
+     * İhtiyaç profili (şifreli; okumak için App\Support\Needs\NeedProfiles).
+     *
+     * @return HasOne<PersonNeed, $this>
+     */
+    public function needs(): HasOne
+    {
+        return $this->hasOne(PersonNeed::class);
     }
 
     /**

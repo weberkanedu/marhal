@@ -19,6 +19,7 @@ enum PersonListFilter: string
     case PassportIssue = 'pasaport';
     case OnTour = 'turda';
     case NoConsent = 'kvkk';
+    case Needs = 'ihtiyac';
 
     public function label(): string
     {
@@ -26,6 +27,7 @@ enum PersonListFilter: string
             self::PassportIssue => 'Pasaport sorunlu',
             self::OnTour => 'Aktif turda',
             self::NoConsent => 'KVKK onayı yok',
+            self::Needs => 'Özel ihtiyaç',
         };
     }
 
@@ -39,6 +41,7 @@ enum PersonListFilter: string
             self::PassportIssue => $query->withPassportIssue(),
             self::OnTour => $query->whereHas('registrations', fn (Builder $q) => $this->registrationScope($q)),
             self::NoConsent => $query->whereNull('kvkk_consent_at'),
+            self::Needs => $query->whereHas('needs'),
         };
     }
 

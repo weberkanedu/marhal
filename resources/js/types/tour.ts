@@ -63,6 +63,8 @@ export type RegistrationRow = {
     room_type: string | null;
     // Oda ve koltuk: [{label: "Mekke", value: "501"}, {label: "1. Otobüs", value: "12"}]
     placements: { label: string; value: string }[];
+    // İhtiyaç adları (tekerlekli sandalye, diyabet …); notlar yolcu sayfasında.
+    needs: string[];
     status: RegistrationStatus;
     // Rehber (finans yetkisi yok) için null gelir.
     price: string | null;

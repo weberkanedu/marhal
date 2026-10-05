@@ -17,6 +17,8 @@ export type PersonListItem = {
     // Pasaport no yok / bitiş tarihi yok / 6 aydan az geçerli; sorun yoksa null.
     passport_issue: string | null;
     on_tour: boolean;
+    // İhtiyaç adları (yalnız Yolcular listesinde; aramada yok).
+    needs?: string[];
     has_photo: boolean;
 };
 

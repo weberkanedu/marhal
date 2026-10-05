@@ -23,6 +23,7 @@ use App\Models\User;
 use App\Models\VehicleType;
 use App\Support\Dashboard\TourReadiness;
 use App\Support\Money;
+use App\Support\Needs\NeedProfiles;
 use App\Support\Placements;
 use App\Support\Tenancy\CurrentTenant;
 use App\Support\Tours\TourJourney;
@@ -100,7 +101,7 @@ class TourController extends Controller
         return to_route('tours.show', $tour);
     }
 
-    public function show(Request $request, Tour $tour, CurrentTenant $currentTenant, TourJourney $journey, TourReadiness $readiness): Response
+    public function show(Request $request, Tour $tour, CurrentTenant $currentTenant, TourJourney $journey, TourReadiness $readiness, NeedProfiles $profiles): Response
     {
         Gate::authorize('view', $tour);
 
@@ -135,8 +136,14 @@ class TourController extends Controller
             ->get()
             ->sort(fn (Registration $a, Registration $b) => ($a->status === RegistrationStatus::Cancelled) <=> ($b->status === RegistrationStatus::Cancelled)
                 ?: TurkishText::compare($a->person->last_name.' '.$a->person->first_name, $b->person->last_name.' '.$b->person->first_name))
-            ->values()
-            ->map(fn (Registration $registration) => $this->registrationRow($registration, $tour, $finance));
+            ->values();
+
+        // İhtiyaç adları (rehber dahil; notlar yalnız yolcu sayfasında, personele).
+        $needs = NeedProfiles::labels($profiles->forPersons($registrations->pluck('person_id')));
+        $registrations = $registrations->map(fn (Registration $registration) => [
+            ...$this->registrationRow($registration, $tour, $finance),
+            'needs' => $needs[$registration->person_id] ?? [],
+        ]);
 
         $active = $registrations->where('status', '!=', RegistrationStatus::Cancelled->value);
 

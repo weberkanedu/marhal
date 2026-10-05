@@ -9,6 +9,7 @@ import {
     Plane,
     Plus,
     Search,
+    HeartPulse,
     ShieldAlert,
     Users,
 } from '@lucide/vue';
@@ -35,7 +36,7 @@ import {
 import type { ExportItem } from '@/types/export';
 import type { Option, Paginated, PersonListItem } from '@/types/person';
 
-type FilterKey = 'pasaport' | 'turda' | 'kvkk';
+type FilterKey = 'pasaport' | 'turda' | 'kvkk' | 'ihtiyac';
 
 const props = defineProps<{
     persons: Paginated<PersonListItem>;
@@ -84,9 +85,12 @@ const statCards = computed(() => [
         key: o.value,
         label: o.label,
         value: props.stats[o.value],
-        icon: { pasaport: AlertTriangle, turda: Plane, kvkk: ShieldAlert }[
-            o.value
-        ],
+        icon: {
+            pasaport: AlertTriangle,
+            turda: Plane,
+            kvkk: ShieldAlert,
+            ihtiyac: HeartPulse,
+        }[o.value],
         tone:
             o.value === 'turda'
                 ? ''
@@ -196,7 +200,7 @@ const genderLabels: Record<string, string> = { erkek: 'Erkek', kadin: 'Kadın' }
         </div>
 
         <!-- Sayı kartları (süzgeç) -->
-        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
             <button
                 v-for="card in statCards"
                 :key="card.label"
@@ -341,6 +345,14 @@ const genderLabels: Record<string, string> = { erkek: 'Erkek', kadin: 'Kadın' }
                                         class="rounded-full bg-success-soft px-2 py-0.5 text-xs font-semibold text-success"
                                     >
                                         Turda
+                                    </span>
+                                    <span
+                                        v-for="need in person.needs"
+                                        :key="need"
+                                        class="inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground"
+                                    >
+                                        <HeartPulse class="size-3" />
+                                        {{ need }}
                                     </span>
                                 </div>
                             </td>

@@ -3,10 +3,12 @@
 namespace App\Actions\Buses;
 
 use App\Actions\Rooms\StayOccupancy;
+use App\Enums\NeedEffect;
 use App\Models\Bus;
 use App\Models\Registration;
 use App\Models\SeatAssignment;
 use App\Support\FamilyUnits;
+use App\Support\Needs\NeedProfiles;
 use App\Support\TurkishText;
 use Illuminate\Support\Facades\DB;
 
@@ -15,7 +17,7 @@ use Illuminate\Support\Facades\DB;
  * Önce plan (önizleme), onaylanınca aynı plan uygulanır. Elle yapılmış yerleşimlere dokunmaz.
  *
  * Öncelikler:
- *  1. 65 yaş ve üstü yolcular (ve aileleri) ön sıralara.
+ *  1. 65 yaş ve üstü ve hareket güçlüğü olan yolcular (ve aileleri) ön sıralara.
  *  2. Aileler ikişer ikişer aynı sıranın aynı tarafında yan yana, kalabalık aileler art arda sıralarda.
  *  3. Tek yolcular yanında karşı cinsten, akrabası olmayan biri olmayacak şekilde.
  * Rehbere ayrılmış koltuklar kullanılmaz.
@@ -37,6 +39,7 @@ class AutoAssignSeats
         private readonly BusPassengers $passengers,
         private readonly StayOccupancy $occupancy,
         private readonly AssignSeat $assign,
+        private readonly NeedProfiles $needs,
     ) {}
 
     /**
@@ -68,7 +71,10 @@ class AutoAssignSeats
         );
 
         $units = FamilyUnits::build(array_values($pending->all()), $this->links);
-        $elderly = fn (array $unit) => collect($unit)->contains(fn (Registration $r) => ($r->person->birth_date->age ?? 0) >= self::ELDERLY_AGE);
+        // Öne alınanlar: 65 yaş ve üstü ile hareket güçlüğü olan yolcular (ve aileleri).
+        $profiles = $this->needs->forPersons($pending->pluck('person_id'));
+        $elderly = fn (array $unit) => collect($unit)->contains(fn (Registration $r) => ($r->person->birth_date->age ?? 0) >= self::ELDERLY_AGE
+            || NeedProfiles::has($profiles[$r->person_id] ?? [], NeedEffect::Mobility));
         usort($units, fn (array $a, array $b) => $elderly($b) <=> $elderly($a) ?: count($b) <=> count($a));
 
         $plan = ['placements' => [], 'unplaced' => []];

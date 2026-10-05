@@ -6,6 +6,7 @@ use App\Actions\Users\CreateTenantUser;
 use App\Enums\TenantStatus;
 use App\Enums\UserRole;
 use App\Models\Tenant;
+use App\Support\Needs\DefaultNeedTypes;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -35,6 +36,9 @@ class CreateTenant
                 'email' => $data['email'] ?? null,
                 'tursab_no' => $data['tursab_no'] ?? null,
             ]);
+
+            // Varsayılan ihtiyaç türleri (acente sonradan değiştirebilir).
+            DefaultNeedTypes::seed($tenant);
 
             $result = $this->createUser->handle(
                 $tenant,

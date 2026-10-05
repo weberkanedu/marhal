@@ -148,19 +148,19 @@ Yerleşim bilgisi (otel / oda / koltuk) yaka kartı, tur tablosu ve aile ekranı
     - **Görüşünü paylaş** (menü altı): `feedback` tablosu, takip no = id; platform yöneticisi "Geri bildirimler"de listeler (yanıt: paketler aşaması).
       Migration: `tours.whatsapp_link`, `feedback`. Demo paketi `tasarim-2-ekranlar`.
 3. ✅ Araç ve uçak tipleri + sürükle-bırak (2026-10-05).
-   - **Araç**: `vehicle_types` / `buses` → `body` (otobüs / midibüs / minibüs / van, `VehicleBody`) ve `front_seats` (şoför yanı;
-     varsa ilk numaralar onların). Otobüs düzeni tipten **kopyalanır** (eski araçlar etkilenmez). `BusLayout::frontZone()` = şoför yanı +
-     ilk 3 sıra ("ön bölge"; 4. adımda hareket güçlüğü uyarısı buna bakacak). Koltuk planı: aile kümeli havuz, sürükle-bırak (dolu koltuğa
-     bırakınca yer değiştirir, havuza bırakınca kalkar), tıklayarak yerleştirme (telefon / klavye), "Temizle", "Otomatik yerleştir".
-     Çıktılar: Koltuk planı, Araç yolcu listesi, yeni **Şoför listesi** (`BusDriverList`). Ekrandaki önizleme `types/bus.ts → busGrid`
-     sunucudaki `BusLayout::grid` ile aynı kural (ikisi birlikte değişmeli).
-   - **Uçak**: `aircraft_types` (acentenin; hazır tipler `AircraftPresets`: A321neo, B737-800, A330-300, B777-300ER, B787-9),
-     uçuşa kopyalanan kabin (`flights.cabin/first_row/last_row/exit_rows/blocked_seats`), `flight_passengers.seat_no`.
-     Kurallar `App\Actions\Flights\FlightSeats` (atama, yer değiştirme, gri = başka yolcuya ait koltuk, uyarılar: acil çıkışta
-     15 yaş altı / 65 yaş ve üstü, yanında akrabası olmayan karşı cins). Ekran: Uçuş → "Koltuk planı"; Acente ayarları → Uçak tipleri.
-     Çıktı: **Koltuk tercih listesi** (`FlightSeatPreferences`) — havayoluna gönderilir, kesin koltuğu havayolu verir.
-     Uçakta otomatik yerleştirme yok (havayolu tercihi; istenirse eklenir).
-   Migration: `add_body_and_front_seats_to_vehicles`, `create_aircraft_types_and_flight_seats`. Demo paketi `tasarim-3-arac-ucak`.
+    - **Araç**: `vehicle_types` / `buses` → `body` (otobüs / midibüs / minibüs / van, `VehicleBody`) ve `front_seats` (şoför yanı;
+      varsa ilk numaralar onların). Otobüs düzeni tipten **kopyalanır** (eski araçlar etkilenmez). `BusLayout::frontZone()` = şoför yanı +
+      ilk 3 sıra ("ön bölge"; 4. adımda hareket güçlüğü uyarısı buna bakacak). Koltuk planı: aile kümeli havuz, sürükle-bırak (dolu koltuğa
+      bırakınca yer değiştirir, havuza bırakınca kalkar), tıklayarak yerleştirme (telefon / klavye), "Temizle", "Otomatik yerleştir".
+      Çıktılar: Koltuk planı, Araç yolcu listesi, yeni **Şoför listesi** (`BusDriverList`). Ekrandaki önizleme `types/bus.ts → busGrid`
+      sunucudaki `BusLayout::grid` ile aynı kural (ikisi birlikte değişmeli).
+    - **Uçak**: `aircraft_types` (acentenin; hazır tipler `AircraftPresets`: A321neo, B737-800, A330-300, B777-300ER, B787-9),
+      uçuşa kopyalanan kabin (`flights.cabin/first_row/last_row/exit_rows/blocked_seats`), `flight_passengers.seat_no`.
+      Kurallar `App\Actions\Flights\FlightSeats` (atama, yer değiştirme, gri = başka yolcuya ait koltuk, uyarılar: acil çıkışta
+      15 yaş altı / 65 yaş ve üstü, yanında akrabası olmayan karşı cins). Ekran: Uçuş → "Koltuk planı"; Acente ayarları → Uçak tipleri.
+      Çıktı: **Koltuk tercih listesi** (`FlightSeatPreferences`) — havayoluna gönderilir, kesin koltuğu havayolu verir.
+      Uçakta otomatik yerleştirme yok (havayolu tercihi; istenirse eklenir).
+      Migration: `add_body_and_front_seats_to_vehicles`, `create_aircraft_types_and_flight_seats`. Demo paketi `tasarim-3-arac-ucak`.
 4. ⏳ Otel kat planı (`hotels.floors_count`, `tour_hotel_floors`, `rooms.near_elevator`) + ihtiyaç profili (`person_needs`, şifreli, açık rıza).
 5. ⏳ Yaka kartı yenileme (`badge_settings`, `groups.color`).
 6. ⏳ Hazırlık takibi (`readiness_items`, `readiness_checks`).

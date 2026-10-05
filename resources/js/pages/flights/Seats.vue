@@ -30,7 +30,11 @@ import { Input } from '@/components/ui/input';
 import { selectClass } from '@/lib/formClasses';
 import { index as aircraftTypesIndex } from '@/routes/aircraft-types';
 import { show as showFlight } from '@/routes/flights';
-import { manifest, seats as seatReport } from '@/routes/reports/flights';
+import {
+    assistance as assistanceReport,
+    manifest,
+    seats as seatReport,
+} from '@/routes/reports/flights';
 import { index as toursIndex, show as showTour } from '@/routes/tours';
 import type { ExportItem } from '@/types/export';
 import type { Gender } from '@/types/person';
@@ -263,6 +267,11 @@ const exportItems = computed<ExportItem[]>(() =>
                   title: 'Koltuk tercih listesi',
                   description: 'Havayoluna gönderilecek, koltuk sırasıyla',
                   url: seatReport.url(props.flight.id),
+              },
+              {
+                  title: 'Özel yardım listesi',
+                  description: 'Tekerlekli sandalye, engel, özel yemek',
+                  url: assistanceReport.url(props.flight.id),
               },
               {
                   title: 'Havayolu listesi',

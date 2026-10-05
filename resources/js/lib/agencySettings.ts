@@ -1,6 +1,7 @@
 import {
     Building2,
     BusFront,
+    HeartPulse,
     Hotel,
     Plane,
     ScrollText,
@@ -10,6 +11,7 @@ import { index as aircraftTypesIndex } from '@/routes/aircraft-types';
 import { edit as agencyEdit } from '@/routes/agency';
 import { index as auditIndex } from '@/routes/audit';
 import { index as hotelsIndex } from '@/routes/hotels';
+import { index as needTypesIndex } from '@/routes/need-types';
 import { index as usersIndex } from '@/routes/users';
 import { index as vehicleTypesIndex } from '@/routes/vehicle-types';
 import type { NavItem } from '@/types';
@@ -33,6 +35,14 @@ export function agencySettingsTabs(
             icon: Building2,
         });
         tabs.push({ title: 'Personel', href: usersIndex(), icon: UserCog });
+    }
+
+    if (staff && features.includes('passengers')) {
+        tabs.push({
+            title: 'İhtiyaç türleri',
+            href: needTypesIndex(),
+            icon: HeartPulse,
+        });
     }
 
     if (staff && features.includes('room_planning')) {
@@ -75,5 +85,6 @@ export const agencySettingsPages = [
     'hotels/',
     'vehicle-types/',
     'aircraft-types/',
+    'need-types/',
     'audit/',
 ];

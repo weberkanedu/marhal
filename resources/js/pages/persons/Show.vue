@@ -10,6 +10,8 @@ import {
     Trash2,
 } from '@lucide/vue';
 import { ref } from 'vue';
+import NeedsCard from '@/components/persons/NeedsCard.vue';
+import type { PersonNeeds } from '@/components/persons/NeedsCard.vue';
 import RelationsCard from '@/components/persons/RelationsCard.vue';
 import type { PersonRelationRow } from '@/components/persons/RelationsCard.vue';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +37,7 @@ const props = defineProps<{
     registrations: RegistrationRow[];
     relations: PersonRelationRow[];
     relationOptions: Option[];
+    needs: PersonNeeds;
     can: { update: boolean; delete: boolean; reveal: boolean };
 }>();
 
@@ -260,6 +263,12 @@ function confirmDelete(): void {
                 {{ person.notes }}
             </CardContent>
         </Card>
+
+        <NeedsCard
+            :person-id="person.id"
+            :needs="needs"
+            :can-update="can.update"
+        />
 
         <RelationsCard
             :person-id="person.id"

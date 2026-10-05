@@ -3,10 +3,12 @@
 namespace App\Actions\Flights;
 
 use App\Actions\Rooms\StayOccupancy;
+use App\Enums\NeedEffect;
 use App\Models\AircraftType;
 use App\Models\Flight;
 use App\Models\FlightPassenger;
 use App\Support\Flights\AircraftLayout;
+use App\Support\Needs\NeedProfiles;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -19,7 +21,10 @@ use Illuminate\Validation\ValidationException;
  */
 class FlightSeats
 {
-    public function __construct(private readonly StayOccupancy $occupancy) {}
+    public function __construct(
+        private readonly StayOccupancy $occupancy,
+        private readonly NeedProfiles $needs,
+    ) {}
 
     public function setAircraft(Flight $flight, AircraftType $type): Flight
     {
@@ -131,6 +136,7 @@ class FlightSeats
         $bySeat = $passengers->filter(fn (FlightPassenger $p) => $p->seat_no !== null)->keyBy('seat_no');
         $links = $this->occupancy->familyLinks($bySeat->map(fn (FlightPassenger $p) => $p->registration->person_id));
         $warnings = [];
+        $profiles = $this->needs->forPersons($bySeat->map(fn (FlightPassenger $p) => $p->registration->person_id));
 
         foreach ($bySeat as $seat => $passenger) {
             $person = $passenger->registration->person;
@@ -140,6 +146,10 @@ class FlightSeats
                 && ($age < AircraftLayout::EXIT_MIN_AGE || $age >= AircraftLayout::EXIT_MAX_AGE)) {
                 $warnings[$seat][] = 'Acil çıkış sırasında '.((int) $age).' yaşında yolcu (havayolu kabul etmez: '
                     .AircraftLayout::EXIT_MIN_AGE.' yaş altı, '.AircraftLayout::EXIT_MAX_AGE.' yaş ve üstü)';
+            }
+
+            if ($layout->isExitRow($layout->row((string) $seat)) && NeedProfiles::has($profiles[$person->id] ?? [], NeedEffect::Mobility)) {
+                $warnings[$seat][] = 'Hareket güçlüğü olan yolcu acil çıkış sırasında oturamaz';
             }
 
             foreach ($layout->neighbours((string) $seat) as $neighbourSeat) {
