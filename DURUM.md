@@ -164,18 +164,30 @@ Yerleşim bilgisi (otel / oda / koltuk) yaka kartı, tur tablosu ve aile ekranı
 4. ✅ İhtiyaç profili + otel kat planı (2026-10-05). **Kullanıcı kararları**: ihtiyaçları personel notlarıyla görür, rehber
    yalnız kendi grubunda adını; ayrı açık rıza (onay + tarih + giren kişi), rıza geri alınınca ihtiyaçlar silinir;
    türler: hareket, sağlık, beslenme, diğer (acente ekleyip kapatabilir — Acente ayarları → İhtiyaç türleri).
-   - Veri: `need_types` (acenteye kopyalanan varsayılanlar `DefaultNeedTypes`; yeni acentede `CreateTenant` ekler),
-     `person_needs` (kişi başına tek satır, hangi ihtiyaç + not **birlikte şifreli** `encrypted:array`; erişim kaydına içerik yazılmaz),
-     `persons.health_consent_at/_by`. Okumanın tek yolu `App\Support\Needs\NeedProfiles`; kurallar `NeedEffect`e bakar.
-   - Kurallar: araçta hareket güçlüğü → ön bölge (otomatik yerleştirmede öne, değilse uyarı); uçakta acil çıkış uyarısı;
-     otelde asansöre yakın oda (otomatik dağıtmada önce ve oraya; uzak odada uyarı). "Karışık oda" zaten engelleniyor (AssignRoom).
-   - Ekran: yolcu sayfası "İhtiyaçlar" kartı, Yolcular "Özel ihtiyaç" süzgeci, tur / oda / koltuk ekranlarında ihtiyaç adları.
-   - Otel: `hotels.floors_count`, `tour_hotels.used_floors` (plandaki `hotel_floors` tablosu yerine konaklamada liste — her tur
-     farklı kat alabilir), `rooms.near_elevator`. Oda planında kat kulesi + "Oteli tanımla"; oda eklerken "ilk N oda asansöre yakın".
-   - Çıktılar: uçuş **Özel yardım listesi** (WCHR/WCHS/DEAF/BLND/SPML), otel **Kat planı** ve **İhtiyaç listesi** (sağlık verisi: personel).
-   Migration: `create_needs_tables`, `add_floors_and_elevator_to_hotels`. Demo paketi `tasarim-4-ihtiyac-kat`.
-   Not: SQLite tırnaklı bilinmeyen sütunu metin sayıyor — sütun adı içeren testler mutlaka `composer test:pgsql` ile de koşmalı.
-5. ⏳ Yaka kartı yenileme (`badge_settings`, `groups.color`).
+    - Veri: `need_types` (acenteye kopyalanan varsayılanlar `DefaultNeedTypes`; yeni acentede `CreateTenant` ekler),
+      `person_needs` (kişi başına tek satır, hangi ihtiyaç + not **birlikte şifreli** `encrypted:array`; erişim kaydına içerik yazılmaz),
+      `persons.health_consent_at/_by`. Okumanın tek yolu `App\Support\Needs\NeedProfiles`; kurallar `NeedEffect`e bakar.
+    - Kurallar: araçta hareket güçlüğü → ön bölge (otomatik yerleştirmede öne, değilse uyarı); uçakta acil çıkış uyarısı;
+      otelde asansöre yakın oda (otomatik dağıtmada önce ve oraya; uzak odada uyarı). "Karışık oda" zaten engelleniyor (AssignRoom).
+    - Ekran: yolcu sayfası "İhtiyaçlar" kartı, Yolcular "Özel ihtiyaç" süzgeci, tur / oda / koltuk ekranlarında ihtiyaç adları.
+    - Otel: `hotels.floors_count`, `tour_hotels.used_floors` (plandaki `hotel_floors` tablosu yerine konaklamada liste — her tur
+      farklı kat alabilir), `rooms.near_elevator`. Oda planında kat kulesi + "Oteli tanımla"; oda eklerken "ilk N oda asansöre yakın".
+    - Çıktılar: uçuş **Özel yardım listesi** (WCHR/WCHS/DEAF/BLND/SPML), otel **Kat planı** ve **İhtiyaç listesi** (sağlık verisi: personel).
+      Migration: `create_needs_tables`, `add_floors_and_elevator_to_hotels`. Demo paketi `tasarim-4-ihtiyac-kat`.
+      Not: SQLite tırnaklı bilinmeyen sütunu metin sayıyor — sütun adı içeren testler mutlaka `composer test:pgsql` ile de koşmalı.
+5. ✅ Yaka kartı yenileme (2026-10-05). Acente ayarları → **Yaka kartı** (`badge_settings`, acente başına tek satır; yoksa
+   varsayılan): boy (`BadgeSize`: dikey A6 2×2, yatay 9×6,4 2×4, plastik 8,6×5,4 2×5), ön yüz alanları (fotoğraf, oteller+oda,
+   otobüs+koltuk, rehber, QR), arka yüz (Türkçe / İngilizce / Arapça "Kaybolursanız", acil telefon, otel adresleri — dikeyde),
+   sağlık notu (yalnız acente açtıysa **ve** yolcunun sağlık rızası varsa). Seri no = kayıt id'sinin son 6 hanesi.
+   Çift taraflı baskı: arka sayfada sütunlar ters (uzun kenardan çevirince doğru karta denk gelir).
+   - **Tek kaynak**: otel / oda / koltuk artık `Placements::hotels()` ve `Placements::seat()`ten (eskiden kartın kendi hesabı vardı);
+     aile ekranı da bunu kullanacak.
+   - **Grup rengi** `groups.color` (palet `GroupColors::PALETTE`, seçilmezse turdaki sıraya göre); kart bandı ve otobüs tabelası
+     (koltuk planı PDF'inin üstündeki renkli grup şeridi).
+   - **Arapça**: dompdf harf birleştirmez / sağdan sola dizmez → `App\Support\ArabicText` (Presentation Forms-B, DejaVu Sans).
+     Yalnız kısa sabit cümleler için; PDF çıktısı gözle kontrol edildi.
+   - QR: bacon/bacon-qr-code (Fortify'dan zaten vardı), içerik: yolcu, acente, acil telefon, kart no (aile ekranı bağlantısı 7. adımda).
+   Migration: `create_badge_settings_and_group_colors`. Demo paketi `tasarim-5-yaka-karti`.
 6. ⏳ Hazırlık takibi (`readiness_items`, `readiness_checks`).
 7. ⏳ Aile ekranı + fotoğrafla ön kayıt (MRZ okuma servisi için önce seçenek / maliyet).
 8. ⏳ WhatsApp tahsilat asistanı (önce sağlayıcı + sanal POS seçenekleri / maliyet).

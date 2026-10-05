@@ -83,10 +83,10 @@ class BadgeTest extends TestCase
         $this->assertSame('A Grubu', $badge['group']);
         $this->assertSame('Ahmet Rehber 0555 111 22 33', $badge['guide']);
         $this->assertSame([
-            ['label' => 'Mekke', 'value' => 'Swissôtel Al Maqam · Oda 501'],
-            ['label' => 'Medine', 'value' => 'Pullman Zamzam'], // oda henüz yok: sadece grubun oteli
-            ['label' => 'Otobüs', 'value' => '1. Otobüs · Koltuk 7'],
-        ], $badge['lines']);
+            ['Mekke', 'Swissôtel Al Maqam', '501'],
+            ['Medine', 'Pullman Zamzam', null], // oda henüz yok: sadece grubun oteli
+        ], array_map(fn (array $h) => [$h['city'], $h['hotel'], $h['room']], $badge['hotels']));
+        $this->assertSame(['label' => '1. Otobüs', 'value' => '7'], $badge['bus']);
 
         $flat = json_encode($badge);
         $this->assertStringNotContainsString((string) $registration->person->passport_no, (string) $flat);

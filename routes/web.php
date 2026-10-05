@@ -3,6 +3,7 @@
 use App\Http\Controllers\AgencySettingsController;
 use App\Http\Controllers\AircraftTypeController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\BadgeSettingController;
 use App\Http\Controllers\BusController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\DashboardController;
@@ -64,6 +65,10 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::get('need-types', [NeedTypeController::class, 'index'])->name('need-types.index');
         Route::post('need-types', [NeedTypeController::class, 'store'])->name('need-types.store');
         Route::put('need-types/{needType}', [NeedTypeController::class, 'update'])->name('need-types.update');
+        Route::middleware('feature:badge_generation')->group(function () {
+            Route::get('badge-settings', [BadgeSettingController::class, 'edit'])->name('badge-settings.edit');
+            Route::put('badge-settings', [BadgeSettingController::class, 'update'])->name('badge-settings.update');
+        });
         Route::delete('person-relations/{relation}', [PersonRelationController::class, 'destroy'])->name('person-relations.destroy');
 
         // Turlar, gruplar ve kayıtlar

@@ -24,6 +24,12 @@
     </style>
 </head>
 <body>
+    {{-- Tabela: grubun rengi ve adı büyük (araç camına / kapısına asılır). --}}
+    @if (! empty($groupNames))
+        <div style="background: {{ $color }}; color: #fff; font-size: 20px; font-weight: bold; text-align: center; padding: 6px; margin-bottom: 8px; border-radius: 4px;">
+            {{ $groupNames }}
+        </div>
+    @endif
     <table class="header" width="100%">
         <tr>
             <td>

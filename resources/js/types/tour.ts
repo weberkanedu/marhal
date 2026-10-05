@@ -43,6 +43,9 @@ export type TourGroup = {
     guide_name: string | null;
     guide_phone: string | null;
     notes: string | null;
+    // Kart bandı rengi; color_chosen false ise paletten otomatik verildi.
+    color: string;
+    color_chosen: boolean;
     registrations_count: number;
 };
 

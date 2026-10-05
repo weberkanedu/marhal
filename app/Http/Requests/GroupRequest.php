@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Enums\UserRole;
 use App\Models\Group;
 use App\Models\Tour;
+use App\Support\GroupColors;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -36,6 +37,8 @@ class GroupRequest extends FormRequest
             'guide_name' => ['nullable', 'string', 'max:150'],
             'guide_phone' => ['nullable', 'string', 'max:30'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            // Kart bandı / otobüs tabelası rengi; boşsa turdaki sırasına göre paletten.
+            'color' => ['nullable', Rule::in(GroupColors::PALETTE)],
         ];
     }
 
@@ -49,6 +52,7 @@ class GroupRequest extends FormRequest
             'guide_user_id' => 'rehber',
             'guide_name' => 'rehber adı',
             'guide_phone' => 'rehber telefonu',
+            'color' => 'renk',
         ];
     }
 

@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $tenant_id
  * @property string $tour_id
  * @property string $name
+ * @property string|null $color
  * @property int|null $guide_user_id
  * @property string|null $guide_name
  * @property string|null $guide_phone

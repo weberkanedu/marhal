@@ -25,12 +25,23 @@ const props = defineProps<{
 const open = defineModel<boolean>('open', { required: true });
 
 const guideUserId = ref<string>('');
+// Grup rengi (App\Support\GroupColors::PALETTE ile aynı).
+const palette = [
+    '#0f6b4e',
+    '#9c3d2e',
+    '#1d4f91',
+    '#b07d12',
+    '#6b3fa0',
+    '#2f7d86',
+];
+const color = ref<string | null>(null);
 
 watch(open, (isOpen) => {
     if (isOpen) {
         guideUserId.value = props.group?.guide_user_id
             ? String(props.group.guide_user_id)
             : '';
+        color.value = props.group?.color_chosen ? props.group.color : null;
     }
 });
 
@@ -111,6 +122,32 @@ const form = computed(() =>
                         :default-value="group?.guide_phone ?? undefined"
                     />
                     <InputError :message="errors.guide_phone" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label>Renk (yaka kartı bandı, otobüs tabelası)</Label>
+                    <input type="hidden" name="color" :value="color ?? ''" />
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button
+                            v-for="swatch in palette"
+                            :key="swatch"
+                            type="button"
+                            class="size-8 rounded-full border-2 transition"
+                            :class="
+                                color === swatch
+                                    ? 'scale-110 border-foreground'
+                                    : 'border-transparent'
+                            "
+                            :style="{ background: swatch }"
+                            :aria-label="`Renk ${swatch}`"
+                            :aria-pressed="color === swatch"
+                            @click="color = color === swatch ? null : swatch"
+                        />
+                        <span class="text-xs text-muted-foreground">
+                            {{ color ? '' : 'Seçilmezse otomatik verilir' }}
+                        </span>
+                    </div>
+                    <InputError :message="errors.color" />
                 </div>
 
                 <DialogFooter>

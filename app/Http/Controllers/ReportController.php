@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Models\BadgeSetting;
 use App\Models\Bus;
 use App\Models\Flight;
 use App\Models\Group;
@@ -26,6 +27,7 @@ use App\Reports\Definitions\TourPaymentStatus;
 use App\Reports\Definitions\TourProgram;
 use App\Reports\ReportResponder;
 use App\Support\Collections\CollectionFilters;
+use App\Support\GroupColors;
 use App\Support\Persons\PersonListFilter;
 use App\Support\Tenancy\CurrentTenant;
 use Illuminate\Http\Request;
@@ -181,8 +183,11 @@ class ReportController extends Controller
     {
         Gate::authorize('update', $bus->tour);
 
-        $bus->load('tour');
+        $bus->load(['tour', 'groups']);
         $layout = $bus->layout();
+        // Tabela bandı: aracın (ilk) grubunun rengi — yaka kartı bandıyla aynı.
+        $colors = GroupColors::forGroups($bus->tour->groups()->orderBy('name')->get());
+        $group = $bus->groups->sortBy('name')->first();
 
         return $this->responder->pdfView('bus_seat_chart', Str::slug("{$bus->name} koltuk plani", '-', 'tr').'.pdf', 'reports.bus-seats', [
             'title' => "{$bus->tour->name} — {$bus->name} Koltuk Planı",
@@ -192,6 +197,8 @@ class ReportController extends Controller
             ])),
             'grid' => $layout->grid(),
             'reserved' => $bus->reserved(),
+            'color' => $group ? $colors[$group->id] : '#111111',
+            'groupNames' => $bus->groups->pluck('name')->join(', ') ?: null,
             'names' => $bus->seats()->with('registration.person')->get()
                 ->mapWithKeys(fn (SeatAssignment $s) => [$s->seat_no => $s->registration->person->full_name])
                 ->all(),
@@ -226,7 +233,8 @@ class ReportController extends Controller
         $group = isset($filters['group']) ? $tour->groups()->whereKey($filters['group'])->firstOrFail() : null;
         $registration = isset($filters['registration']) ? $tour->registrations()->whereKey($filters['registration'])->firstOrFail() : null;
 
-        $badges = $definition->build($tour, $group, $registration);
+        $settings = BadgeSetting::current();
+        $badges = $definition->build($tour, $group, $registration, $settings);
         $suffix = $registration ? Str::slug($registration->person->full_name, '-', 'tr') : ($group ? Str::slug($group->name, '-', 'tr') : 'tum-tur');
 
         return $this->responder->pdfView('tour_badges', "yaka-karti-{$suffix}.pdf", 'reports.badges', [
@@ -235,6 +243,8 @@ class ReportController extends Controller
             'tourName' => $tour->name,
             'tourDates' => $tour->start_date->format('d.m.Y').' – '.$tour->end_date->format('d.m.Y'),
             'emergencyPhone' => $this->currentTenant->get()?->phone,
+            'settings' => $settings,
+            'size' => $settings->size,
         ]);
     }
 

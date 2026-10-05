@@ -22,6 +22,7 @@ use App\Models\TourHotel;
 use App\Models\User;
 use App\Models\VehicleType;
 use App\Support\Dashboard\TourReadiness;
+use App\Support\GroupColors;
 use App\Support\Money;
 use App\Support\Needs\NeedProfiles;
 use App\Support\Placements;
@@ -116,9 +117,13 @@ class TourController extends Controller
             ->when($guideOf !== null, fn (Builder $q) => $q->whereIn('id', $guideOf ?? []))
             ->withCount(['registrations' => fn (Builder $q) => $q->where('status', '!=', RegistrationStatus::Cancelled)])
             ->orderBy('name')
-            ->get()
+            ->get();
+        $colors = GroupColors::forGroups($groups);
+        $groups = $groups
             ->map(fn (Group $group) => [
                 ...$group->only(['id', 'name', 'guide_user_id', 'guide_name', 'guide_phone', 'notes']),
+                'color' => $colors[$group->id],
+                'color_chosen' => $group->color !== null,
                 'guide_display' => $group->guide_name,
                 'registrations_count' => $group->registrations_count,
             ]);
