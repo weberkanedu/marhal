@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Link, router } from '@inertiajs/vue3';
-import { Pencil, Plane, Plus, Trash2, Users } from '@lucide/vue';
+import { Armchair, Pencil, Plane, Plus, Trash2, Users } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import FlightController from '@/actions/App/Http/Controllers/FlightController';
 import InputError from '@/components/InputError.vue';
@@ -18,7 +18,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { selectClass } from '@/lib/formClasses';
-import { show as showFlight } from '@/routes/flights';
+import { seatPlan, show as showFlight } from '@/routes/flights';
 import { commonAirports, formatFlightTime } from '@/types/flight';
 import type { TourFlight } from '@/types/flight';
 import type { Option } from '@/types/person';
@@ -138,6 +138,11 @@ const directionVariant = (d: string) =>
                             <span class="text-xs text-muted-foreground">
                                 {{ flight.passengers_count }}
                             </span>
+                        </Link>
+                    </Button>
+                    <Button variant="outline" size="sm" as-child>
+                        <Link :href="seatPlan(flight.id)">
+                            <Armchair /> Koltuk planı
                         </Link>
                     </Button>
                     <div v-if="canUpdate" class="flex">

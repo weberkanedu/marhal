@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AgencySettingsController;
+use App\Http\Controllers\AircraftTypeController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BusController;
 use App\Http\Controllers\CollectionController;
@@ -8,6 +9,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\FlightController;
 use App\Http\Controllers\FlightPassengerController;
+use App\Http\Controllers\FlightSeatPlanController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\HotelController;
 use App\Http\Controllers\PaymentController;
@@ -105,6 +107,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::get('buses/{bus}/auto-assign', [SeatPlanController::class, 'preview'])->name('buses.auto-assign-preview');
         Route::post('buses/{bus}/auto-assign', [SeatPlanController::class, 'apply'])->name('buses.auto-assign');
         Route::post('buses/{bus}/seats', [SeatAssignmentController::class, 'store'])->name('buses.seats.store');
+        Route::delete('buses/{bus}/seats', [SeatAssignmentController::class, 'clear'])->name('buses.seats.clear');
         Route::delete('seat-assignments/{seat}', [SeatAssignmentController::class, 'destroy'])->name('seat-assignments.destroy');
     });
 
@@ -117,6 +120,18 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::post('flights/{flight}/passengers', [FlightPassengerController::class, 'store'])->name('flights.passengers.store');
         Route::put('flight-passengers/{passenger}', [FlightPassengerController::class, 'update'])->name('flight-passengers.update');
         Route::delete('flight-passengers/{passenger}', [FlightPassengerController::class, 'destroy'])->name('flight-passengers.destroy');
+
+        // Uçak koltuk planı (havayoluna koltuk tercihi) ve uçak tipleri
+        Route::get('flights/{flight}/seats', [FlightSeatPlanController::class, 'show'])->name('flights.seat-plan');
+        Route::put('flights/{flight}/aircraft', [FlightSeatPlanController::class, 'aircraft'])->name('flights.aircraft');
+        Route::post('flights/{flight}/seats', [FlightSeatPlanController::class, 'assign'])->name('flights.seats.store');
+        Route::delete('flights/{flight}/seats', [FlightSeatPlanController::class, 'clear'])->name('flights.seats.clear');
+        Route::post('flights/{flight}/blocked-seats', [FlightSeatPlanController::class, 'block'])->name('flights.blocked-seats');
+        Route::delete('flight-passengers/{passenger}/seat', [FlightSeatPlanController::class, 'unassign'])->name('flight-passengers.seat.destroy');
+        Route::get('aircraft-types', [AircraftTypeController::class, 'index'])->name('aircraft-types.index');
+        Route::post('aircraft-types', [AircraftTypeController::class, 'store'])->name('aircraft-types.store');
+        Route::put('aircraft-types/{aircraftType}', [AircraftTypeController::class, 'update'])->name('aircraft-types.update');
+        Route::delete('aircraft-types/{aircraftType}', [AircraftTypeController::class, 'destroy'])->name('aircraft-types.destroy');
     });
 
     // Ödemeler ve tahsilat
@@ -143,6 +158,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::middleware('feature:bus_planning')->group(function () {
             Route::get('buses/{bus}/passengers', [ReportController::class, 'busPassengers'])->name('buses.passengers');
             Route::get('buses/{bus}/seat-chart', [ReportController::class, 'busSeatChart'])->name('buses.seat-chart');
+            Route::get('tours/{tour}/drivers', [ReportController::class, 'busDrivers'])->name('tours.drivers');
         });
         Route::get('tours/{tour}/badges', [ReportController::class, 'tourBadges'])
             ->middleware('feature:badge_generation')
@@ -150,6 +166,9 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::get('flights/{flight}/manifest', [ReportController::class, 'flightManifest'])
             ->middleware('feature:flight_lists')
             ->name('flights.manifest');
+        Route::get('flights/{flight}/seats', [ReportController::class, 'flightSeats'])
+            ->middleware('feature:flight_lists')
+            ->name('flights.seats');
     });
 
     // Acente yönetimi (sadece acente yöneticisi)

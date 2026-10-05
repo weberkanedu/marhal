@@ -1,4 +1,12 @@
-import { Building2, BusFront, Hotel, ScrollText, UserCog } from '@lucide/vue';
+import {
+    Building2,
+    BusFront,
+    Hotel,
+    Plane,
+    ScrollText,
+    UserCog,
+} from '@lucide/vue';
+import { index as aircraftTypesIndex } from '@/routes/aircraft-types';
 import { edit as agencyEdit } from '@/routes/agency';
 import { index as auditIndex } from '@/routes/audit';
 import { index as hotelsIndex } from '@/routes/hotels';
@@ -39,6 +47,14 @@ export function agencySettingsTabs(
         });
     }
 
+    if (staff && features.includes('flight_lists')) {
+        tabs.push({
+            title: 'Uçak tipleri',
+            href: aircraftTypesIndex(),
+            icon: Plane,
+        });
+    }
+
     if (admin) {
         tabs.push({
             title: 'Erişim kayıtları',
@@ -58,5 +74,6 @@ export const agencySettingsPages = [
     'users/',
     'hotels/',
     'vehicle-types/',
+    'aircraft-types/',
     'audit/',
 ];

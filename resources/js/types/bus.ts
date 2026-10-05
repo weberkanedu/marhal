@@ -1,7 +1,10 @@
 import type { Gender } from '@/types/person';
 
-// Koltuk düzeni hücresi: koltuk no, koridor, kapı veya boşluk (sunucudaki BusLayout ile aynı).
-export type BusCell = number | 'aisle' | 'door' | null;
+// Koltuk düzeni hücresi: koltuk no, koridor, kapı, şoför veya boşluk (sunucudaki BusLayout ile aynı).
+export type BusCell = number | 'aisle' | 'door' | 'driver' | null;
+
+// Araç gövdesi (App\Enums\VehicleBody).
+export type VehicleBody = 'otobus' | 'midibus' | 'minibus' | 'van';
 
 export type VehicleTypeRow = {
     id: string;
@@ -11,6 +14,9 @@ export type VehicleTypeRow = {
     rows: number;
     back_row_seats: number;
     door_row: number | null;
+    front_seats: number;
+    body: VehicleBody;
+    body_label: string;
     notes: string | null;
     label: string;
     seat_count: number;
@@ -70,9 +76,15 @@ export type SeatPlanBus = {
     driver_name: string | null;
     driver_phone: string | null;
     reserved: number[];
+    body: VehicleBody;
+    // Ön bölge koltukları (yaşlı / hareket güçlüğü olan yolcular için önerilen).
+    front_zone: number[];
     groups: string[];
     tour: { id: string; name: string };
 };
+
+// Koltuğu olmayanların aile kümeleri (havuzda bir arada gösterilir).
+export type SeatPoolUnit = { label: string | null; ids: string[] };
 
 export type SeatPlanStats = {
     seats: number;
@@ -96,9 +108,29 @@ export function busGrid(
     rows: number,
     backRow = 0,
     doorRow: number | null = null,
+    frontSeats = 0,
 ): BusCell[][] {
     const grid: BusCell[][] = [];
     let no = 1;
+
+    if (frontSeats > 0) {
+        // Ön sıra: en solda şoför; koltuklar önce sağdan, kalırsa şoförün yanından.
+        const rightSeats = Math.min(frontSeats, right);
+        const leftSeats = Math.min(frontSeats - rightSeats, left - 1);
+        const cells: BusCell[] = ['driver'];
+
+        for (let i = 1; i < left; i++) {
+            cells.push(i <= leftSeats ? no++ : null);
+        }
+
+        cells.push('aisle');
+
+        for (let i = 0; i < right; i++) {
+            cells.push(i >= right - rightSeats ? no++ : null);
+        }
+
+        grid.push(cells);
+    }
 
     for (let row = 1; row <= rows; row++) {
         const cells: BusCell[] = [];

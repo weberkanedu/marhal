@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Actions\Persons\AddPersonRelation;
 use App\Enums\Gender;
 use App\Enums\Relation;
+use App\Models\AircraftType;
 use App\Models\Bus;
 use App\Models\Flight;
 use App\Models\FlightPassenger;
@@ -44,9 +45,11 @@ class DemoDataTest extends TestCase
     {
         $this->seed([PlanSeeder::class, DemoSeeder::class]);
 
-        $this->assertSame(4, VehicleType::count());
+        $this->assertSame(6, VehicleType::count(), '4 otobüs + minibüs ve van (tasarim-3-arac-ucak)');
         $this->assertSame(2, Bus::count(), 'Grup başına bir otobüs');
         $this->assertSame(6, SeatAssignment::count(), '1. otobüs (A Grubu) dağıtılmış, 2. otobüs boş');
+        $this->assertSame(2, AircraftType::count(), 'Uçuşlara A321neo ve A330 eklenir');
+        $this->assertSame(0, Flight::query()->whereNull('cabin')->count());
     }
 
     public function test_demo_seed_includes_flights(): void

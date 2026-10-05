@@ -20,9 +20,10 @@ import { Label } from '@/components/ui/label';
 import { selectClass } from '@/lib/formClasses';
 import { index } from '@/routes/vehicle-types';
 import { busGrid } from '@/types/bus';
-import type { VehicleTypeRow } from '@/types/bus';
+import type { VehicleBody, VehicleTypeRow } from '@/types/bus';
+import type { Option } from '@/types/person';
 
-defineProps<{ types: VehicleTypeRow[] }>();
+defineProps<{ types: VehicleTypeRow[]; bodies: Option<VehicleBody>[] }>();
 
 defineOptions({
     layout: {
@@ -41,6 +42,8 @@ const shape = reactive({
     rows: 11,
     back: 5,
     door: '' as string,
+    front: 0,
+    body: 'otobus' as VehicleBody,
 });
 
 // Hazır şablonlar: tek tıkla doldurulur, sonra değiştirilebilir.
@@ -52,6 +55,8 @@ const presets = [
         rows: 11,
         back: 5,
         door: '6',
+        front: 0,
+        body: 'otobus' as VehicleBody,
     },
     {
         name: 'VIP otobüs (2+1)',
@@ -60,15 +65,38 @@ const presets = [
         rows: 10,
         back: 0,
         door: '6',
+        front: 0,
+        body: 'otobus' as VehicleBody,
     },
-    { name: 'Midibüs (2+1)', left: 2, right: 1, rows: 8, back: 4, door: '' },
     {
-        name: 'Minibüs / Sprinter (1+1)',
+        name: 'Midibüs (2+1)',
+        left: 2,
+        right: 1,
+        rows: 8,
+        back: 4,
+        door: '',
+        front: 0,
+        body: 'midibus' as VehicleBody,
+    },
+    {
+        name: 'Minibüs / Sprinter (2+1)',
+        left: 2,
+        right: 1,
+        rows: 4,
+        back: 4,
+        door: '',
+        front: 2,
+        body: 'minibus' as VehicleBody,
+    },
+    {
+        name: 'VIP van (1+1)',
         left: 1,
         right: 1,
-        rows: 7,
+        rows: 2,
         back: 3,
         door: '',
+        front: 1,
+        body: 'van' as VehicleBody,
     },
 ];
 const presetName = ref('');
@@ -89,6 +117,8 @@ function openDialog(type: VehicleTypeRow | null): void {
             rows: type.rows,
             back: type.back_row_seats,
             door: type.door_row ? String(type.door_row) : '',
+            front: type.front_seats,
+            body: type.body,
         });
     } else {
         applyPreset(presets[0]);
@@ -107,6 +137,10 @@ const preview = computed(() =>
             Number(shape.left) + Number(shape.right) + 1,
         ),
         shape.door ? Number(shape.door) : null,
+        Math.min(
+            Number(shape.front) || 0,
+            Number(shape.left) - 1 + Number(shape.right),
+        ),
     ),
 );
 const previewCount = computed(
@@ -142,8 +176,8 @@ function remove(type: VehicleTypeRow): void {
                     Araç tipleri
                 </h2>
                 <p class="text-sm text-muted-foreground">
-                    Kullandığınız otobüslerin koltuk düzenleri. Tura otobüs
-                    eklerken buradan seçilir.
+                    Kullandığınız otobüs, midibüs, minibüs ve vanların koltuk
+                    düzenleri. Tura araç eklerken buradan seçilir.
                 </p>
             </div>
             <Button @click="openDialog(null)"><Plus /> Araç tipi ekle</Button>
@@ -168,6 +202,7 @@ function remove(type: VehicleTypeRow): void {
                         class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-sm"
                     >
                         <BusDiagram
+                            :body="type.body"
                             :grid="
                                 busGrid(
                                     type.left_seats,
@@ -175,6 +210,7 @@ function remove(type: VehicleTypeRow): void {
                                     Math.min(type.rows, 4),
                                     0,
                                     null,
+                                    type.front_seats,
                                 )
                             "
                             compact
@@ -183,7 +219,11 @@ function remove(type: VehicleTypeRow): void {
                         <div class="min-w-48 flex-1">
                             <div class="font-medium">{{ type.name }}</div>
                             <div class="text-xs text-muted-foreground">
-                                {{ type.label }} · {{ type.rows }} sıra
+                                {{ type.body_label }} · {{ type.label }} ·
+                                {{ type.rows }} sıra
+                                <template v-if="type.front_seats">
+                                    · şoför yanı {{ type.front_seats }}
+                                </template>
                                 <template v-if="type.back_row_seats">
                                     + arka sıra {{ type.back_row_seats }}
                                 </template>
@@ -275,6 +315,37 @@ function remove(type: VehicleTypeRow): void {
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="grid gap-2">
+                            <Label for="vt-body">Gövde</Label>
+                            <select
+                                id="vt-body"
+                                v-model="shape.body"
+                                name="body"
+                                :class="selectClass"
+                            >
+                                <option
+                                    v-for="body in bodies"
+                                    :key="body.value"
+                                    :value="body.value"
+                                >
+                                    {{ body.label }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="vt-front">Şoför yanı koltuk</Label>
+                            <select
+                                id="vt-front"
+                                v-model.number="shape.front"
+                                name="front_seats"
+                                :class="selectClass"
+                            >
+                                <option :value="0">Yok</option>
+                                <option :value="1">1</option>
+                                <option :value="2">2</option>
+                            </select>
+                            <InputError :message="errors.front_seats" />
+                        </div>
+                        <div class="grid gap-2">
                             <Label for="vt-left">Sol koltuk</Label>
                             <select
                                 id="vt-left"
@@ -355,8 +426,8 @@ function remove(type: VehicleTypeRow): void {
                         </Button>
                     </DialogFooter>
                 </div>
-                <div class="flex justify-center">
-                    <BusDiagram :grid="preview" compact />
+                <div class="flex items-start justify-center">
+                    <BusDiagram :grid="preview" :body="shape.body" compact />
                 </div>
             </Form>
         </DialogContent>

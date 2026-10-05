@@ -51,7 +51,7 @@ class SaveBus
                 'driver_phone' => $data['driver_phone'] ?? null,
                 'notes' => $data['notes'] ?? null,
                 'reserved_seats' => $reserved,
-                ...($layoutChanges ? $type->layout()->toAttributes() : []),
+                ...($layoutChanges ? [...$type->layout()->toAttributes(), 'body' => $type->body] : []),
             ];
 
             $bus = $bus === null ? $tour->buses()->create($attributes) : tap($bus)->update($attributes);

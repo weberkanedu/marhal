@@ -10,9 +10,11 @@ use App\Models\Person;
 use App\Models\SeatAssignment;
 use App\Models\Tour;
 use App\Models\TourHotel;
+use App\Reports\Definitions\BusDriverList;
 use App\Reports\Definitions\BusPassengerList;
 use App\Reports\Definitions\CollectionReport;
 use App\Reports\Definitions\FlightManifest;
+use App\Reports\Definitions\FlightSeatPreferences;
 use App\Reports\Definitions\PersonList;
 use App\Reports\Definitions\StayRoomingList;
 use App\Reports\Definitions\StayRoomOccupancy;
@@ -62,6 +64,16 @@ class ReportController extends Controller
     public function tourPayments(Request $request, Tour $tour, TourPaymentStatus $definition): Response
     {
         Gate::authorize('viewFinance', $tour);
+
+        return $this->responder->download($definition->build($tour), $this->format($request));
+    }
+
+    /**
+     * Turun şoför listesi (araç, plaka, şoför telefonu, gruplar).
+     */
+    public function busDrivers(Request $request, Tour $tour, BusDriverList $definition): Response
+    {
+        Gate::authorize('update', $tour);
 
         return $this->responder->download($definition->build($tour), $this->format($request));
     }
@@ -205,6 +217,16 @@ class ReportController extends Controller
             'tourDates' => $tour->start_date->format('d.m.Y').' – '.$tour->end_date->format('d.m.Y'),
             'emergencyPhone' => $this->currentTenant->get()?->phone,
         ]);
+    }
+
+    /**
+     * Havayoluna gönderilecek koltuk tercih listesi.
+     */
+    public function flightSeats(Request $request, Flight $flight, FlightSeatPreferences $definition): Response
+    {
+        Gate::authorize('update', $flight->tour);
+
+        return $this->responder->download($definition->build($flight), $this->format($request));
     }
 
     /**

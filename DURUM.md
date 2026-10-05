@@ -134,20 +134,33 @@ Yerleşim bilgisi (otel / oda / koltuk) yaka kartı, tur tablosu ve aile ekranı
 
 1. ✅ İki tema (Gece Zümrüdü, Şafak) + ortak görünüm katmanı. Migration: `users.theme` değerleri taşındı. Demo paketi gerekmedi (veri yok).
 2. ✅ Ekranlar (2026-10-05). Ortak parçalar: `ExportMenu` ("Çıktı al": her çıktı Excel + PDF), `ProgressRing`, `kpi-tile`, `PersonAvatar`.
-   - **Tur**: yolculuk çizelgesi `App\Support\Tours\TourJourney` (Hazırlık → gidiş → şehir konaklamaları → dönüş; aynı şehirdeki
-     grup otelleri tek adım; uçuş / konaklama yoksa tur tarihleri) — **tek kaynak**: tur sayfası, "Tur programı" çıktısı, ileride aile ekranı.
-     Halkalar (Kayıt, Tahsilat, Oda, Koltuk, Uçuş) ana paneldeki `TourReadiness` ile aynı hesap; rehbere gösterilmez.
-     "WhatsApp grubu" davet bağlantısını kopyalar (`tours.whatsapp_link`, yalnız https://chat.whatsapp.com/).
-   - **Yolcular**: sayı kartları = süzgeçler (`App\Support\Persons\PersonListFilter`: pasaport sorunlu / aktif turda / KVKK yok);
-     pasaport kuralı tek yerde (`Person::passportIssue()` + `withPassportIssue()`); listede telefon da maskeli (`masked_phone`).
-     Çıktılar: Yolcu listesi, Pasaport kontrol listesi (`PersonList`). "Yeni yolcu": elle / Excel / ön kayıt linki (7. adımda).
-   - **Tahsilat**: özet `App\Support\Collections\CollectionSummary` (ana panel de bunu kullanır): bu ay tahsil edilen (geçen aya göre %),
-     bu ay vadesi gelen taksit, gecikmiş, kalan. "Ödeme al": satırdan ya da üstten yolcu seçerek (`PaymentDialog` ortak).
-     **Aylık hedef girilmedi** (tablo eklenmedi): hedef yerine "bu ay vadesi gelen" ile karşılaştırılıyor — kullanıcıya soruldu.
-   - **Ana Panel**: selam + "Yeni kayıt" menüsü + "Sıradaki tur" kartı (geri sayım, hazırlık halkası, oda/koltuk/uçuş/tahsilat çubukları).
-   - **Görüşünü paylaş** (menü altı): `feedback` tablosu, takip no = id; platform yöneticisi "Geri bildirimler"de listeler (yanıt: paketler aşaması).
-   Migration: `tours.whatsapp_link`, `feedback`. Demo paketi `tasarim-2-ekranlar`.
-3. ⏳ Araç tipleri (gövde, şoför yanı) ve uçak tipleri + sürükle-bırak yerleştirme.
+    - **Tur**: yolculuk çizelgesi `App\Support\Tours\TourJourney` (Hazırlık → gidiş → şehir konaklamaları → dönüş; aynı şehirdeki
+      grup otelleri tek adım; uçuş / konaklama yoksa tur tarihleri) — **tek kaynak**: tur sayfası, "Tur programı" çıktısı, ileride aile ekranı.
+      Halkalar (Kayıt, Tahsilat, Oda, Koltuk, Uçuş) ana paneldeki `TourReadiness` ile aynı hesap; rehbere gösterilmez.
+      "WhatsApp grubu" davet bağlantısını kopyalar (`tours.whatsapp_link`, yalnız https://chat.whatsapp.com/).
+    - **Yolcular**: sayı kartları = süzgeçler (`App\Support\Persons\PersonListFilter`: pasaport sorunlu / aktif turda / KVKK yok);
+      pasaport kuralı tek yerde (`Person::passportIssue()` + `withPassportIssue()`); listede telefon da maskeli (`masked_phone`).
+      Çıktılar: Yolcu listesi, Pasaport kontrol listesi (`PersonList`). "Yeni yolcu": elle / Excel / ön kayıt linki (7. adımda).
+    - **Tahsilat**: özet `App\Support\Collections\CollectionSummary` (ana panel de bunu kullanır): bu ay tahsil edilen (geçen aya göre %),
+      bu ay vadesi gelen taksit, gecikmiş, kalan. "Ödeme al": satırdan ya da üstten yolcu seçerek (`PaymentDialog` ortak).
+      **Aylık hedef girilmedi** (tablo eklenmedi): hedef yerine "bu ay vadesi gelen" ile karşılaştırılıyor — kullanıcıya soruldu.
+    - **Ana Panel**: selam + "Yeni kayıt" menüsü + "Sıradaki tur" kartı (geri sayım, hazırlık halkası, oda/koltuk/uçuş/tahsilat çubukları).
+    - **Görüşünü paylaş** (menü altı): `feedback` tablosu, takip no = id; platform yöneticisi "Geri bildirimler"de listeler (yanıt: paketler aşaması).
+      Migration: `tours.whatsapp_link`, `feedback`. Demo paketi `tasarim-2-ekranlar`.
+3. ✅ Araç ve uçak tipleri + sürükle-bırak (2026-10-05).
+   - **Araç**: `vehicle_types` / `buses` → `body` (otobüs / midibüs / minibüs / van, `VehicleBody`) ve `front_seats` (şoför yanı;
+     varsa ilk numaralar onların). Otobüs düzeni tipten **kopyalanır** (eski araçlar etkilenmez). `BusLayout::frontZone()` = şoför yanı +
+     ilk 3 sıra ("ön bölge"; 4. adımda hareket güçlüğü uyarısı buna bakacak). Koltuk planı: aile kümeli havuz, sürükle-bırak (dolu koltuğa
+     bırakınca yer değiştirir, havuza bırakınca kalkar), tıklayarak yerleştirme (telefon / klavye), "Temizle", "Otomatik yerleştir".
+     Çıktılar: Koltuk planı, Araç yolcu listesi, yeni **Şoför listesi** (`BusDriverList`). Ekrandaki önizleme `types/bus.ts → busGrid`
+     sunucudaki `BusLayout::grid` ile aynı kural (ikisi birlikte değişmeli).
+   - **Uçak**: `aircraft_types` (acentenin; hazır tipler `AircraftPresets`: A321neo, B737-800, A330-300, B777-300ER, B787-9),
+     uçuşa kopyalanan kabin (`flights.cabin/first_row/last_row/exit_rows/blocked_seats`), `flight_passengers.seat_no`.
+     Kurallar `App\Actions\Flights\FlightSeats` (atama, yer değiştirme, gri = başka yolcuya ait koltuk, uyarılar: acil çıkışta
+     15 yaş altı / 65 yaş ve üstü, yanında akrabası olmayan karşı cins). Ekran: Uçuş → "Koltuk planı"; Acente ayarları → Uçak tipleri.
+     Çıktı: **Koltuk tercih listesi** (`FlightSeatPreferences`) — havayoluna gönderilir, kesin koltuğu havayolu verir.
+     Uçakta otomatik yerleştirme yok (havayolu tercihi; istenirse eklenir).
+   Migration: `add_body_and_front_seats_to_vehicles`, `create_aircraft_types_and_flight_seats`. Demo paketi `tasarim-3-arac-ucak`.
 4. ⏳ Otel kat planı (`hotels.floors_count`, `tour_hotel_floors`, `rooms.near_elevator`) + ihtiyaç profili (`person_needs`, şifreli, açık rıza).
 5. ⏳ Yaka kartı yenileme (`badge_settings`, `groups.color`).
 6. ⏳ Hazırlık takibi (`readiness_items`, `readiness_checks`).

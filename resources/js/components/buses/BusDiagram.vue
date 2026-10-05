@@ -1,27 +1,38 @@
 <script setup lang="ts">
-import type { BusCell } from '@/types/bus';
+import { Armchair, CircleDot } from '@lucide/vue';
+import { computed } from 'vue';
+import type { BusCell, VehicleBody } from '@/types/bus';
 
 /**
- * Otobüs koltuk çizimi. Koltuk içeriği "seat" slotuyla verilir; slot verilmezse sadece numara.
+ * Araç koltuk çizimi (gövdeye göre: otobüs uzun ve köşeli burun, van / minibüs kısa ve yuvarlak).
+ * Koltuk içeriği "seat" slotuyla verilir; slot verilmezse sadece numara.
  * Önizleme (araç tipi formu) ve koltuk planı ekranı aynı bileşeni kullanır.
  */
-withDefaults(
+const props = withDefaults(
     defineProps<{
         grid: BusCell[][];
         compact?: boolean;
+        body?: VehicleBody;
     }>(),
-    { compact: false },
+    { compact: false, body: 'otobus' },
+);
+
+// Şoför yanı koltuk yoksa şoför ayrı bir şerit olarak gösterilir.
+const hasDriverRow = computed(() =>
+    props.grid.some((cells) => cells.includes('driver')),
 );
 </script>
 
 <template>
     <div
-        class="inline-flex flex-col gap-1 rounded-2xl border-2 bg-muted/30 p-2 sm:p-3"
+        class="veh inline-flex flex-col gap-1 border-2 p-2 sm:p-3"
+        :class="[`veh-${body}`, compact ? 'veh-compact' : '']"
     >
         <div
-            class="mb-1 rounded-md border bg-background px-2 py-1 text-center text-xs text-muted-foreground"
+            v-if="!hasDriverRow"
+            class="mb-1 flex items-center justify-center gap-1 rounded-md border bg-background/60 px-2 py-1 text-xs text-muted-foreground"
         >
-            Ön — şoför
+            <CircleDot class="size-3" /> Ön — şoför
         </div>
         <div
             v-for="(cells, rowIndex) in grid"
@@ -66,7 +77,29 @@ withDefaults(
                 >
                     kapı
                 </div>
-                <div v-else class="min-w-0 flex-1"></div>
+                <div
+                    v-else-if="cell === 'driver'"
+                    :class="
+                        compact
+                            ? 'size-7 text-[9px]'
+                            : 'h-14 w-[4.2rem] text-xs sm:w-28'
+                    "
+                    class="flex shrink-0 flex-col items-center justify-center gap-0.5 rounded-md border border-dashed text-muted-foreground"
+                    title="Şoför"
+                >
+                    <Armchair :class="compact ? 'size-3' : 'size-4'" />
+                    <span v-if="!compact">Şoför</span>
+                </div>
+                <div
+                    v-else
+                    :class="
+                        cells.includes('aisle')
+                            ? compact
+                                ? 'size-7 shrink-0'
+                                : 'w-[4.2rem] shrink-0 sm:w-28'
+                            : 'min-w-0 flex-1'
+                    "
+                ></div>
             </template>
         </div>
     </div>

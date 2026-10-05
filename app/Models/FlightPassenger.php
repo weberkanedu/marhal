@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $registration_id
  * @property string|null $pnr
  * @property string|null $ticket_no
+ * @property string|null $seat_no
  * @property-read Flight $flight
  * @property-read Registration $registration
  */

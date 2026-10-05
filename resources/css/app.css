@@ -585,6 +585,66 @@ button.kpi-tile:hover {
     line-height: 1.3;
 }
 
+/* Araç çizimi (components/buses/BusDiagram.vue): gövdeye göre burun ve köşeler */
+.veh {
+    border-color: var(--border);
+    background: color-mix(in srgb, var(--muted) 70%, transparent);
+    border-radius: 2.25rem 2.25rem 1rem 1rem;
+}
+[data-theme='zumrut'] .veh {
+    background: linear-gradient(
+        180deg,
+        rgba(221, 185, 79, 0.08),
+        rgba(22, 48, 38, 0.85)
+    );
+}
+[data-theme='safak'] .veh {
+    background: rgba(255, 255, 255, 0.6);
+    border-color: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 30px 60px -30px rgba(19, 38, 31, 0.35);
+}
+.veh-midibus {
+    border-radius: 2rem 2rem 1.25rem 1.25rem;
+}
+.veh-minibus,
+.veh-van {
+    border-radius: 2.75rem 2.75rem 1.5rem 1.5rem;
+}
+.veh-compact {
+    border-radius: 1.25rem 1.25rem 0.6rem 0.6rem;
+}
+/* Uçak kabini (components/flights/PlaneDiagram.vue): yuvarlak burun */
+.plane {
+    border-color: var(--border);
+    border-radius: 9rem 9rem 2rem 2rem;
+    background: color-mix(in srgb, var(--muted) 70%, transparent);
+}
+[data-theme='zumrut'] .plane {
+    background: linear-gradient(
+        180deg,
+        rgba(221, 185, 79, 0.08),
+        rgba(22, 48, 38, 0.85)
+    );
+}
+[data-theme='safak'] .plane {
+    background: rgba(255, 255, 255, 0.6);
+    border-color: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 30px 60px -30px rgba(19, 38, 31, 0.35);
+}
+.plane-seat-w {
+    width: 2.6rem;
+}
+@media (min-width: 640px) {
+    .plane-seat-w {
+        width: 3.4rem;
+    }
+}
+
+/* Ön bölge koltuğu (hareket güçlüğü / yaşlı yolcular için önerilen) */
+.seat-front {
+    box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--men) 55%, transparent);
+}
+
 /* Sayılar */
 .num {
     font-family: var(--font-number);

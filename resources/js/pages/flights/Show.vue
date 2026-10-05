@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import {
     AlertTriangle,
+    Armchair,
     ArrowLeft,
     Plus,
     Search,
@@ -25,6 +26,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { formatDate } from '@/lib/format';
+import { seatPlan } from '@/routes/flights';
 import { manifest } from '@/routes/reports/flights';
 import { index as toursIndex, show as showTour } from '@/routes/tours';
 import { formatFlightTime } from '@/types/flight';
@@ -145,9 +147,16 @@ function add(): void {
                     >
                 </p>
             </div>
-            <Button v-if="can.update" @click="openAdd"
-                ><Plus /> Yolcu ekle</Button
-            >
+            <div class="flex flex-wrap gap-2">
+                <Button variant="outline" as-child>
+                    <Link :href="seatPlan(flight.id)"
+                        ><Armchair /> Koltuk planı</Link
+                    >
+                </Button>
+                <Button v-if="can.update" @click="openAdd"
+                    ><Plus /> Yolcu ekle</Button
+                >
+            </div>
         </div>
 
         <div v-if="can.reports" class="flex flex-wrap items-center gap-4">

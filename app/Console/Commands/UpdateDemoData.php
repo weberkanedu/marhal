@@ -10,6 +10,7 @@ use Database\Seeders\Demo\FixParentAgesDemo;
 use Database\Seeders\Demo\FlightDemo;
 use Database\Seeders\Demo\RoomPlanDemo;
 use Database\Seeders\Demo\ScreensDemo;
+use Database\Seeders\Demo\VehicleAircraftDemo;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -33,6 +34,7 @@ class UpdateDemoData extends Command
         'faz3-ucuslar' => FlightDemo::class,
         'faz3-yaka-karti' => BadgeDemo::class,
         'tasarim-2-ekranlar' => ScreensDemo::class,
+        'tasarim-3-arac-ucak' => VehicleAircraftDemo::class,
     ];
 
     public function handle(CurrentTenant $currentTenant): int

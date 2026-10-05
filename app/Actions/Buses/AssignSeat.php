@@ -13,12 +13,13 @@ use Illuminate\Validation\ValidationException;
  * Yolcuyu koltuğa oturtur. Engelleyen kurallar: başka turun / iptal edilmiş kaydı, olmayan koltuk,
  * rehbere ayrılmış koltuk, dolu koltuk. Yolcu turda başka bir koltuktaysa (başka otobüs dahil)
  * yeni koltuğa taşınır. Yan koltukta karşı cinsten yolcu olması engellemez, sadece uyarıdır.
+ * `$swap`: hedef koltuk doluysa ve yolcu aynı otobüste oturuyorsa iki yolcu yer değiştirir (sürükle-bırak).
  */
 class AssignSeat
 {
-    public function handle(Bus $bus, Registration $registration, int $seatNo): SeatAssignment
+    public function handle(Bus $bus, Registration $registration, int $seatNo, bool $swap = false): SeatAssignment
     {
-        return DB::transaction(function () use ($bus, $registration, $seatNo): SeatAssignment {
+        return DB::transaction(function () use ($bus, $registration, $seatNo, $swap): SeatAssignment {
             // Aynı koltuğa aynı anda iki yerleştirme yapılmasın.
             $bus = Bus::query()->lockForUpdate()->whereKey($bus->getKey())->firstOrFail();
             $name = $registration->person->full_name;
@@ -36,6 +37,22 @@ class AssignSeat
             }
 
             $taken = $bus->seats()->where('seat_no', $seatNo)->where('registration_id', '!=', $registration->getKey())->with('registration.person')->first();
+
+            $current = $bus->seats()->where('registration_id', $registration->getKey())->first();
+
+            if ($taken !== null && $swap && $current !== null) {
+                // Yer değiştirme: (otobüs, koltuk) benzersiz olduğundan önce karşıdaki kayıt kaldırılır.
+                $other = $taken->registration_id;
+                $oldSeat = $current->seat_no;
+                $taken->delete();
+                $current->update(['seat_no' => $seatNo]);
+                (new SeatAssignment)->forceFill([
+                    'tenant_id' => $bus->tenant_id, 'tour_id' => $bus->tour_id, 'bus_id' => $bus->getKey(),
+                    'registration_id' => $other, 'seat_no' => $oldSeat,
+                ])->save();
+
+                return $current;
+            }
 
             if ($taken !== null) {
                 $this->fail("{$seatNo} numaralı koltukta {$taken->registration->person->full_name} oturuyor.");

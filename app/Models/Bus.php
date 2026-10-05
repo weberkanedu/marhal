@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\VehicleBody;
 use App\Models\Concerns\Auditable;
 use App\Models\Concerns\BelongsToTenant;
 use App\Support\Buses\BusLayout;
@@ -26,6 +27,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $rows
  * @property int $back_row_seats
  * @property int|null $door_row
+ * @property VehicleBody $body
+ * @property int $front_seats
  * @property array<int, int|string>|null $reserved_seats
  * @property string|null $plate
  * @property string|null $driver_name
@@ -51,6 +54,8 @@ class Bus extends Model
             'rows' => 'integer',
             'back_row_seats' => 'integer',
             'door_row' => 'integer',
+            'body' => VehicleBody::class,
+            'front_seats' => 'integer',
             'reserved_seats' => 'array',
         ];
     }

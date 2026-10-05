@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\VehicleBody;
 use App\Models\VehicleType;
+use App\Support\Buses\BusLayout;
 use App\Support\TurkishText;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,11 +30,14 @@ class VehicleTypeController extends Controller
                 ->sort(fn (VehicleType $a, VehicleType $b) => TurkishText::compare($a->name, $b->name))
                 ->values()
                 ->map(fn (VehicleType $type) => [
-                    ...$type->only(['id', 'name', 'left_seats', 'right_seats', 'rows', 'back_row_seats', 'door_row', 'notes']),
+                    ...$type->only(['id', 'name', 'left_seats', 'right_seats', 'rows', 'back_row_seats', 'door_row', 'front_seats', 'notes']),
+                    'body' => $type->body->value,
+                    'body_label' => $type->body->label(),
                     'label' => $type->layout()->label(),
                     'seat_count' => $type->layout()->seatCount(),
                     'buses_count' => $type->buses_count,
                 ]),
+            'bodies' => VehicleBody::options(),
         ]);
     }
 
@@ -83,12 +89,17 @@ class VehicleTypeController extends Controller
             'rows' => ['required', 'integer', 'min:1', 'max:20'],
             'back_row_seats' => ['nullable', 'integer', 'min:0', 'max:5'],
             'door_row' => ['nullable', 'integer', 'min:1', 'lte:rows'],
+            'body' => ['nullable', Rule::enum(VehicleBody::class)],
+            'front_seats' => ['nullable', 'integer', 'min:0', 'max:3'],
             'notes' => ['nullable', 'string', 'max:500'],
         ], [], [
             'name' => 'ad', 'left_seats' => 'sol koltuk', 'right_seats' => 'sağ koltuk', 'rows' => 'sıra sayısı',
             'back_row_seats' => 'arka sıra', 'door_row' => 'kapı sırası', 'notes' => 'not',
+            'body' => 'gövde', 'front_seats' => 'şoför yanı koltuk',
         ]);
 
+        $data['body'] ??= VehicleBody::Bus->value;
+        $data['front_seats'] = min((int) ($data['front_seats'] ?? 0), BusLayout::maxFrontSeats($data['left_seats'], $data['right_seats']));
         $data['back_row_seats'] = min((int) ($data['back_row_seats'] ?? 0), $data['left_seats'] + $data['right_seats'] + 1);
 
         return $data;

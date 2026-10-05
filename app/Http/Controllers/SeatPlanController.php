@@ -12,6 +12,7 @@ use App\Models\PersonRelation;
 use App\Models\Registration;
 use App\Models\SeatAssignment;
 use App\Models\User;
+use App\Support\FamilyUnits;
 use App\Support\TurkishText;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -64,6 +65,8 @@ class SeatPlanController extends Controller
                 'driver_name' => $bus->driver_name,
                 'driver_phone' => $bus->driver_phone,
                 'reserved' => $bus->reserved(),
+                'body' => $bus->body->value,
+                'front_zone' => $layout->frontZone(),
                 'groups' => $bus->groups->pluck('name')->values(),
                 'tour' => ['id' => $bus->tour->id, 'name' => $bus->tour->name],
             ],
@@ -76,6 +79,8 @@ class SeatPlanController extends Controller
                     'warnings' => $guideGroups !== null ? [] : ($warnings[$s->seat_no] ?? []),
                 ]]),
             'unassigned' => $this->withFamily($unassigned, $bus, $seats),
+            // Yolcu havuzu aile kümeleriyle (sürükle-bırakta aileler bir arada görünür).
+            'units' => $this->units($unassigned),
             'others' => $canUpdate ? $this->others($bus, $expected, $seatedIds) : [],
             'stats' => [
                 'seats' => $layout->seatCount() - $reservedCount,
@@ -198,6 +203,28 @@ class SeatPlanController extends Controller
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * Koltuğu olmayanların aile kümeleri: kayıt id'leri ve "Yılmaz ailesi" gibi bir ad (tek kişiyse null).
+     *
+     * @param  Collection<int, Registration>  $unassigned
+     * @return list<array{label: string|null, ids: list<string>}>
+     */
+    private function units(Collection $unassigned): array
+    {
+        $links = $this->occupancy->familyLinks($unassigned->pluck('person_id'));
+        $sorted = $unassigned->sort(fn (Registration $a, Registration $b) => TurkishText::compare(
+            $a->person->last_name.' '.$a->person->first_name,
+            $b->person->last_name.' '.$b->person->first_name,
+        ))->values()->all();
+
+        return array_map(fn (array $unit) => [
+            'label' => count($unit) > 1
+                ? collect($unit)->map(fn (Registration $r) => $r->person->last_name)->unique()->join(' / ').' ailesi'
+                : null,
+            'ids' => array_map(fn (Registration $r) => $r->id, $unit),
+        ], FamilyUnits::build(array_values($sorted), $links));
     }
 
     /**

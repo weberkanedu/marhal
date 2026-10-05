@@ -3,7 +3,8 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import {
     AlertTriangle,
     ArrowLeft,
-    FileText,
+    Eraser,
+    GripVertical,
     Search,
     Users,
     Wand2,
@@ -14,7 +15,9 @@ import { toast } from 'vue-sonner';
 import SeatAssignmentController from '@/actions/App/Http/Controllers/SeatAssignmentController';
 import SeatPlanController from '@/actions/App/Http/Controllers/SeatPlanController';
 import BusDiagram from '@/components/buses/BusDiagram.vue';
-import ExportButtons from '@/components/ExportButtons.vue';
+import ExportMenu from '@/components/ExportMenu.vue';
+import PersonAvatar from '@/components/persons/PersonAvatar.vue';
+import ProgressBar from '@/components/ProgressBar.vue';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -36,6 +39,7 @@ import {
     passengers as passengerReport,
     seatChart,
 } from '@/routes/reports/buses';
+import { drivers as driverReport } from '@/routes/reports/tours';
 import { index as toursIndex, show as showTour } from '@/routes/tours';
 import type {
     BusCell,
@@ -44,14 +48,17 @@ import type {
     SeatOccupant,
     SeatPlanBus,
     SeatPlanStats,
+    SeatPoolUnit,
     UnseatedPassenger,
 } from '@/types/bus';
+import type { ExportItem } from '@/types/export';
 
 const props = defineProps<{
     bus: SeatPlanBus;
     grid: BusCell[][];
     seats: Record<string, SeatOccupant>;
     unassigned: UnseatedPassenger[];
+    units: SeatPoolUnit[];
     others: OtherSeatPassenger[];
     stats: SeatPlanStats;
     can: { update: boolean; reports: boolean };
@@ -66,18 +73,22 @@ defineOptions({
 const occupant = (seat: number): SeatOccupant | undefined =>
     props.seats[String(seat)];
 const isReserved = (seat: number) => props.bus.reserved.includes(seat);
+const inFront = (seat: number) => props.bus.front_zone.includes(seat);
 
-// Seçim: koltuğu olmayan yolcu veya taşınacak oturan yolcu.
-const selected = ref<{
+type Picked = {
     registration_id: string;
     full_name: string;
     seat_id: string | null;
-} | null>(null);
+    seat_no: number | null;
+};
 
-function selectPassenger(p: {
-    registration_id: string;
-    full_name: string;
-}): void {
+// Seçim (tıklayarak yerleştirme; telefon ve klavye için) ve sürüklenen yolcu.
+const selected = ref<Picked | null>(null);
+const dragging = ref<Picked | null>(null);
+const overSeat = ref<number | null>(null);
+const overPool = ref(false);
+
+function pick(p: { registration_id: string; full_name: string }): void {
     if (!props.can.update) {
         return;
     }
@@ -89,11 +100,41 @@ function selectPassenger(p: {
                   registration_id: p.registration_id,
                   full_name: p.full_name,
                   seat_id: null,
+                  seat_no: null,
               };
 }
 
 function showError(errors: Record<string, string>): void {
     toast.error(Object.values(errors)[0] ?? 'İşlem yapılamadı.');
+}
+
+function assign(who: Picked, seat: number): void {
+    router.post(
+        SeatAssignmentController.store.url(props.bus.id),
+        {
+            registration_id: who.registration_id,
+            seat_no: seat,
+            // Oturan yolcu dolu koltuğa bırakılırsa yer değiştirir.
+            swap: who.seat_id !== null,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => (selected.value = null),
+            onError: showError,
+        },
+    );
+}
+
+function unseat(who: Picked | null): void {
+    if (!who?.seat_id) {
+        return;
+    }
+
+    router.delete(SeatAssignmentController.destroy.url(who.seat_id), {
+        preserveScroll: true,
+        onSuccess: () => (selected.value = null),
+        onError: showError,
+    });
 }
 
 function clickSeat(seat: number): void {
@@ -103,9 +144,14 @@ function clickSeat(seat: number): void {
 
     const current = occupant(seat);
 
-    // Dolu koltuk: yolcuyu seç (taşımak veya kaldırmak için).
-    if (current) {
-        if (current.registration_id === null) {
+    if (current && current.registration_id !== null) {
+        // Seçili oturan yolcu başka bir dolu koltuğa tıklarsa yer değiştirir.
+        if (
+            selected.value?.seat_id &&
+            selected.value.registration_id !== current.registration_id
+        ) {
+            assign(selected.value, seat);
+
             return;
         }
 
@@ -116,48 +162,83 @@ function clickSeat(seat: number): void {
                       registration_id: current.registration_id,
                       full_name: current.full_name,
                       seat_id: current.seat_id,
+                      seat_no: seat,
                   };
 
         return;
     }
 
-    if (!selected.value) {
+    if (!current && selected.value) {
+        assign(selected.value, seat);
+    }
+}
+
+// Sürükle-bırak (fare ile)
+function startDrag(event: DragEvent, who: Picked): void {
+    if (!props.can.update) {
         return;
     }
 
-    router.post(
-        SeatAssignmentController.store.url(props.bus.id),
-        { registration_id: selected.value.registration_id, seat_no: seat },
-        {
-            preserveScroll: true,
-            onSuccess: () => (selected.value = null),
-            onError: showError,
-        },
-    );
+    dragging.value = who;
+    event.dataTransfer?.setData('text/plain', who.registration_id);
+
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+    }
 }
 
-function unseat(): void {
-    if (!selected.value?.seat_id) {
-        return;
+function endDrag(): void {
+    dragging.value = null;
+    overSeat.value = null;
+    overPool.value = false;
+}
+
+function canDropOn(seat: number): boolean {
+    const who = dragging.value;
+
+    if (!who || isReserved(seat) || who.seat_no === seat) {
+        return false;
     }
 
-    router.delete(
-        SeatAssignmentController.destroy.url(selected.value.seat_id),
-        {
-            preserveScroll: true,
-            onSuccess: () => (selected.value = null),
-            onError: showError,
-        },
+    const current = occupant(seat);
+
+    // Boş koltuk ya da (oturan yolcu için) yer değiştirme.
+    return (
+        !current || (who.seat_id !== null && current.registration_id !== null)
     );
 }
 
-// Arama
+function dropOnSeat(seat: number): void {
+    if (dragging.value && canDropOn(seat)) {
+        assign(dragging.value, seat);
+    }
+
+    endDrag();
+}
+
+function dropOnPool(): void {
+    unseat(dragging.value);
+    endDrag();
+}
+
+// Havuz: aile kümeleri bir arada; arama süzer.
 const search = ref('');
 const normalize = (value: string) => value.toLocaleLowerCase('tr');
-const filtered = computed(() =>
-    props.unassigned.filter((p) =>
-        normalize(p.full_name).includes(normalize(search.value)),
-    ),
+const byId = computed(
+    () => new Map(props.unassigned.map((p) => [p.registration_id, p])),
+);
+const pool = computed(() =>
+    props.units
+        .map((unit) => ({
+            label: unit.label,
+            people: unit.ids
+                .map((id) => byId.value.get(id))
+                .filter((p): p is UnseatedPassenger => p !== undefined)
+                .filter((p) =>
+                    normalize(p.full_name).includes(normalize(search.value)),
+                ),
+        }))
+        .filter((unit) => unit.people.length > 0),
 );
 const filteredOthers = computed(() =>
     props.others.filter((p) =>
@@ -181,7 +262,43 @@ const shortName = (name: string) => {
         : name;
 };
 
-// Otomatik dağıt
+const exportItems = computed<ExportItem[]>(() =>
+    props.can.reports
+        ? [
+              {
+                  title: 'Koltuk planı',
+                  description: 'Araca asmak için, A4',
+                  url: seatChart.url(props.bus.id),
+                  pdfOnly: true,
+              },
+              {
+                  title: 'Araç yolcu listesi',
+                  description: `${props.bus.name} · koltuk sırasıyla`,
+                  url: passengerReport.url(props.bus.id),
+              },
+              {
+                  title: 'Şoför listesi',
+                  description: 'Turun bütün araçları, plaka ve telefon',
+                  url: driverReport.url(props.bus.tour.id),
+              },
+          ]
+        : [],
+);
+
+function clearPlan(): void {
+    if (
+        confirm(
+            `${props.bus.name} için bütün yolcular koltuktan kaldırılsın mı? Rehber koltukları ayrılmış kalır.`,
+        )
+    ) {
+        router.delete(SeatAssignmentController.clear.url(props.bus.id), {
+            preserveScroll: true,
+            onError: showError,
+        });
+    }
+}
+
+// Otomatik yerleştir
 const autoOpen = ref(false);
 const preview = ref<SeatAutoPreview | null>(null);
 const loading = ref(false);
@@ -195,9 +312,7 @@ async function openAuto(): Promise<void> {
     try {
         const response = await fetch(
             SeatPlanController.preview.url(props.bus.id),
-            {
-                headers: { Accept: 'application/json' },
-            },
+            { headers: { Accept: 'application/json' } },
         );
         preview.value = response.ok ? await response.json() : null;
     } finally {
@@ -250,77 +365,60 @@ function applyAuto(): void {
                     </template>
                 </p>
             </div>
-            <Button
-                v-if="can.update"
-                :disabled="stats.unassigned === 0"
-                @click="openAuto"
-            >
-                <Wand2 /> Otomatik dağıt
-            </Button>
+            <div class="flex flex-wrap gap-2">
+                <ExportMenu :items="exportItems" />
+                <Button
+                    v-if="can.update"
+                    variant="outline"
+                    :disabled="stats.occupied === 0"
+                    @click="clearPlan"
+                >
+                    <Eraser /> Temizle
+                </Button>
+                <Button
+                    v-if="can.update"
+                    :disabled="stats.unassigned === 0"
+                    @click="openAuto"
+                >
+                    <Wand2 /> Otomatik yerleştir
+                </Button>
+            </div>
         </div>
 
-        <div
-            v-if="can.reports"
-            class="flex flex-wrap items-center gap-x-6 gap-y-2"
-        >
-            <ExportButtons
-                :url="passengerReport.url(bus.id)"
-                label="Otobüs yolcu listesi"
-            />
-            <Button variant="outline" size="sm" as-child>
-                <a :href="seatChart.url(bus.id)">
-                    <FileText /> Koltuk planı (PDF, otobüse asmak için)
-                </a>
-            </Button>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Card>
-                <CardHeader>
-                    <CardDescription>Yolcu koltuğu</CardDescription>
-                    <CardTitle class="text-2xl">{{ stats.seats }}</CardTitle>
-                    <p
-                        v-if="stats.reserved"
-                        class="text-xs text-muted-foreground"
-                    >
-                        + {{ stats.reserved }} rehber / görevli
-                    </p>
-                </CardHeader>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardDescription>Dolu</CardDescription>
-                    <CardTitle class="text-2xl">{{ stats.occupied }}</CardTitle>
-                </CardHeader>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardDescription>Boş</CardDescription>
-                    <CardTitle class="text-2xl text-success">
-                        {{ stats.seats - stats.occupied }}
-                    </CardTitle>
-                </CardHeader>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardDescription>Koltuğu olmayan</CardDescription>
-                    <CardTitle
-                        class="text-2xl"
-                        :class="{ 'text-warning': stats.unassigned > 0 }"
-                    >
-                        {{ stats.unassigned }}
-                    </CardTitle>
-                </CardHeader>
-            </Card>
+        <!-- Doluluk -->
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+            <div class="flex min-w-60 flex-1 items-center gap-3">
+                <ProgressBar
+                    class="flex-1"
+                    :value="stats.occupied"
+                    :max="stats.occupied + stats.unassigned || stats.seats"
+                />
+                <span class="text-muted-foreground tabular-nums">
+                    {{ stats.occupied }} /
+                    {{ stats.occupied + stats.unassigned }}
+                    yerleşti
+                </span>
+            </div>
+            <span class="text-muted-foreground">
+                Boş koltuk:
+                <b class="text-success">{{ stats.seats - stats.occupied }}</b>
+                <template v-if="stats.reserved">
+                    · Rehber / görevli: {{ stats.reserved }}
+                </template>
+            </span>
         </div>
 
         <div
             v-if="selected"
-            class="sticky top-2 z-10 flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/40 bg-background p-3 text-sm shadow-sm"
+            class="sticky top-2 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-popover p-3 text-sm shadow-lg"
         >
             <span>
-                <strong>{{ selected.full_name }}</strong> seçildi — boş bir
-                koltuğa tıklayın.
+                <strong>{{ selected.full_name }}</strong> seçildi —
+                {{
+                    selected.seat_id
+                        ? 'boş koltuğa tıklayın ya da yer değiştireceği yolcuya tıklayın.'
+                        : 'boş bir koltuğa tıklayın.'
+                }}
             </span>
             <div class="flex gap-2">
                 <Button
@@ -328,7 +426,7 @@ function applyAuto(): void {
                     size="sm"
                     variant="outline"
                     class="text-destructive"
-                    @click="unseat"
+                    @click="unseat(selected)"
                 >
                     Koltuktan kaldır
                 </Button>
@@ -339,13 +437,26 @@ function applyAuto(): void {
         </div>
 
         <div class="grid min-w-0 gap-4 lg:grid-cols-[20rem_minmax(0,1fr)]">
-            <Card class="h-fit min-w-0 lg:sticky lg:top-2">
+            <!-- Yolcu havuzu: oturan yolcu buraya bırakılırsa koltuktan kalkar -->
+            <Card
+                class="h-fit min-w-0 transition-shadow lg:sticky lg:top-2"
+                :class="{
+                    'ring-2 ring-primary': overPool && dragging?.seat_id,
+                }"
+                @dragover.prevent="overPool = dragging?.seat_id !== null"
+                @dragleave="overPool = false"
+                @drop.prevent="dropOnPool"
+            >
                 <CardHeader>
                     <CardTitle class="flex items-center gap-2">
                         <Users class="size-4" /> Koltuğu olmayanlar
+                        <span class="text-sm font-normal text-muted-foreground">
+                            {{ unassigned.length }}
+                        </span>
                     </CardTitle>
                     <CardDescription v-if="can.update">
-                        Yolcuya, sonra boş koltuğa tıklayın.
+                        Yolcuyu koltuğa sürükleyin ya da önce yolcuya, sonra
+                        koltuğa tıklayın. Aileler bir arada.
                     </CardDescription>
                 </CardHeader>
                 <CardContent class="flex flex-col gap-2 text-sm">
@@ -361,60 +472,90 @@ function applyAuto(): void {
                     </div>
                     <p
                         v-if="unassigned.length === 0"
-                        class="py-2 text-muted-foreground"
+                        class="rounded-lg border border-dashed p-4 text-center text-muted-foreground"
                     >
-                        Herkesin koltuğu var.
+                        Herkes yerleşti ✓
                     </p>
-                    <ul
-                        class="flex max-h-[35vh] flex-col gap-0.5 overflow-y-auto lg:max-h-[60vh]"
+                    <div
+                        class="flex max-h-[35vh] flex-col gap-2 overflow-y-auto lg:max-h-[60vh]"
                     >
-                        <li v-for="p in filtered" :key="p.registration_id">
+                        <div
+                            v-for="(unit, index) in pool"
+                            :key="index"
+                            class="flex flex-col gap-1"
+                            :class="
+                                unit.label
+                                    ? 'rounded-xl border border-dashed border-primary/40 p-1.5'
+                                    : ''
+                            "
+                        >
+                            <small
+                                v-if="unit.label"
+                                class="px-1 pt-1 text-[10.5px] tracking-wider text-muted-foreground uppercase"
+                            >
+                                {{ unit.label }}
+                            </small>
                             <button
+                                v-for="p in unit.people"
+                                :key="p.registration_id"
                                 type="button"
-                                class="w-full rounded-md px-2 py-1.5 text-left hover:bg-muted"
+                                class="flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition-colors hover:border-primary"
                                 :class="{
-                                    'bg-primary/10 ring-1 ring-primary':
+                                    'border-primary ring-2 ring-primary/30':
                                         selected?.registration_id ===
                                         p.registration_id,
+                                    'cursor-grab': can.update,
+                                    'opacity-40':
+                                        dragging?.registration_id ===
+                                        p.registration_id,
                                 }"
+                                :draggable="can.update"
                                 :disabled="!can.update"
-                                @click="selectPassenger(p)"
+                                @click="pick(p)"
+                                @dragstart="
+                                    startDrag($event, {
+                                        registration_id: p.registration_id,
+                                        full_name: p.full_name,
+                                        seat_id: null,
+                                        seat_no: null,
+                                    })
+                                "
+                                @dragend="endDrag"
                             >
-                                <div
-                                    class="flex items-center justify-between gap-2"
-                                >
-                                    <span class="truncate font-medium">{{
-                                        p.full_name
-                                    }}</span>
-                                    <span
-                                        class="shrink-0 text-xs text-muted-foreground"
-                                    >
-                                        {{
-                                            p.gender === 'erkek'
-                                                ? 'Erkek'
-                                                : 'Kadın'
-                                        }}
-                                        <template v-if="p.age"
-                                            >· {{ p.age }}</template
-                                        >
+                                <GripVertical
+                                    v-if="can.update"
+                                    class="size-3.5 shrink-0 text-muted-foreground"
+                                />
+                                <PersonAvatar
+                                    :name="p.full_name"
+                                    :gender="p.gender"
+                                    size="sm"
+                                />
+                                <span class="min-w-0 flex-1">
+                                    <span class="block truncate font-medium">
+                                        {{ p.full_name }}
                                     </span>
-                                </div>
-                                <div class="text-xs text-muted-foreground">
-                                    {{ p.group_name }}
-                                </div>
-                                <div
-                                    v-for="f in p.family"
-                                    :key="f.name"
-                                    class="text-xs text-primary"
-                                >
-                                    {{ f.relation }}: {{ f.name }}
-                                    <template v-if="f.seat_no">
-                                        (koltuk {{ f.seat_no }})
-                                    </template>
-                                </div>
+                                    <span
+                                        class="block truncate text-xs text-muted-foreground"
+                                    >
+                                        {{ p.group_name }}
+                                        <template v-if="p.age">
+                                            · {{ p.age }} yaş
+                                        </template>
+                                        <template
+                                            v-for="f in p.family.filter(
+                                                (f) => f.seat_no,
+                                            )"
+                                            :key="f.name"
+                                        >
+                                            · {{ f.relation }} koltuk
+                                            {{ f.seat_no }}
+                                        </template>
+                                    </span>
+                                </span>
                             </button>
-                        </li>
-                    </ul>
+                        </div>
+                    </div>
 
                     <template v-if="can.update && others.length > 0">
                         <button
@@ -423,7 +564,7 @@ function applyAuto(): void {
                             @click="showOthers = !showOthers"
                         >
                             {{ showOthers ? 'Gizle' : 'Göster' }}: grubu bu
-                            otobüste olmayan yolcular ({{ others.length }})
+                            araçta olmayan yolcular ({{ others.length }})
                         </button>
                         <ul v-if="showOthers" class="flex flex-col gap-0.5">
                             <li
@@ -438,7 +579,17 @@ function applyAuto(): void {
                                             selected?.registration_id ===
                                             p.registration_id,
                                     }"
-                                    @click="selectPassenger(p)"
+                                    draggable="true"
+                                    @click="pick(p)"
+                                    @dragstart="
+                                        startDrag($event, {
+                                            registration_id: p.registration_id,
+                                            full_name: p.full_name,
+                                            seat_id: null,
+                                            seat_no: null,
+                                        })
+                                    "
+                                    @dragend="endDrag"
                                 >
                                     <div class="truncate">
                                         {{ p.full_name }}
@@ -446,9 +597,8 @@ function applyAuto(): void {
                                     <div class="text-xs text-muted-foreground">
                                         {{ p.group_name ?? 'Grupsuz' }}
                                         <template v-if="p.elsewhere">
-                                            · şu an
-                                            {{ p.elsewhere }} (seçerseniz buraya
-                                            taşınır)
+                                            · şu an {{ p.elsewhere }}
+                                            (seçerseniz buraya taşınır)
                                         </template>
                                     </div>
                                 </button>
@@ -459,30 +609,87 @@ function applyAuto(): void {
             </Card>
 
             <div class="flex min-w-0 flex-col gap-3">
+                <div
+                    class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground"
+                >
+                    <span class="flex items-center gap-1.5">
+                        <i
+                            class="seat-front inline-block size-3 rounded border"
+                        />
+                        Ön bölge (yaşlı / hareket güçlüğü olanlar için)
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <i class="inline-block size-3 rounded-full bg-women" />
+                        Kadın
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <i class="inline-block size-3 rounded-full bg-men" />
+                        Erkek
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <i
+                            class="inline-block size-3 rounded border border-dashed"
+                        />
+                        Rehber / görevli
+                    </span>
+                </div>
+
                 <div class="overflow-x-auto pb-2">
-                    <BusDiagram :grid="grid">
+                    <BusDiagram :grid="grid" :body="bus.body">
                         <template #seat="{ seat }">
                             <button
                                 type="button"
-                                class="flex h-14 w-full flex-col items-start rounded-md border px-1.5 py-1 text-left text-xs transition"
+                                class="flex h-14 w-full flex-col items-start rounded-lg border px-1.5 py-1 text-left text-xs transition"
                                 :class="{
+                                    'seat-front': inFront(seat),
                                     'border-dashed bg-muted text-muted-foreground':
                                         isReserved(seat),
-                                    'bg-background hover:bg-muted':
+                                    'bg-background/70 hover:bg-muted':
                                         !isReserved(seat) && !occupant(seat),
-                                    'bg-primary/5': occupant(seat),
+                                    'border-women/60 bg-women/10':
+                                        occupant(seat)?.gender === 'kadin',
+                                    'border-men/60 bg-men/10':
+                                        occupant(seat)?.gender === 'erkek',
                                     'border-primary ring-2 ring-primary/30':
-                                        selected &&
-                                        !occupant(seat) &&
-                                        !isReserved(seat),
+                                        (selected &&
+                                            !occupant(seat) &&
+                                            !isReserved(seat)) ||
+                                        overSeat === seat,
                                     'ring-2 ring-primary':
                                         occupant(seat)?.registration_id ===
                                             selected?.registration_id &&
                                         selected !== null,
+                                    'cursor-grab':
+                                        can.update &&
+                                        occupant(seat)?.registration_id,
+                                    'opacity-40': dragging?.seat_no === seat,
                                 }"
                                 :disabled="!can.update || isReserved(seat)"
-                                :aria-label="`Koltuk ${seat}${occupant(seat) ? ': ' + occupant(seat)?.full_name : ''}`"
+                                :draggable="
+                                    can.update &&
+                                    !!occupant(seat)?.registration_id
+                                "
+                                :aria-label="`Koltuk ${seat}${occupant(seat) ? ': ' + occupant(seat)?.full_name : ''}${inFront(seat) ? ' (ön bölge)' : ''}`"
                                 @click="clickSeat(seat)"
+                                @dragstart="
+                                    startDrag($event, {
+                                        registration_id:
+                                            occupant(seat)?.registration_id ??
+                                            '',
+                                        full_name:
+                                            occupant(seat)?.full_name ?? '',
+                                        seat_id:
+                                            occupant(seat)?.seat_id ?? null,
+                                        seat_no: seat,
+                                    })
+                                "
+                                @dragend="endDrag"
+                                @dragover="
+                                    canDropOn(seat) &&
+                                    ($event.preventDefault(), (overSeat = seat))
+                                "
+                                @dragleave="overSeat = null"
+                                @drop.prevent="dropOnSeat(seat)"
                             >
                                 <span
                                     class="flex w-full items-center justify-between font-semibold"
@@ -492,16 +699,6 @@ function applyAuto(): void {
                                         v-if="occupant(seat)?.warnings.length"
                                         class="size-3 text-warning"
                                     />
-                                    <span
-                                        v-else-if="occupant(seat)?.gender"
-                                        class="text-[10px] font-normal text-muted-foreground"
-                                    >
-                                        {{
-                                            occupant(seat)?.gender === 'erkek'
-                                                ? 'E'
-                                                : 'K'
-                                        }}
-                                    </span>
                                 </span>
                                 <span v-if="isReserved(seat)" class="truncate"
                                     >Rehber</span
@@ -530,7 +727,8 @@ function applyAuto(): void {
                             <AlertTriangle class="size-4" /> Uyarılar
                         </CardTitle>
                         <CardDescription>
-                            Engellemez; isterseniz yolcuları yer değiştirin.
+                            Engellemez; isterseniz yolcuları sürükleyip yer
+                            değiştirin.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -548,10 +746,10 @@ function applyAuto(): void {
     <Dialog v-model:open="autoOpen">
         <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-lg">
             <DialogHeader>
-                <DialogTitle>Otomatik dağıt</DialogTitle>
+                <DialogTitle>Otomatik yerleştir</DialogTitle>
                 <DialogDescription>
-                    65 yaş ve üstü yolcular öne, aileler yan yana, tek yolcular
-                    karşı cinsten yabancının yanına düşmeyecek şekilde
+                    65 yaş ve üstü yolcular ön bölgeye, aileler yan yana, tek
+                    yolcular karşı cinsten yabancının yanına düşmeyecek şekilde
                     oturtulur. Elle yaptığınız yerleşimler değişmez.
                 </DialogDescription>
             </DialogHeader>
@@ -587,7 +785,7 @@ function applyAuto(): void {
                             {{ u.name }}
                         </li>
                     </ul>
-                    <p class="mt-1">Başka bir otobüs ekleyebilirsiniz.</p>
+                    <p class="mt-1">Başka bir araç ekleyebilirsiniz.</p>
                 </div>
             </template>
             <p v-else class="text-sm text-destructive">

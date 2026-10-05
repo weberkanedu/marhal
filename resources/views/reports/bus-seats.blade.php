@@ -60,6 +60,8 @@
                         <td class="aisle"></td>
                     @elseif ($cell === 'door')
                         <td class="door">kapı</td>
+                    @elseif ($cell === 'driver')
+                        <td class="door">şoför</td>
                     @else
                         <td></td>
                     @endif
