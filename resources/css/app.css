@@ -57,6 +57,10 @@
     --color-chart-4: var(--chart-4);
     --color-chart-5: var(--chart-5);
 
+    /* Cinsiyet işaretleri (oda / koltuk planı) */
+    --color-women: var(--women);
+    --color-men: var(--men);
+
     --color-sidebar: var(--sidebar-background);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar-primary: var(--sidebar-primary);
@@ -68,8 +72,9 @@
 }
 
 /*
- * Temalar: <html data-theme="haremeyn|kurumsal|kum"> + .dark sınıfı.
- * Yeni tema eklemek = aşağıya bir açık + bir koyu blok eklemek ve App\Enums\ColorTheme'a bir satır.
+ * Temalar: <html data-theme="zumrut|safak">. Gece Zümrüdü koyu (html.dark), Şafak açık.
+ * Yeni tema eklemek = aşağıya bir renk bloğu (+ gerekiyorsa efekt bloğu) ve App\Enums\ColorTheme'a bir satır.
+ * Ekranlar sabit renk yazmaz; buradaki anlamlı adları kullanır (primary, success, warning, danger, women, men…).
  */
 
 :root {
@@ -77,213 +82,388 @@
         'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
         'Segoe UI Emoji';
     --font-display: var(--font-body);
-    --radius: 0.5rem;
-
+    --font-number: var(--font-body);
+    --radius: 0.625rem;
+    --card-radius: 1rem;
     --destructive-foreground: #ffffff;
-    --success: #15803d;
-    --success-soft: #e3f3e8;
-    --warning: #b45309;
-    --warning-soft: #fdf0db;
-    --danger-soft: #fbe4e1;
-
-    --chart-1: #0e7c66;
-    --chart-2: #d4a72c;
-    --chart-3: #2563eb;
-    --chart-4: #c2410c;
-    --chart-5: #7c3aed;
+    --success-soft: color-mix(in srgb, var(--success) 15%, transparent);
+    --warning-soft: color-mix(in srgb, var(--warning) 16%, transparent);
+    --danger-soft: color-mix(in srgb, var(--destructive) 14%, transparent);
 }
 
-.dark {
-    --success: #4ade80;
-    --success-soft: #12301f;
-    --warning: #fbbf24;
-    --warning-soft: #3a2c0b;
-    --danger-soft: #3b1513;
-}
-
-/* ---------- A · Haremeyn: zümrüt yeşili + altın ---------- */
+/* ---------- Gece Zümrüdü: gece yeşili, altın, cam kartlar ---------- */
 :root,
-[data-theme='haremeyn'] {
+[data-theme='zumrut'] {
     --font-display: 'Fraunces', Georgia, serif;
-    --background: #fbf9f4;
-    --foreground: #1c2b24;
-    --card: #ffffff;
-    --card-foreground: #1c2b24;
-    --popover: #ffffff;
-    --popover-foreground: #1c2b24;
-    --primary: #0e3b2e;
-    --primary-foreground: #ffffff;
-    --secondary: #efeadb;
-    --secondary-foreground: #1c2b24;
-    --muted: #f3efe3;
-    --muted-foreground: #5b6b62;
-    --accent: #f1ead3;
-    --accent-foreground: #4a3a0a;
-    --destructive: #b42318;
-    --border: #e7e0cc;
-    --input: #ded6bf;
-    --ring: #0e3b2e;
-    --sidebar-background: #0e3b2e;
-    --sidebar-foreground: #e9e3d0;
-    --sidebar-primary: #d4af37;
-    --sidebar-primary-foreground: #0e3b2e;
-    --sidebar-accent: #16503f;
-    --sidebar-accent-foreground: #ffffff;
-    --sidebar-border: #1a5544;
-    --sidebar-ring: #d4af37;
-}
-
-[data-theme='haremeyn'].dark {
-    --background: #0b1512;
-    --foreground: #ece7da;
-    --card: #111e19;
-    --card-foreground: #ece7da;
-    --popover: #111e19;
-    --popover-foreground: #ece7da;
-    --primary: #d4af37;
-    --primary-foreground: #0b1512;
-    --secondary: #1a2a24;
-    --secondary-foreground: #ece7da;
-    --muted: #16241f;
-    --muted-foreground: #9daea5;
-    --accent: #22342c;
-    --accent-foreground: #ece7da;
-    --destructive: #f04438;
-    --border: #22342c;
-    --input: #2a3f36;
-    --ring: #d4af37;
-    --sidebar-background: #08110e;
+    --font-number: 'Fraunces', Georgia, serif;
+    --radius: 0.625rem;
+    --card-radius: 1rem;
+    --background: #0b1b16;
+    --foreground: #f1ebdb;
+    --card: rgba(22, 48, 38, 0.68);
+    --card-foreground: #f1ebdb;
+    --popover: #12281f;
+    --popover-foreground: #f1ebdb;
+    --primary: #ddb94f;
+    --primary-foreground: #0b1b16;
+    --secondary: rgba(217, 180, 74, 0.1);
+    --secondary-foreground: #f1ebdb;
+    --muted: rgba(217, 180, 74, 0.06);
+    --muted-foreground: #a1b5aa;
+    --accent: rgba(217, 180, 74, 0.12);
+    --accent-foreground: #f5dc8c;
+    --destructive: #f0786c;
+    --success: #56c495;
+    --warning: #ecbd4c;
+    --women: #f0a3b9;
+    --men: #8cc5e8;
+    --border: rgba(217, 180, 74, 0.18);
+    --input: rgba(217, 180, 74, 0.24);
+    --ring: #ddb94f;
+    --chart-1: #ddb94f;
+    --chart-2: #56c495;
+    --chart-3: #8cc5e8;
+    --chart-4: #f0786c;
+    --chart-5: #c3a3e6;
+    --sidebar-background: rgba(10, 26, 20, 0.5);
     --sidebar-foreground: #d9d2bf;
-    --sidebar-primary: #d4af37;
-    --sidebar-primary-foreground: #08110e;
-    --sidebar-accent: #16241f;
-    --sidebar-accent-foreground: #ffffff;
-    --sidebar-border: #1a2a24;
-    --sidebar-ring: #d4af37;
+    --sidebar-primary: #ddb94f;
+    --sidebar-primary-foreground: #0b1b16;
+    --sidebar-accent: rgba(221, 185, 79, 0.1);
+    --sidebar-accent-foreground: #f5dc8c;
+    --sidebar-border: rgba(217, 180, 74, 0.18);
+    --sidebar-ring: #ddb94f;
+    --blob-1: #15795a;
+    --blob-2: #9a7816;
+    --blob-3: #125f48;
+    --blob-4: transparent;
+    --bar-fill: linear-gradient(90deg, #a37f20, #f1d27a);
+    --bar-full: linear-gradient(90deg, #33996f, #72dfb1);
 }
 
-/* ---------- B · Sade kurumsal: lacivert + beyaz ---------- */
-[data-theme='kurumsal'] {
-    --font-display: var(--font-body);
-    --background: #f6f8fb;
-    --foreground: #0f172a;
-    --card: #ffffff;
-    --card-foreground: #0f172a;
-    --popover: #ffffff;
-    --popover-foreground: #0f172a;
-    --primary: #1e3a5f;
-    --primary-foreground: #ffffff;
-    --secondary: #e8eef7;
-    --secondary-foreground: #1e3a5f;
-    --muted: #f1f5f9;
-    --muted-foreground: #64748b;
-    --accent: #e8eef7;
-    --accent-foreground: #1e3a5f;
-    --destructive: #dc2626;
-    --border: #e2e8f0;
-    --input: #cbd5e1;
-    --ring: #1e3a5f;
-    --sidebar-background: #ffffff;
-    --sidebar-foreground: #334155;
-    --sidebar-primary: #1e3a5f;
-    --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #e8eef7;
-    --sidebar-accent-foreground: #1e3a5f;
-    --sidebar-border: #e2e8f0;
-    --sidebar-ring: #1e3a5f;
-}
-
-[data-theme='kurumsal'].dark {
-    --background: #0b1220;
-    --foreground: #e2e8f0;
-    --card: #111a2e;
-    --card-foreground: #e2e8f0;
-    --popover: #111a2e;
-    --popover-foreground: #e2e8f0;
-    --primary: #7fa7d9;
-    --primary-foreground: #0b1220;
-    --secondary: #1b2740;
-    --secondary-foreground: #e2e8f0;
-    --muted: #16213a;
-    --muted-foreground: #94a3b8;
-    --accent: #1b2740;
-    --accent-foreground: #e2e8f0;
-    --destructive: #f87171;
-    --border: #1e2a44;
-    --input: #27344f;
-    --ring: #7fa7d9;
-    --sidebar-background: #0e1628;
-    --sidebar-foreground: #cbd5e1;
-    --sidebar-primary: #7fa7d9;
-    --sidebar-primary-foreground: #0b1220;
-    --sidebar-accent: #1b2740;
-    --sidebar-accent-foreground: #ffffff;
-    --sidebar-border: #1e2a44;
-    --sidebar-ring: #7fa7d9;
-}
-
-/* ---------- C · Kum ve bakır: sıcak bej + bakır ---------- */
-[data-theme='kum'] {
+/* ---------- Şafak: açık, buzlu cam, renkli aurora ---------- */
+[data-theme='safak'] {
     --font-body:
         'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji';
     --font-display: var(--font-body);
+    --font-number: var(--font-body);
     --radius: 0.875rem;
-    --background: #f7f1e8;
-    --foreground: #2b2420;
-    --card: #ffffff;
-    --card-foreground: #2b2420;
+    --card-radius: 1.375rem;
+    --background: #eef3f1;
+    --foreground: #13261f;
+    --card: rgba(255, 255, 255, 0.55);
+    --card-foreground: #13261f;
     --popover: #ffffff;
-    --popover-foreground: #2b2420;
-    --primary: #b5651d;
+    --popover-foreground: #13261f;
+    --primary: #0f6b4e;
     --primary-foreground: #ffffff;
-    --secondary: #efe5d6;
-    --secondary-foreground: #4a3f37;
-    --muted: #f3ebdf;
-    --muted-foreground: #8a7a6c;
-    --accent: #f6e3d3;
-    --accent-foreground: #7a3a10;
-    --destructive: #b42318;
-    --border: #ebdfcf;
-    --input: #e2d4c1;
-    --ring: #b5651d;
-    --sidebar-background: #efe5d6;
-    --sidebar-foreground: #4a3f37;
-    --sidebar-primary: #b5651d;
+    --secondary: rgba(255, 255, 255, 0.75);
+    --secondary-foreground: #13261f;
+    --muted: rgba(19, 38, 31, 0.05);
+    --muted-foreground: #56685f;
+    --accent: rgba(15, 107, 78, 0.08);
+    --accent-foreground: #0f6b4e;
+    /* Tasarım renklerinin bir ton koyusu: açık zeminde yazı olarak da okunsun. */
+    --destructive: #c63d33;
+    --success: #13804f;
+    --warning: #a86c0c;
+    --women: #e36b9a;
+    --men: #3a8fd6;
+    --border: rgba(19, 38, 31, 0.12);
+    --input: rgba(19, 38, 31, 0.16);
+    --ring: #0f6b4e;
+    --chart-1: #0f6b4e;
+    --chart-2: #e0a526;
+    --chart-3: #3a8fd6;
+    --chart-4: #d6453b;
+    --chart-5: #8d5bd1;
+    --sidebar-background: rgba(255, 255, 255, 0.4);
+    --sidebar-foreground: #13261f;
+    --sidebar-primary: #13261f;
     --sidebar-primary-foreground: #ffffff;
     --sidebar-accent: #ffffff;
-    --sidebar-accent-foreground: #9a4e1e;
-    --sidebar-border: #e4d6c3;
-    --sidebar-ring: #b5651d;
+    --sidebar-accent-foreground: #13261f;
+    --sidebar-border: rgba(255, 255, 255, 0.7);
+    --sidebar-ring: #0f6b4e;
+    --blob-1: #9be7c4;
+    --blob-2: #ffd98a;
+    --blob-3: #ffc1d6;
+    --blob-4: #a9d8ff;
+    --bar-fill: linear-gradient(90deg, #3cc58f, #0f6b4e);
+    --bar-full: linear-gradient(90deg, #3cc58f, #13804f);
 }
 
-[data-theme='kum'].dark {
-    --background: #1a1512;
-    --foreground: #f1e7db;
-    --card: #231c17;
-    --card-foreground: #f1e7db;
-    --popover: #231c17;
-    --popover-foreground: #f1e7db;
-    --primary: #e08a4a;
-    --primary-foreground: #1a1512;
-    --secondary: #2e251f;
-    --secondary-foreground: #f1e7db;
-    --muted: #2a221c;
-    --muted-foreground: #b3a391;
-    --accent: #3a2a1f;
-    --accent-foreground: #f1e7db;
-    --destructive: #f87171;
-    --border: #3a2f27;
-    --input: #463930;
-    --ring: #e08a4a;
-    --sidebar-background: #15110e;
-    --sidebar-foreground: #e5d8c8;
-    --sidebar-primary: #e08a4a;
-    --sidebar-primary-foreground: #15110e;
-    --sidebar-accent: #2a221c;
-    --sidebar-accent-foreground: #ffffff;
-    --sidebar-border: #2e251f;
-    --sidebar-ring: #e08a4a;
+/*
+ * Ortak görünüm katmanı (katmansız CSS: bileşenlerin Tailwind sınıflarının önüne geçer).
+ * Bileşenler data-slot adlarıyla seçilir; ekran kodu değişmeden her sayfa yeni görünümü alır.
+ */
+
+/* Arka plan ışıkları (components/AppBackdrop.vue) */
+.app-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+.app-backdrop .blob {
+    position: absolute;
+    width: 46vmax;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    filter: blur(80px);
+}
+.app-backdrop .b1 {
+    left: -12%;
+    top: -18%;
+    background: var(--blob-1);
+    animation: drift 18s ease-in-out infinite alternate;
+}
+.app-backdrop .b2 {
+    right: -14%;
+    top: 4%;
+    background: var(--blob-2);
+    animation: drift 22s ease-in-out infinite alternate-reverse;
+}
+.app-backdrop .b3 {
+    left: 22%;
+    bottom: -32%;
+    background: var(--blob-3);
+    animation: drift 26s ease-in-out infinite alternate;
+}
+.app-backdrop .b4 {
+    right: 8%;
+    bottom: -24%;
+    background: var(--blob-4);
+    animation: drift 16s ease-in-out infinite alternate-reverse;
+}
+[data-theme='zumrut'] .app-backdrop .b1,
+[data-theme='zumrut'] .app-backdrop .b3 {
+    opacity: 0.5;
+}
+[data-theme='zumrut'] .app-backdrop .b2 {
+    opacity: 0.24;
+}
+[data-theme='zumrut'] .app-backdrop .b4 {
+    display: none;
+}
+[data-theme='safak'] .app-backdrop .blob {
+    opacity: 0.8;
+    filter: blur(70px);
+}
+/* Gece Zümrüdü: sekiz köşeli yıldız deseni, üstten silikleşerek */
+[data-theme='zumrut'] .app-backdrop::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.1;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3Cg fill='none' stroke='%23ddb94f' stroke-width='.7'%3E%3Crect x='17' y='17' width='22' height='22'/%3E%3Crect x='17' y='17' width='22' height='22' transform='rotate(45 28 28)'/%3E%3Ccircle cx='28' cy='28' r='4'/%3E%3C/g%3E%3C/svg%3E");
+    mask: radial-gradient(ellipse at 70% 0%, #000 10%, transparent 70%);
+}
+
+/* Yerleşim: menü ve içerik aynı ışıklı zeminin üstünde */
+[data-slot='sidebar-wrapper'] {
+    background: transparent !important;
+}
+[data-slot='sidebar-inset'] {
+    background: transparent !important;
+    box-shadow: none !important;
+    z-index: 1;
+}
+[data-slot='sidebar']:not([data-mobile]) {
+    z-index: 2;
+}
+[data-slot='sidebar'] > div > [data-sidebar='sidebar'] {
+    border: 1px solid var(--sidebar-border);
+    border-radius: var(--card-radius);
+    backdrop-filter: blur(18px);
+}
+[data-sidebar='sidebar'][data-mobile='true'] {
+    background: var(--popover);
+}
+
+/* Menüde seçili madde */
+[data-theme='zumrut'] [data-sidebar='menu-button'][data-active='true'] {
+    background: linear-gradient(90deg, rgba(221, 185, 79, 0.17), transparent);
+    color: #f5dc8c;
+    box-shadow: inset 2px 0 0 #ddb94f;
+}
+[data-theme='safak'] [data-sidebar='menu-button'][data-active='true'] {
+    background: #ffffff;
+    box-shadow: 0 6px 16px -8px rgba(19, 38, 31, 0.3);
+}
+
+/* Logo kutusu */
+[data-theme='zumrut'] .app-logo-mark {
+    background: linear-gradient(135deg, #f3d77e, #b8902a);
+    color: #0b1b16;
+}
+[data-theme='safak'] .app-logo-mark {
+    background: #13261f;
+    color: #ffffff;
+    border-radius: 999px;
+}
+
+/* Kartlar: cam görünüm */
+[data-slot='card'] {
+    --cx: -999px;
+    --cy: -999px;
+    position: relative;
+    border-radius: var(--card-radius);
+    backdrop-filter: blur(12px);
+}
+[data-theme='zumrut'] [data-slot='card'] {
+    box-shadow: inset 0 1px 0 rgba(255, 236, 180, 0.07);
+    background:
+        radial-gradient(
+            380px circle at var(--cx) var(--cy),
+            rgba(241, 210, 122, 0.07),
+            transparent 45%
+        ),
+        var(--card);
+}
+/* Fareyi izleyen altın kenar (konum: composables/useTheme.ts → initializeCardGlow) */
+[data-theme='zumrut'] [data-slot='card']::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    z-index: 3;
+    background: radial-gradient(
+        240px circle at var(--cx) var(--cy),
+        rgba(245, 214, 128, 0.85),
+        transparent 45%
+    );
+    mask:
+        linear-gradient(#000 0 0) content-box exclude,
+        linear-gradient(#000 0 0);
+}
+/* Öne çıkan kart: kenarında dönen altın ışık (<Card class="card-glow">) */
+@property --glow-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+}
+[data-theme='zumrut'] [data-slot='card'].card-glow {
+    border: 1px solid transparent;
+    background:
+        linear-gradient(#11271f, #11271f) padding-box,
+        conic-gradient(
+                from var(--glow-angle),
+                rgba(221, 185, 79, 0.12) 0deg,
+                rgba(221, 185, 79, 0.12) 250deg,
+                #f6dc8a 320deg,
+                rgba(221, 185, 79, 0.12) 360deg
+            )
+            border-box;
+    animation: glow-spin 6s linear infinite;
+}
+[data-theme='safak'] [data-slot='card'] {
+    backdrop-filter: blur(20px) saturate(1.4);
+    border-color: rgba(255, 255, 255, 0.75);
+    box-shadow: 0 18px 40px -24px rgba(19, 38, 31, 0.35);
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+[data-theme='safak'] a:hover > [data-slot='card'],
+[data-theme='safak'] [data-slot='card'].card-glow {
+    transform: translateY(-2px);
+    box-shadow: 0 24px 48px -24px rgba(19, 38, 31, 0.45);
+}
+[data-theme='safak'] [data-slot='card'].card-glow {
+    border-color: rgba(15, 107, 78, 0.35);
+}
+
+/* Ana düğmeler */
+[data-theme='zumrut'] [data-slot='button']:not([data-variant]),
+[data-theme='zumrut'] [data-slot='button'][data-variant='default'] {
+    background: linear-gradient(135deg, #f3d77e, #c99f30);
+    color: #0b1b16;
+    box-shadow:
+        0 0 0 1px rgba(255, 235, 170, 0.4) inset,
+        0 8px 24px -8px rgba(221, 185, 79, 0.6);
+}
+[data-theme='safak'] [data-slot='button'] {
+    border-radius: 999px;
+}
+[data-theme='safak'] [data-slot='button']:not([data-variant]),
+[data-theme='safak'] [data-slot='button'][data-variant='default'] {
+    background: #13261f;
+    color: #ffffff;
+}
+[data-theme='safak'] [data-slot='button'][data-variant='outline'] {
+    background: rgba(255, 255, 255, 0.75);
+}
+[data-slot='button']:not([data-variant]):hover,
+[data-slot='button'][data-variant='default']:hover {
+    filter: brightness(1.08);
+}
+
+/* Sayfa başlığı: Gece Zümrüdü'nde altın ışıltı */
+[data-theme='zumrut'] [data-slot='sidebar-inset'] h1:not(.sr-only) {
+    background: linear-gradient(100deg, #f8e9bb 10%, #ddb94f 45%, #f8e9bb 80%);
+    background-size: 200% 100%;
+    background-clip: text;
+    color: transparent;
+    animation: sheen 7s linear infinite;
+}
+[data-theme='safak'] [data-slot='sidebar-inset'] h1:not(.sr-only) {
+    font-weight: 800;
+    letter-spacing: -0.03em;
+}
+
+/* İlerleme çubuğu (components/ProgressBar.vue) */
+.m-bar {
+    height: 6px;
+    border-radius: 6px;
+    background: var(--border);
+    overflow: hidden;
+}
+.m-bar > i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--bar-fill);
+    transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.m-bar > i.full {
+    background: var(--bar-full);
+}
+.m-bar > i.over {
+    background: var(--destructive);
+}
+
+/* Sayılar */
+.num {
+    font-family: var(--font-number);
+    font-variant-numeric: tabular-nums;
+}
+
+@keyframes drift {
+    to {
+        transform: translate(12%, 10%) scale(1.15);
+    }
+}
+@keyframes glow-spin {
+    to {
+        --glow-angle: 360deg;
+    }
+}
+@keyframes sheen {
+    to {
+        background-position: -200% 0;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .app-backdrop .blob,
+    [data-slot='card'].card-glow,
+    [data-slot='sidebar-inset'] h1 {
+        animation: none !important;
+    }
 }
 
 @layer base {

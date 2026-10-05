@@ -19,7 +19,7 @@ import {
     InputOTPSlot,
 } from '@/components/ui/input-otp';
 import { Spinner } from '@/components/ui/spinner';
-import { useAppearance } from '@/composables/useAppearance';
+import { isDarkTheme } from '@/composables/useTheme';
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
 import { confirm } from '@/routes/two-factor';
 import type { TwoFactorConfigContent } from '@/types';
@@ -28,8 +28,6 @@ type Props = {
     requiresConfirmation: boolean;
     twoFactorEnabled: boolean;
 };
-
-const { resolvedAppearance } = useAppearance();
 
 const props = defineProps<Props>();
 const isOpen = defineModel<boolean>('isOpen');
@@ -174,10 +172,9 @@ watch(
                                         v-html="qrCodeSvg"
                                         class="flex aspect-square size-full items-center justify-center"
                                         :style="{
-                                            filter:
-                                                resolvedAppearance === 'dark'
-                                                    ? 'invert(1) brightness(1.5)'
-                                                    : undefined,
+                                            filter: isDarkTheme()
+                                                ? 'invert(1) brightness(1.5)'
+                                                : undefined,
                                         }"
                                     />
                                 </div>
@@ -226,7 +223,7 @@ watch(
                                     >
                                         <Check
                                             v-if="copied"
-                                            class="w-4 text-green-500"
+                                            class="w-4 text-success"
                                         />
                                         <Copy v-else class="w-4" />
                                     </button>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ProgressBar from '@/components/ProgressBar.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { CalendarDays, Plus, Users } from '@lucide/vue';
 import { Badge } from '@/components/ui/badge';
@@ -126,15 +127,10 @@ function occupancy(tour: TourListItem): number | null {
                                 {{ tour.groups_count }} grup
                             </span>
                         </div>
-                        <div
+                        <ProgressBar
                             v-if="occupancy(tour) !== null"
-                            class="h-1.5 overflow-hidden rounded-full bg-muted"
-                        >
-                            <div
-                                class="h-full rounded-full bg-primary"
-                                :style="{ width: `${occupancy(tour)}%` }"
-                            />
-                        </div>
+                            :value="occupancy(tour) ?? 0"
+                        />
                     </CardContent>
                 </Card>
             </Link>

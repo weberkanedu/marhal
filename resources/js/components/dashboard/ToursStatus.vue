@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ProgressBar from '@/components/ProgressBar.vue';
 import { Link } from '@inertiajs/vue3';
 import { AlertTriangle, CheckCircle2, Plane } from '@lucide/vue';
 import { computed } from 'vue';
@@ -133,16 +134,10 @@ const daysText = (days: number) =>
                                     <span class="tabular-nums"
                                         >%{{ collectionPct(tour) }}</span
                                     >
-                                    <div
-                                        class="mt-1 h-1 w-16 overflow-hidden rounded-full bg-muted"
-                                    >
-                                        <div
-                                            class="h-full rounded-full bg-primary"
-                                            :style="{
-                                                width: `${collectionPct(tour)}%`,
-                                            }"
-                                        />
-                                    </div>
+                                    <ProgressBar
+                                        class="mt-1 w-16"
+                                        :value="collectionPct(tour) ?? 0"
+                                    />
                                 </template>
                             </td>
                             <td

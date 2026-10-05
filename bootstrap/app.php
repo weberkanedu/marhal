@@ -20,7 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->encryptCookies(except: ['appearance', 'color_theme', 'sidebar_state']);
+        $middleware->encryptCookies(except: ['color_theme', 'sidebar_state']);
 
         // Dokploy'da uygulama Traefik'in arkasında çalışır; HTTPS ve gerçek IP başlıklarına güven.
         $middleware->trustProxies(at: '*');

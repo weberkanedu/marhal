@@ -30,12 +30,12 @@ const pdf = withFormat('pdf');
         </span>
         <Button variant="outline" :size="size ?? 'sm'" as-child>
             <a :href="xlsx" title="Excel olarak indir">
-                <FileSpreadsheet class="text-emerald-700" /> Excel
+                <FileSpreadsheet class="text-success" /> Excel
             </a>
         </Button>
         <Button variant="outline" :size="size ?? 'sm'" as-child>
             <a :href="pdf" title="PDF olarak indir">
-                <FileText class="text-red-700" /> PDF
+                <FileText class="text-danger" /> PDF
             </a>
         </Button>
     </div>

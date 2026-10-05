@@ -53,7 +53,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     protected $attributes = [
         'is_active' => true,
         'must_change_password' => false,
-        'theme' => 'haremeyn',
+        'theme' => 'zumrut',
     ];
 
     /**

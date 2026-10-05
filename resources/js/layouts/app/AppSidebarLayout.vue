@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppBackdrop from '@/components/AppBackdrop.vue';
 import AppContent from '@/components/AppContent.vue';
 import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
@@ -16,6 +17,7 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
+    <AppBackdrop />
     <AppShell variant="sidebar">
         <AppSidebar />
         <AppContent variant="sidebar" class="min-w-0 overflow-x-clip">

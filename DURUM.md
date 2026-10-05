@@ -62,7 +62,11 @@ Her adım sonunda güncellenir. ✅ bitti · 🟡 kısmen · ⏳ planlı
 - **Tur > Grup > Kayıt**: bir turda birden çok grup olabilir; her grubun rehberi var.
 - Yolcu fotoğrafları şimdilik sunucu diskinde (`MEDIA_DISK=local`), ileride S3.
 - Taksit takibi MVP'de (Faz 1, 3. adım).
-- **Tema seçici** (kullanıcı fikri): Haremeyn (varsayılan), Sade kurumsal, Kum ve bakır + açık/koyu mod; kullanıcıya kaydedilir. Durum renkleri her temada aynı. PDF/Excel temadan bağımsız.
+- **Temalar (tasarım yenileme, 2026-10-05):** Gece Zümrüdü (koyu, varsayılan) ve Şafak (açık). Eski üç tema ve açık/koyu düğmesi kaldırıldı;
+  eski seçimler migration ile taşındı (Haremeyn / Kum → Zümrüt, Kurumsal → Şafak). Ortak görünüm katmanı `resources/css/app.css`:
+  arka plan ışıkları (`AppBackdrop`), cam kartlar, fareyi izleyen altın kenar (`useTheme.ts → initializeCardGlow`), `card-glow`,
+  altın / koyu hap düğmeler, başlık ışıltısı, `ProgressBar`. Bileşenler `data-slot` ile seçilir; ekranlara sabit renk yazılmaz
+  (`success|warning|danger|women|men` adları). PDF/Excel/yaka kartı temadan bağımsız.
 - **Ekran düzeni (2026-10-04, kullanıcı onayı)**: sol menüde sadece günlük işler (Ana Panel, Turlar, Yolcular, Tahsilat)
     - "Acente ayarları". Ayarlar sekmeli tek sayfa (`layouts/agency`, `lib/agencySettings.ts`): Acente bilgileri, Personel,
       Oteller, Araç tipleri, Erişim kayıtları (operasyon yalnız Oteller / Araç tipleri). Kişisel ayarlar sağ alttaki kişi menüsünde.
@@ -121,6 +125,23 @@ Sıra ve anlatım kullanıcıyla konuşuldu; başlarken bu sırayla, adım adım
    şifreli önbellekte 30 dk, kullanıcıya özel. Başlık eş anlamlıları ve Excel biçim düzeltmeleri `PersonRowNormalizer`.
 4. ⏳ Üst çubukta hızlı arama (ad / T.C. / pasaport) ve ilk kullanım rehberi (logo, otel, ilk tur).
 5. ⏳ Yolcu sayfasında tur kayıtlarında oda / koltuk / uçuş bilgisi.
+
+## Tasarım yenileme (dal `tasarim-yenileme`, kullanıcı onayıyla adım adım)
+
+Kaynak: tasarım sayfası (claude.ai artifact UuhFHJG8dJ3nmbiUuDS1AS) + paketler sayfası (5Mxqaa5YmxceQ3qi7xzPCq, en sona ayrı plan).
+Kural: her adım onaylanınca yazılır; dış servis gerektirenlerde önce seçenek + maliyet sorulur; staging'e push öncesi sorulur.
+Yerleşim bilgisi (otel / oda / koltuk) yaka kartı, tur tablosu ve aile ekranına **tek kaynaktan** (`App\Support\Placements`) gider.
+
+1. ✅ İki tema (Gece Zümrüdü, Şafak) + ortak görünüm katmanı. Migration: `users.theme` değerleri taşındı. Demo paketi gerekmedi (veri yok).
+2. ⏳ Ana Panel, Tur (yolculuk çizelgesi, halkalar), Yolcular, Tahsilat (Ödeme al penceresi) + her ekranda "Çıktı al" menüsü; "Görüşünü paylaş".
+3. ⏳ Araç tipleri (gövde, şoför yanı) ve uçak tipleri + sürükle-bırak yerleştirme.
+4. ⏳ Otel kat planı (`hotels.floors_count`, `tour_hotel_floors`, `rooms.near_elevator`) + ihtiyaç profili (`person_needs`, şifreli, açık rıza).
+5. ⏳ Yaka kartı yenileme (`badge_settings`, `groups.color`).
+6. ⏳ Hazırlık takibi (`readiness_items`, `readiness_checks`).
+7. ⏳ Aile ekranı + fotoğrafla ön kayıt (MRZ okuma servisi için önce seçenek / maliyet).
+8. ⏳ WhatsApp tahsilat asistanı (önce sağlayıcı + sanal POS seçenekleri / maliyet).
+9. ⏳ Faz 4 entegrasyonlar + NFC (`tenant_integrations`, acente ayarından aç/kapa; önce seçenek / maliyet).
+Son: paketler, hesap paylaşımı koruması, iyzico abonelik, platform paneli (ayrı plan).
 
 ## Sıradaki iş (önerilen sıra)
 

@@ -12,8 +12,8 @@ use Symfony\Component\HttpFoundation\Response;
 class HandleAppearance
 {
     /**
-     * Açık/koyu mod (çerez) ve renk teması (kullanıcı ayarı; giriş öncesi çerez) kök şablona verilir,
-     * böylece sayfa ilk çizimde doğru renklerle gelir.
+     * Tema (kullanıcı ayarı; giriş öncesi çerez) kök şablona verilir, böylece sayfa ilk çizimde
+     * doğru renklerle gelir. Koyu / açık mod temanın kendisinden gelir.
      *
      * @param  Closure(Request): (Response)  $next
      */
@@ -28,7 +28,6 @@ class HandleAppearance
             ?? ColorTheme::tryFrom(is_string($cookie) ? $cookie : '')
             ?? ColorTheme::DEFAULT;
 
-        View::share('appearance', $request->cookie('appearance') ?? 'system');
         View::share('colorTheme', $theme);
 
         return $next($request);

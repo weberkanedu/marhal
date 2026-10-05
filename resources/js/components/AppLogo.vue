@@ -7,7 +7,7 @@ const page = usePage();
 
 <template>
     <div
-        class="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
+        class="app-logo-mark flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
     >
         <AppLogoIcon class="size-5" />
     </div>
