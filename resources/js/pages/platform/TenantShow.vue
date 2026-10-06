@@ -41,6 +41,8 @@ const props = defineProps<{
         id: string;
         accessible: boolean;
         active_tours: number;
+        passengers_used: number;
+        passenger_limit: number | null;
     };
     features: FeatureRow[];
     users: UserRow[];
@@ -96,7 +98,12 @@ function resetPassword(user: UserRow): void {
                 {{ tenant.accessible ? 'Erişim açık' : 'Erişim kapalı' }}
             </Badge>
             <span class="text-sm text-muted-foreground">
-                {{ tenant.active_tours }} aktif tur
+                {{ tenant.active_tours }} aktif tur · Yolcu
+                {{ tenant.passengers_used }}
+                <template v-if="tenant.passenger_limit !== null"
+                    >/ {{ tenant.passenger_limit }}</template
+                >
+                (bu abonelik yılı)
             </span>
         </div>
 

@@ -10,8 +10,8 @@ use Illuminate\Validation\ValidationException;
  * Kullanıcının adını, rolünü ve aktifliğini günceller.
  *
  * Kurallar: kişi kendi rolünü düşüremez / kendini pasif yapamaz; acentenin son aktif
- * yöneticisi kaldırılamaz (acente kilitlenmesin); pasif kullanıcı yeniden aktifleşirken
- * kullanıcı limiti kontrol edilir.
+ * yöneticisi kaldırılamaz (acente kilitlenmesin); personel sınırına yeni giren hesap (pasiften aktife
+ * ya da rehberden personele geçen) için sınır kontrol edilir — rehberler sayılmaz.
  */
 class UpdateTenantUser
 {
@@ -37,8 +37,13 @@ class UpdateTenantUser
             throw ValidationException::withMessages(['role' => 'Acentenin en az bir aktif yöneticisi olmalı.']);
         }
 
-        if (! $user->is_active && $active && ! $user->tenant?->canAddUser()) {
-            throw ValidationException::withMessages(['is_active' => 'Paketinizdeki kullanıcı sınırına ulaştınız.']);
+        $wasCounted = $user->is_active && $user->role !== UserRole::Guide;
+        $isCounted = $active && $role !== UserRole::Guide;
+
+        if (! $wasCounted && $isCounted && ! $user->tenant?->canAddUser()) {
+            throw ValidationException::withMessages([
+                $user->is_active ? 'role' : 'is_active' => 'Paketinizdeki personel sınırına ulaştınız. Rehber hesapları sınıra sayılmaz.',
+            ]);
         }
 
         $user->update(['name' => $data['name'], 'role' => $role, 'is_active' => $active]);

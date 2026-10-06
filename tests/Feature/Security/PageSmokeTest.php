@@ -59,7 +59,7 @@ class PageSmokeTest extends TestCase
         parent::setUp();
 
         $this->seed(PlanSeeder::class);
-        $this->tenant = Tenant::factory()->create(['plan_id' => Plan::where('slug', 'kurumsal')->value('id')]);
+        $this->tenant = Tenant::factory()->create(['plan_id' => Plan::where('slug', 'kervan')->value('id')]);
     }
 
     public function test_every_page_loads_for_every_role_without_leaks(): void

@@ -49,25 +49,60 @@ class AdminScreensTest extends TestCase
     public function test_super_admin_can_edit_a_plan_and_tenants_get_new_features(): void
     {
         $this->seed(PlanSeeder::class);
-        $starter = Plan::where('slug', 'baslangic')->sole();
+        $starter = Plan::where('slug', 'mikat')->sole();
         $tenant = Tenant::factory()->create(['plan_id' => $starter->id]);
-        $this->assertFalse($tenant->hasFeature(Feature::RoomPlanning));
+        $this->assertFalse($tenant->hasFeature(Feature::FamilyScreen));
 
         $this->actingAs(User::factory()->superAdmin()->create())->put(route('platform.plans.update', $starter), [
-            'name' => 'Başlangıç+',
             'price_monthly' => 990,
-            'price_yearly' => 9900,
-            'currency' => 'TRY',
             'user_limit' => 2,
-            'active_tour_limit' => null,
-            'features' => ['passengers', 'payments', 'basic_reports', 'room_planning'],
+            'passenger_limit' => null,
+            'is_public' => true,
+            'features' => ['passengers', 'payments', 'basic_reports', 'family_screen'],
         ])->assertSessionHasNoErrors();
 
         $starter->refresh();
-        $this->assertSame('Başlangıç+', $starter->name);
+        $this->assertSame('Mikat', $starter->name);
+        $this->assertSame('9900.00', $starter->price_yearly, 'Yıllık = aylık × 10.');
         $this->assertSame(2, $starter->user_limit);
-        $this->assertNull($starter->active_tour_limit);
-        $this->assertTrue($tenant->fresh()->hasFeature(Feature::RoomPlanning), 'Önbellek temizlenmeli.');
+        $this->assertNull($starter->passenger_limit, 'Boş = sınırsız.');
+        $this->assertTrue($tenant->fresh()->hasFeature(Feature::FamilyScreen), 'Önbellek temizlenmeli.');
+        $this->assertFalse($tenant->fresh()->hasFeature(Feature::RoomPlanning));
+    }
+
+    public function test_at_least_one_plan_stays_on_sale(): void
+    {
+        $this->seed(PlanSeeder::class);
+        $admin = User::factory()->superAdmin()->create();
+        $payload = fn (Plan $plan) => [
+            'price_monthly' => (float) $plan->price_monthly,
+            'user_limit' => $plan->user_limit,
+            'passenger_limit' => $plan->passenger_limit,
+            'is_public' => false,
+            'features' => [],
+        ];
+
+        [$first, $second, $last] = Plan::orderBy('sort')->get()->all();
+        $this->actingAs($admin)->put(route('platform.plans.update', $first), $payload($first))->assertSessionHasNoErrors();
+        $this->actingAs($admin)->put(route('platform.plans.update', $second), $payload($second))->assertSessionHasNoErrors();
+        $this->actingAs($admin)->put(route('platform.plans.update', $last), $payload($last))->assertSessionHasErrors('is_public');
+
+        $this->assertTrue($last->fresh()->is_public);
+        $this->assertFalse($first->fresh()->is_public);
+    }
+
+    public function test_plans_page_lists_plans_in_sale_order(): void
+    {
+        $this->seed(PlanSeeder::class);
+
+        $this->actingAs(User::factory()->superAdmin()->create())->get(route('platform.plans.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->component('platform/Plans')
+                ->where('plans.0.name', 'Mikat')
+                ->where('plans.1.name', 'Kafile')
+                ->where('plans.2.name', 'Kervan')
+                ->where('plans.1.passenger_limit', 1500)
+                ->where('yearlyMonths', 10));
     }
 
     public function test_tenant_admins_cannot_edit_plans(): void

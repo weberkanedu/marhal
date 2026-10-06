@@ -37,7 +37,7 @@ const props = defineProps<{
     registrations: RegistrationRow[];
     relations: PersonRelationRow[];
     relationOptions: Option[];
-    needs: PersonNeeds;
+    needs: PersonNeeds | null;
     can: { update: boolean; delete: boolean; reveal: boolean };
 }>();
 
@@ -265,6 +265,7 @@ function confirmDelete(): void {
         </Card>
 
         <NeedsCard
+            v-if="needs"
             :person-id="person.id"
             :needs="needs"
             :can-update="can.update"

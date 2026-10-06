@@ -5,23 +5,33 @@
 
 ## Yeni oturum için başlangıç notu (2026-10-07)
 
-**Şu an:** dal `tasarim-yenileme`, son commit "Tasarım yenileme 7b: telefonla ön kayıt"; staging ile aynı (hepsi gönderildi).
+**Şu an:** dal `tasarim-yenileme`, son commit "Paketler 10a: Mikat · Kafile · Kervan, yolcu kotası"; **staging'e henüz gönderilmedi**.
 Tasarım yenilemenin 1–7. adımları ve "tasarıma birebir uyum" turu bitti (aşağıda "Tasarım yenileme" bölümü).
-**Sıradaki (kullanıcı kararı 2026-10-07):** paketler, abonelik, hesap paylaşımı koruması ve platform paneli — ayrı plan,
-kaynak: paketler tasarım sayfası (claude.ai artifact 5Mxqaa5YmxceQ3qi7xzPCq; artifact okuma aracıyla açılır). Kod yazmadan önce
-bu sayfa okunup kullanıcıya adım adım plan + migration listesi sunulacak; abonelik ödemesi (iyzico vb. sanal POS) dış servis
-olduğundan önce seçenekler ve **maliyetleri** sorulacak.
-**Paketler planı (kullanıcı onayı bekliyor, 2026-10-07):** 10a paket yapısı + yolcu kotası + Platform → Paketler ·
-10b abonelik durumu (deneme / aktif / gecikmede / salt okunur), "Paketim" sekmesi, havale-EFT elle onay ·
+**Paketler planı (kullanıcı onayladı, 2026-10-07)** — kaynak: paketler tasarım sayfası (claude.ai artifact 5Mxqaa5YmxceQ3qi7xzPCq;
+artifact okuma aracıyla açılır): ✅ 10a paket yapısı + yolcu kotası + Platform → Paketler ·
+**sıradaki 10b** abonelik durumu (deneme / aktif / gecikmede / salt okunur), "Paketim" sekmesi, havale-EFT elle onay ·
 10c Platform → Acenteler + Geri bildirim yanıtı · 10d hesap paylaşımı koruması (oturum, cihaz, şüpheli giriş, acente kimliği) ·
-10e iyzico + e-fatura (önce seçenek / maliyet). **Kararlar:** paket adları Mikat · Kafile · Kervan; Aile ekranı ve Ön kayıt
-Kafile ve üstünde (Hazırlık her pakette); yolcu kotası = abonelik yılı içindeki tur kayıtları (iptal geri döner);
-aktif tur sınırı kaldırılır, yalnız yolcu kotası.
+10e iyzico + e-fatura (dış servis: önce seçenek / **maliyet** sor). **Kararlar:** paket adları Mikat · Kafile · Kervan; Aile ekranı
+ve Ön kayıt Kafile ve üstünde (Hazırlık her pakette); yolcu kotası = abonelik yılı içindeki tur kayıtları (iptal geri döner);
+aktif tur sınırı kaldırıldı, yalnız yolcu kotası. WhatsApp mesaj kotası (8. adım iptal) paketlere girmedi.
+**10a (2026-10-07):**
+- Migration `add_quota_and_sales_to_plans`: `plans.passenger_limit / is_public / is_featured / tagline / sort`; veri düzeltmesi
+  baslangic→mikat, profesyonel→kafile, kurumsal→kervan (fiyat 1490 / 3490 / 7490, yıllık = aylık × 10 `Plan::YEARLY_MONTHS`,
+  personel 3 / 10 / 30, yolcu 300 / 1500 / 5000). `plans.active_tour_limit` artık kullanılmıyor — sonraki bir migration'da silinecek.
+- Yeni modüller: `Feature::FlightSeats` (uçak koltuk planı, uçak tipleri, koltuk tercih listesi) ve `Feature::NeedRules`
+  (ihtiyaç profili, ihtiyaç türleri, rıza, özel yardım / ihtiyaç listeleri). Kapalıysa `NeedProfiles` hiç okumaz → kurallar,
+  uyarılar, yaka kartı sağlık notu ihtiyaç yokmuş gibi çalışır; veri silinmez. Modül adları `Feature::label()` / `options()`.
+- Kota: `App\Support\Plans\PassengerQuota` (yıl = abonelik bitişinin, yoksa açılış gününün yıl dönümü); kural `RegisterPerson::ensureRoom`
+  (acente satırı kilitlenir; iptalden geri açma da buradan). Ana Panel "Yolcu kotası" kartı; platform acente sayfasında kullanım.
+- Personel sınırına rehberler sayılmaz (`Tenant::staffCount`); rehberi personele çevirmek sınıra takılır.
+- Platform → Paketler tasarımdaki gibi (`.pe`): anında kayıt, satışta düğmesi (en az bir paket satışta kalır), kural `UpdatePlan`.
+- Ekranda modül kontrolü: `composables/useFeatures`. Demo paketi gerekmedi (veri düzeltmesi migration'da).
 **9. adım (Faz 4 entegrasyonlar: Nusuk / Masar, Diyanet, vize, NFC) en sona bırakıldı** — paketlerden sonra, yine önce seçenek + maliyet.
 **8. adım (WhatsApp tahsilat asistanı) kullanıcı kararıyla plandan çıkarıldı (2026-10-07).**
 **Bekleyen:** kullanıcı "küçük kusurlar var, sonra birlikte bakacağız" dedi (2026-10-07) — liste kullanıcıdan alınacak.
 
 **Kullanıcının kalıcı kuralları (hepsi geçerli):**
+
 - Türkçe, teknik olmayan dille; adım adım. Her adımda **önce** neyin değişeceğini ve hangi migration'ların ekleneceğini sun,
   karar gerektiren yerleri sor (AskUserQuestion), **onay gelmeden kod yazma**. Sonraki adıma onaysız geçme.
 - Onaylanan her adımda: kodu yaz → testler (SQLite + pgsql) → PHPStan, `npm run check`, `npm run types:check` → ekranı
@@ -44,6 +54,7 @@ aktif tur sınırı kaldırılır, yalnız yolcu kotası.
   ekran görüntüsünü yalnız bitmiş ekran için al, pgsql testlerini adım sonunda bir kez çalıştır, adımları küçük tut (7a / 7b gibi).
 
 **Teknik tuzaklar (bu oturumlarda öğrenildi):**
+
 - Bash'te uzun heredoc'lar yarıda kesilebiliyor ve Python'a giden ters bölüler yarıya iniyor → PHP / TS dosyalarını Write / Edit
   aracıyla yaz; betik gerekiyorsa scratchpad'e dosya olarak yaz. Namespace'li kodda `chr(92)` kullan.
 - Yeni Inertia sayfası testinden önce `npm run build`; yeni rota sonrası `php artisan wayfinder:generate --with-form`.
@@ -348,7 +359,7 @@ Yerleşim bilgisi (otel / oda / koltuk) yaka kartı, tur tablosu ve aile ekranı
 - [x] Tahsilat ekranı SQL'de hesaplar ve 50'lik sayfalar (`CollectionScaleTest`). Tur detayı hâlâ tüm kayıtları
       yükler (tur başına yüzlerce yolcu için yeterli).
 - [x] Erişim kayıtları ekranı (yönetici, filtreli, sayfalı).
-- [x] Platform paket düzenleme ekranı. - [ ] Abonelik ödemesi (iyzico/PayTR) yok.
+- [x] Platform paket düzenleme ekranı (10a: Mikat · Kafile · Kervan, yolcu kotası). - [ ] Abonelik ödemesi (iyzico/PayTR) yok.
 - [x] Tur yolcu listesi telefonda kart görünümü.
 - [ ] Arayüz metinleri Vue dosyalarında sabit Türkçe; çok dilli olacaksa çeviri dosyalarına taşınmalı.
 - [ ] Ana panel sade; grafik (aylık tahsilat, tur doluluk) eklenebilir.

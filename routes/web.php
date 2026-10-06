@@ -22,23 +22,23 @@ use App\Http\Controllers\PersonNeedController;
 use App\Http\Controllers\PersonRelationController;
 use App\Http\Controllers\Platform\PlanController;
 use App\Http\Controllers\Platform\TenantController;
+use App\Http\Controllers\PublicFamilyController;
+use App\Http\Controllers\PublicSignupController;
+use App\Http\Controllers\ReadinessItemController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoomAssignmentController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\RoomPlanController;
-use App\Http\Controllers\SeatAssignmentController;
-use App\Http\Controllers\PublicFamilyController;
-use App\Http\Controllers\PublicSignupController;
-use App\Http\Controllers\ReadinessItemController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\SeatAssignmentController;
 use App\Http\Controllers\SeatPlanController;
 use App\Http\Controllers\SignupController;
 use App\Http\Controllers\TourBadgeController;
-use App\Http\Controllers\TourProgramController;
-use App\Http\Controllers\TourReadinessController;
 use App\Http\Controllers\TourController;
 use App\Http\Controllers\TourHotelController;
+use App\Http\Controllers\TourProgramController;
+use App\Http\Controllers\TourReadinessController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VehicleTypeController;
 use Illuminate\Support\Facades\Route;
@@ -78,11 +78,14 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::get('persons/{person}/photo', [PersonController::class, 'photo'])->name('persons.photo');
         Route::get('persons-lookup', [PersonController::class, 'lookup'])->name('persons.lookup');
         Route::post('persons/{person}/relations', [PersonRelationController::class, 'store'])->name('persons.relations.store');
-        Route::put('persons/{person}/needs', [PersonNeedController::class, 'update'])->name('persons.needs.update');
-        Route::put('persons/{person}/health-consent', [PersonNeedController::class, 'consent'])->name('persons.health-consent');
-        Route::get('need-types', [NeedTypeController::class, 'index'])->name('need-types.index');
-        Route::post('need-types', [NeedTypeController::class, 'store'])->name('need-types.store');
-        Route::put('need-types/{needType}', [NeedTypeController::class, 'update'])->name('need-types.update');
+        // İhtiyaç profili ve ihtiyaca göre yerleşim kuralları (Kafile ve üstü)
+        Route::middleware('feature:need_rules')->group(function () {
+            Route::put('persons/{person}/needs', [PersonNeedController::class, 'update'])->name('persons.needs.update');
+            Route::put('persons/{person}/health-consent', [PersonNeedController::class, 'consent'])->name('persons.health-consent');
+            Route::get('need-types', [NeedTypeController::class, 'index'])->name('need-types.index');
+            Route::post('need-types', [NeedTypeController::class, 'store'])->name('need-types.store');
+            Route::put('need-types/{needType}', [NeedTypeController::class, 'update'])->name('need-types.update');
+        });
         Route::middleware('feature:readiness')->group(function () {
             Route::get('readiness-items', [ReadinessItemController::class, 'index'])->name('readiness-items.index');
             Route::post('readiness-items', [ReadinessItemController::class, 'store'])->name('readiness-items.store');
@@ -176,18 +179,20 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::put('flight-passengers/{passenger}', [FlightPassengerController::class, 'update'])->name('flight-passengers.update');
         Route::delete('flight-passengers/{passenger}', [FlightPassengerController::class, 'destroy'])->name('flight-passengers.destroy');
 
-        // Uçak koltuk planı (havayoluna koltuk tercihi) ve uçak tipleri
-        Route::get('flights/{flight}/seats', [FlightSeatPlanController::class, 'show'])->name('flights.seat-plan');
-        Route::put('flights/{flight}/aircraft', [FlightSeatPlanController::class, 'aircraft'])->name('flights.aircraft');
-        Route::post('flights/{flight}/seats', [FlightSeatPlanController::class, 'assign'])->name('flights.seats.store');
-        Route::delete('flights/{flight}/seats', [FlightSeatPlanController::class, 'clear'])->name('flights.seats.clear');
-        Route::post('flights/{flight}/auto-seats', [FlightSeatPlanController::class, 'auto'])->name('flights.seats.auto');
-        Route::post('flights/{flight}/blocked-seats', [FlightSeatPlanController::class, 'block'])->name('flights.blocked-seats');
-        Route::delete('flight-passengers/{passenger}/seat', [FlightSeatPlanController::class, 'unassign'])->name('flight-passengers.seat.destroy');
-        Route::get('aircraft-types', [AircraftTypeController::class, 'index'])->name('aircraft-types.index');
-        Route::post('aircraft-types', [AircraftTypeController::class, 'store'])->name('aircraft-types.store');
-        Route::put('aircraft-types/{aircraftType}', [AircraftTypeController::class, 'update'])->name('aircraft-types.update');
-        Route::delete('aircraft-types/{aircraftType}', [AircraftTypeController::class, 'destroy'])->name('aircraft-types.destroy');
+        // Uçak koltuk planı (havayoluna koltuk tercihi) ve uçak tipleri (Kafile ve üstü)
+        Route::middleware('feature:flight_seats')->group(function () {
+            Route::get('flights/{flight}/seats', [FlightSeatPlanController::class, 'show'])->name('flights.seat-plan');
+            Route::put('flights/{flight}/aircraft', [FlightSeatPlanController::class, 'aircraft'])->name('flights.aircraft');
+            Route::post('flights/{flight}/seats', [FlightSeatPlanController::class, 'assign'])->name('flights.seats.store');
+            Route::delete('flights/{flight}/seats', [FlightSeatPlanController::class, 'clear'])->name('flights.seats.clear');
+            Route::post('flights/{flight}/auto-seats', [FlightSeatPlanController::class, 'auto'])->name('flights.seats.auto');
+            Route::post('flights/{flight}/blocked-seats', [FlightSeatPlanController::class, 'block'])->name('flights.blocked-seats');
+            Route::delete('flight-passengers/{passenger}/seat', [FlightSeatPlanController::class, 'unassign'])->name('flight-passengers.seat.destroy');
+            Route::get('aircraft-types', [AircraftTypeController::class, 'index'])->name('aircraft-types.index');
+            Route::post('aircraft-types', [AircraftTypeController::class, 'store'])->name('aircraft-types.store');
+            Route::put('aircraft-types/{aircraftType}', [AircraftTypeController::class, 'update'])->name('aircraft-types.update');
+            Route::delete('aircraft-types/{aircraftType}', [AircraftTypeController::class, 'destroy'])->name('aircraft-types.destroy');
+        });
     });
 
     // Ödemeler ve tahsilat
@@ -212,7 +217,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
             Route::get('stays/{stay}/rooming-list', [ReportController::class, 'roomingList'])->name('stays.rooming-list');
             Route::get('stays/{stay}/room-occupancy', [ReportController::class, 'roomOccupancy'])->name('stays.room-occupancy');
             Route::get('stays/{stay}/floor-plan', [ReportController::class, 'floorPlan'])->name('stays.floor-plan');
-            Route::get('stays/{stay}/needs', [ReportController::class, 'stayNeeds'])->name('stays.needs');
+            Route::get('stays/{stay}/needs', [ReportController::class, 'stayNeeds'])->middleware('feature:need_rules')->name('stays.needs');
         });
         Route::middleware('feature:bus_planning')->group(function () {
             Route::get('buses/{bus}/passengers', [ReportController::class, 'busPassengers'])->name('buses.passengers');
@@ -226,10 +231,10 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
             ->middleware('feature:flight_lists')
             ->name('flights.manifest');
         Route::get('flights/{flight}/seats', [ReportController::class, 'flightSeats'])
-            ->middleware('feature:flight_lists')
+            ->middleware(['feature:flight_lists', 'feature:flight_seats'])
             ->name('flights.seats');
         Route::get('flights/{flight}/assistance', [ReportController::class, 'flightAssistance'])
-            ->middleware('feature:flight_lists')
+            ->middleware(['feature:flight_lists', 'feature:need_rules'])
             ->name('flights.assistance');
     });
 

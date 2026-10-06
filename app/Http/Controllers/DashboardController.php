@@ -12,6 +12,7 @@ use App\Support\Collections\CollectionSummary;
 use App\Support\Dashboard\ActivityFeed;
 use App\Support\Dashboard\CollectionTrend;
 use App\Support\Dashboard\TourReadiness;
+use App\Support\Plans\PassengerQuota;
 use App\Support\Tenancy\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,6 +35,7 @@ class DashboardController extends Controller
         ActivityFeed $activity,
         CollectionTrend $trend,
         CollectionSummary $money,
+        PassengerQuota $quota,
     ): Response|RedirectResponse {
         if ($request->user()?->hasRole(UserRole::Guide)) {
             return to_route('tours.index');
@@ -55,8 +57,7 @@ class DashboardController extends Controller
                 'persons' => Person::count(),
                 'personsWeek' => Person::query()->where('created_at', '>=', now()->subDays(7))->count(),
                 'plan' => $tenant?->plan->name,
-                'activeTours' => $tenant?->activeTourCount() ?? 0,
-                'activeTourLimit' => $tenant?->plan->active_tour_limit,
+                'quota' => $tenant ? $quota->summary($tenant) : null,
                 'outstanding' => $payments ? $money->outstanding() : [],
             ],
             'payments' => $overdue ? [

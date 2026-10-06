@@ -13,6 +13,8 @@ export type FeatureKey =
     | 'room_planning'
     | 'bus_planning'
     | 'flight_lists'
+    | 'flight_seats'
+    | 'need_rules'
     | 'badge_generation'
     | 'readiness'
     | 'family_screen'

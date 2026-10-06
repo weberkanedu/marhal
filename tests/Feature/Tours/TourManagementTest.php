@@ -30,7 +30,7 @@ class TourManagementTest extends TestCase
     {
         parent::setUp();
 
-        $plan = Plan::factory()->withFeatures([Feature::Passengers])->create(['active_tour_limit' => 2]);
+        $plan = Plan::factory()->withFeatures([Feature::Passengers])->create();
         $this->tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
         $this->staff = User::factory()->forTenant($this->tenant)->role(UserRole::Operations)->create();
     }
@@ -45,29 +45,15 @@ class TourManagementTest extends TestCase
         $this->assertSame(['A Grubu'], $tour->groups()->pluck('name')->all());
     }
 
-    public function test_active_tour_limit_of_the_plan_is_enforced(): void
+    public function test_there_is_no_active_tour_limit_anymore(): void
     {
-        Tour::factory()->count(2)->create(['tenant_id' => $this->tenant->id]);
+        // Kullanıcı kararı 2026-10-07: aktif tur sınırı kalktı, yalnız yıllık yolcu kotası var.
+        Tour::factory()->count(5)->create(['tenant_id' => $this->tenant->id]);
 
         $this->actingAs($this->staff)->post(route('tours.store'), $this->tourData())
-            ->assertSessionHasErrors('status');
-
-        // Taslak olmayan, tamamlanmış bir tur limite takılmaz
-        $this->actingAs($this->staff)->post(route('tours.store'), $this->tourData([
-            'status' => TourStatus::Completed->value,
-            'start_date' => now()->subMonth()->toDateString(),
-            'end_date' => now()->subWeeks(2)->toDateString(),
-        ]))->assertSessionHasNoErrors();
-    }
-
-    public function test_editing_an_already_active_tour_does_not_hit_the_limit(): void
-    {
-        [$tour] = Tour::factory()->count(2)->create(['tenant_id' => $this->tenant->id]);
-
-        $this->actingAs($this->staff)->put(route('tours.update', $tour), $this->tourData(['name' => 'Yeni ad']))
             ->assertSessionHasNoErrors();
 
-        $this->assertSame('Yeni ad', $tour->fresh()->name);
+        $this->assertSame(6, Tour::count());
     }
 
     public function test_show_page_lists_groups_registrations_and_totals(): void

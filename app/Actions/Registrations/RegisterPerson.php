@@ -4,18 +4,24 @@ namespace App\Actions\Registrations;
 
 use App\Enums\RegistrationStatus;
 use App\Models\Registration;
+use App\Models\Tenant;
 use App\Models\Tour;
+use App\Support\Plans\PassengerQuota;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
  * Bir kişiyi tura kaydeder. Ekran (RegistrationController) ve ileride API aynı kuralı kullanır.
  *
- * Kurallar: kayıt para birimi turun para birimidir; iptal edilmemiş kayıtlar kapasiteyi doldurur.
+ * Kurallar: kayıt para birimi turun para birimidir; iptal edilmemiş kayıtlar kapasiteyi ve paketin
+ * yıllık yolcu kotasını (PassengerQuota) doldurur.
  */
 class RegisterPerson
 {
-    public function __construct(private readonly ApplyRegistrationStatus $applyStatus) {}
+    public function __construct(
+        private readonly ApplyRegistrationStatus $applyStatus,
+        private readonly PassengerQuota $quota,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $data  person_id, group_id?, room_type?, price, discount?, status, cancel_reason?, notes?
@@ -26,7 +32,7 @@ class RegisterPerson
             // Aynı anda iki kayıt kapasiteyi aşmasın diye tur satırı kilitlenir.
             $tour = Tour::query()->whereKey($tour->getKey())->lockForUpdate()->firstOrFail();
 
-            $this->ensureCapacity($tour, RegistrationStatus::from($data['status']));
+            $this->ensureRoom($tour, RegistrationStatus::from($data['status']));
 
             $registration = new Registration([
                 ...$this->applyStatus->handle($data),
@@ -41,9 +47,20 @@ class RegisterPerson
         });
     }
 
-    public function ensureCapacity(Tour $tour, RegistrationStatus $status): void
+    /**
+     * Yeni ya da iptalden geri açılan kayıt için turda ve paket kotasında yer var mı.
+     */
+    public function ensureRoom(Tour $tour, RegistrationStatus $status): void
     {
-        if ($tour->capacity === null || $status === RegistrationStatus::Cancelled) {
+        if ($status === RegistrationStatus::Cancelled) {
+            return;
+        }
+
+        // Aynı acentenin farklı turlarına eşzamanlı kayıtlar kotayı aşmasın diye acente satırı kilitlenir.
+        $tenant = Tenant::query()->whereKey($tour->tenant_id)->lockForUpdate()->firstOrFail();
+        $this->quota->ensureRoom($tenant);
+
+        if ($tour->capacity === null) {
             return;
         }
 

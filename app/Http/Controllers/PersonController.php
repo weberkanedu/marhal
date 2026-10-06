@@ -123,7 +123,7 @@ class PersonController extends Controller
                 ->values(),
             'relationOptions' => Relation::options(),
             // İhtiyaç profili (sağlık verisi): ayrı açık rıza; içerik şifreli saklanır.
-            'needs' => [
+            'needs' => ! $profiles->enabled() ? null : [
                 'consent_at' => $person->health_consent_at?->toIso8601String(),
                 'items' => array_map(
                     fn (array $item) => ['type_id' => $item['type_id'], 'note' => $item['note']],

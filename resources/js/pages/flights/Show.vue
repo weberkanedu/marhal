@@ -25,6 +25,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { useFeatures } from '@/composables/useFeatures';
 import { formatDate } from '@/lib/format';
 import { seatPlan } from '@/routes/flights';
 import { manifest } from '@/routes/reports/flights';
@@ -45,6 +46,8 @@ defineOptions({
         breadcrumbs: [{ title: 'Turlar', href: toursIndex() }],
     },
 });
+
+const features = useFeatures();
 
 const warningCount = computed(
     () => props.passengers.filter((p) => p.warnings.length > 0).length,
@@ -148,7 +151,11 @@ function add(): void {
                 </p>
             </div>
             <div class="flex flex-wrap gap-2">
-                <Button variant="outline" as-child>
+                <Button
+                    v-if="features.has('flight_seats')"
+                    variant="outline"
+                    as-child
+                >
                     <Link :href="seatPlan(flight.id)"
                         ><Armchair /> Koltuk planı</Link
                     >

@@ -6,6 +6,7 @@ import FlightSeatPlanController from '@/actions/App/Http/Controllers/FlightSeatP
 import MockPool from '@/components/mock/MockPool.vue';
 import type { PoolPerson } from '@/components/mock/MockPool.vue';
 import MockTop from '@/components/mock/MockTop.vue';
+import { useFeatures } from '@/composables/useFeatures';
 import { usePointerDrag } from '@/composables/usePointerDrag';
 import {
     assistance as assistanceReport,
@@ -258,6 +259,8 @@ function clear(): void {
     }
 }
 
+const features = useFeatures();
+
 const exportItems = computed<ExportItem[]>(() =>
     props.can.update
         ? [
@@ -271,11 +274,15 @@ const exportItems = computed<ExportItem[]>(() =>
                   description: 'Havayoluna gönderilecek',
                   url: seatReport.url(props.flight.id),
               },
-              {
-                  title: 'Özel yardım listesi',
-                  description: 'Tekerlekli sandalye talepleri',
-                  url: assistanceReport.url(props.flight.id),
-              },
+              ...(features.has('need_rules')
+                  ? [
+                        {
+                            title: 'Özel yardım listesi',
+                            description: 'Tekerlekli sandalye talepleri',
+                            url: assistanceReport.url(props.flight.id),
+                        },
+                    ]
+                  : []),
           ]
         : [],
 );

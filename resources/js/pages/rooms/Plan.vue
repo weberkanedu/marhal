@@ -9,6 +9,7 @@ import RoomPlanController from '@/actions/App/Http/Controllers/RoomPlanControlle
 import MockPool from '@/components/mock/MockPool.vue';
 import type { PoolPerson } from '@/components/mock/MockPool.vue';
 import MockTop from '@/components/mock/MockTop.vue';
+import { useFeatures } from '@/composables/useFeatures';
 import { usePointerDrag } from '@/composables/usePointerDrag';
 import {
     floorPlan,
@@ -502,6 +503,8 @@ function addRoom(): void {
     );
 }
 
+const features = useFeatures();
+
 const exportItems = computed<ExportItem[]>(() =>
     props.can.reports
         ? [
@@ -515,11 +518,15 @@ const exportItems = computed<ExportItem[]>(() =>
                   description: 'Her katın çizimi, isimlerle',
                   url: floorPlan.url(props.stay.id),
               },
-              {
-                  title: 'İhtiyaç listesi',
-                  description: 'Asansör ve yardım gereken yolcular',
-                  url: needsReport.url(props.stay.id),
-              },
+              ...(features.has('need_rules')
+                  ? [
+                        {
+                            title: 'İhtiyaç listesi',
+                            description: 'Asansör ve yardım gereken yolcular',
+                            url: needsReport.url(props.stay.id),
+                        },
+                    ]
+                  : []),
               {
                   title: 'Doluluk özeti',
                   description: 'Oda türü ve boş yatak',

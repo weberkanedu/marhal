@@ -1,18 +1,10 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
+import { reactive, watch } from 'vue';
+import { toast } from 'vue-sonner';
 import PlanController from '@/actions/App/Http/Controllers/Platform/PlanController';
-import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { selectClass } from '@/lib/formClasses';
+import MockTop from '@/components/mock/MockTop.vue';
+import { formatNumber } from '@/lib/format';
 import { index } from '@/routes/platform/plans';
 
 type PlanRow = {
@@ -20,17 +12,25 @@ type PlanRow = {
     name: string;
     price_monthly: string;
     price_yearly: string;
-    currency: string;
     user_limit: number | null;
-    active_tour_limit: number | null;
+    passenger_limit: number | null;
+    is_public: boolean;
     tenants_count: number;
     features: string[];
 };
 
-defineProps<{
+type Draft = {
+    price_monthly: string;
+    user_limit: string;
+    passenger_limit: string;
+    is_public: boolean;
+    features: string[];
+};
+
+const props = defineProps<{
     plans: PlanRow[];
     features: { key: string; label: string }[];
-    currencies: string[];
+    yearlyMonths: number;
 }>();
 
 defineOptions({
@@ -38,154 +38,174 @@ defineOptions({
         breadcrumbs: [{ title: 'Paketler', href: index() }],
     },
 });
+
+/**
+ * Tasarımdaki paket düzenleyici (paketler tasarım sayfası → Platform paneli → Paketler): her değişiklik
+ * hemen kaydedilir. Sınır kutusu boşsa sınırsız.
+ */
+const drafts = reactive<Record<string, Draft>>({});
+
+function reset(): void {
+    for (const plan of props.plans) {
+        drafts[plan.id] = {
+            price_monthly: String(Math.round(Number(plan.price_monthly))),
+            user_limit: plan.user_limit === null ? '' : String(plan.user_limit),
+            passenger_limit:
+                plan.passenger_limit === null
+                    ? ''
+                    : String(plan.passenger_limit),
+            is_public: plan.is_public,
+            features: [...plan.features],
+        };
+    }
+}
+
+watch(() => props.plans, reset, { immediate: true });
+
+const toLimit = (value: string) => (value.trim() === '' ? null : Number(value));
+
+const yearly = (id: string) =>
+    formatNumber((Number(drafts[id].price_monthly) || 0) * props.yearlyMonths);
+
+function save(plan: PlanRow): void {
+    const d = drafts[plan.id];
+
+    router.put(
+        PlanController.update.url(plan.id),
+        {
+            price_monthly: Number(d.price_monthly) || 0,
+            user_limit: toLimit(d.user_limit),
+            passenger_limit: toLimit(d.passenger_limit),
+            is_public: d.is_public,
+            features: d.features,
+        },
+        {
+            preserveScroll: true,
+            onError: (errors) => {
+                toast.error(Object.values(errors)[0] ?? 'Kaydedilemedi.');
+                reset();
+            },
+        },
+    );
+}
+
+function toggleFeature(plan: PlanRow, key: string): void {
+    const list = drafts[plan.id].features;
+    drafts[plan.id].features = list.includes(key)
+        ? list.filter((k) => k !== key)
+        : [...list, key];
+    save(plan);
+}
+
+function toggleLive(plan: PlanRow): void {
+    drafts[plan.id].is_public = !drafts[plan.id].is_public;
+    save(plan);
+}
 </script>
 
 <template>
     <Head title="Paketler" />
 
-    <div class="flex flex-col gap-4 p-4">
-        <div>
-            <h1 class="text-xl font-semibold tracking-tight">Paketler</h1>
-            <p class="text-sm text-muted-foreground">
-                Değişiklik, o paketi kullanan bütün acentelere hemen yansır.
-                Sınırı boş bırakmak "sınırsız" demektir.
-            </p>
-        </div>
+    <div class="mx">
+        <div class="main">
+            <MockTop :crumbs="[{ label: 'Platform' }]" title="Paketler" />
 
-        <div class="grid gap-4 xl:grid-cols-3">
-            <Card v-for="plan in plans" :key="plan.id">
-                <CardHeader>
-                    <CardTitle>{{ plan.name }}</CardTitle>
-                    <CardDescription>
-                        {{ plan.tenants_count }} acente bu paketi kullanıyor
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Form
-                        v-bind="PlanController.update.form(plan.id)"
-                        class="space-y-4"
-                        :options="{ preserveScroll: true }"
-                        v-slot="{ errors, processing }"
-                    >
-                        <div class="grid gap-2">
-                            <Label :for="`name-${plan.id}`">Paket adı</Label>
-                            <Input
-                                :id="`name-${plan.id}`"
-                                name="name"
-                                :default-value="plan.name"
-                                required
-                            />
-                            <InputError :message="errors.name" />
-                        </div>
-                        <div class="grid grid-cols-[1fr_1fr_5.5rem] gap-2">
-                            <div class="grid gap-2">
-                                <Label :for="`pm-${plan.id}`">Aylık</Label>
-                                <Input
-                                    :id="`pm-${plan.id}`"
-                                    name="price_monthly"
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    :default-value="plan.price_monthly"
-                                />
-                            </div>
-                            <div class="grid gap-2">
-                                <Label :for="`py-${plan.id}`">Yıllık</Label>
-                                <Input
-                                    :id="`py-${plan.id}`"
-                                    name="price_yearly"
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    :default-value="plan.price_yearly"
-                                />
-                            </div>
-                            <div class="grid gap-2">
-                                <Label :for="`cur-${plan.id}`">Birim</Label>
-                                <select
-                                    :id="`cur-${plan.id}`"
-                                    name="currency"
-                                    :class="selectClass"
-                                >
-                                    <option
-                                        v-for="c in currencies"
-                                        :key="c"
-                                        :value="c"
-                                        :selected="plan.currency === c"
-                                    >
-                                        {{ c }}
-                                    </option>
-                                </select>
-                            </div>
-                            <InputError
-                                class="col-span-3"
-                                :message="
-                                    errors.price_monthly ?? errors.price_yearly
+            <p class="lbl">
+                Fiyatlar KDV hariç. Değişiklik yeni müşterilere hemen uygulanır;
+                mevcut aboneler yenileme tarihine kadar eski fiyattan devam
+                eder.
+            </p>
+
+            <div class="pe">
+                <div v-for="plan in plans" :key="plan.id" class="card">
+                    <h3>
+                        {{ plan.name }}
+                        <span
+                            class="sw"
+                            :class="{ on: drafts[plan.id].is_public }"
+                            role="switch"
+                            tabindex="0"
+                            :aria-checked="drafts[plan.id].is_public"
+                            :aria-label="`${plan.name} satışta`"
+                            :title="
+                                drafts[plan.id].is_public
+                                    ? 'Satışta'
+                                    : 'Satışta değil · mevcut acenteler etkilenmez'
+                            "
+                            @click="toggleLive(plan)"
+                            @keydown.enter.prevent="toggleLive(plan)"
+                            @keydown.space.prevent="toggleLive(plan)"
+                        />
+                    </h3>
+                    <div class="row2">
+                        <label class="fi"
+                            >Aylık (₺)<input
+                                v-model="drafts[plan.id].price_monthly"
+                                type="number"
+                                min="0"
+                                step="10"
+                                @change="save(plan)"
+                        /></label>
+                        <label class="fi"
+                            >Yıllık (₺)<input
+                                :value="yearly(plan.id)"
+                                disabled
+                                :title="`Aylık × ${yearlyMonths}`"
+                        /></label>
+                    </div>
+                    <div class="row2">
+                        <label class="fi"
+                            >Personel<input
+                                v-model="drafts[plan.id].user_limit"
+                                type="number"
+                                min="1"
+                                placeholder="Sınırsız"
+                                @change="save(plan)"
+                        /></label>
+                        <label class="fi"
+                            >Yolcu / yıl<input
+                                v-model="drafts[plan.id].passenger_limit"
+                                type="number"
+                                min="0"
+                                step="50"
+                                placeholder="Sınırsız"
+                                @change="save(plan)"
+                        /></label>
+                    </div>
+                    <div>
+                        <div
+                            v-for="feature in features"
+                            :key="feature.key"
+                            class="feat"
+                        >
+                            <span>{{ feature.label }}</span>
+                            <span
+                                class="sw"
+                                :class="{
+                                    on: drafts[plan.id].features.includes(
+                                        feature.key,
+                                    ),
+                                }"
+                                role="switch"
+                                tabindex="0"
+                                :aria-checked="
+                                    drafts[plan.id].features.includes(
+                                        feature.key,
+                                    )
+                                "
+                                :aria-label="`${plan.name}: ${feature.label}`"
+                                @click="toggleFeature(plan, feature.key)"
+                                @keydown.enter.prevent="
+                                    toggleFeature(plan, feature.key)
+                                "
+                                @keydown.space.prevent="
+                                    toggleFeature(plan, feature.key)
                                 "
                             />
                         </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div class="grid gap-2">
-                                <Label :for="`ul-${plan.id}`"
-                                    >Kullanıcı sınırı</Label
-                                >
-                                <Input
-                                    :id="`ul-${plan.id}`"
-                                    name="user_limit"
-                                    type="number"
-                                    min="1"
-                                    placeholder="Sınırsız"
-                                    :default-value="
-                                        plan.user_limit ?? undefined
-                                    "
-                                />
-                                <InputError :message="errors.user_limit" />
-                            </div>
-                            <div class="grid gap-2">
-                                <Label :for="`tl-${plan.id}`"
-                                    >Aktif tur sınırı</Label
-                                >
-                                <Input
-                                    :id="`tl-${plan.id}`"
-                                    name="active_tour_limit"
-                                    type="number"
-                                    min="1"
-                                    placeholder="Sınırsız"
-                                    :default-value="
-                                        plan.active_tour_limit ?? undefined
-                                    "
-                                />
-                                <InputError
-                                    :message="errors.active_tour_limit"
-                                />
-                            </div>
-                        </div>
-                        <fieldset class="grid gap-1.5">
-                            <legend class="mb-1 text-sm font-medium">
-                                Modüller
-                            </legend>
-                            <label
-                                v-for="feature in features"
-                                :key="feature.key"
-                                class="flex items-center gap-2 text-sm"
-                            >
-                                <input
-                                    type="checkbox"
-                                    name="features[]"
-                                    :value="feature.key"
-                                    :checked="
-                                        plan.features.includes(feature.key)
-                                    "
-                                />
-                                {{ feature.label }}
-                            </label>
-                        </fieldset>
-                        <Button type="submit" :disabled="processing"
-                            >Kaydet</Button
-                        >
-                    </Form>
-                </CardContent>
-            </Card>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </template>

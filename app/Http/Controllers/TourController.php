@@ -2,29 +2,29 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Rooms\StayOccupancy;
+use App\Actions\Signup\SignupLinks;
 use App\Enums\Feature;
 use App\Enums\FlightDirection;
 use App\Enums\HotelCity;
 use App\Enums\RegistrationStatus;
 use App\Enums\RoomType;
+use App\Enums\SignupStatus;
 use App\Enums\TourStatus;
 use App\Enums\TourType;
 use App\Enums\UserRole;
-use App\Actions\Rooms\StayOccupancy;
-use App\Actions\Signup\SignupLinks;
-use App\Enums\SignupStatus;
-use App\Models\NeedType;
-use App\Models\SignupLink;
-use App\Models\SignupRequest;
 use App\Http\Requests\TourRequest;
 use App\Models\Bus;
 use App\Models\FamilyLink;
 use App\Models\Flight;
 use App\Models\Group;
 use App\Models\Hotel;
+use App\Models\NeedType;
 use App\Models\Person;
 use App\Models\ReadinessItem;
 use App\Models\Registration;
+use App\Models\SignupLink;
+use App\Models\SignupRequest;
 use App\Models\Tour;
 use App\Models\TourHotel;
 use App\Models\TourProgramItem;
@@ -80,10 +80,7 @@ class TourController extends Controller
         return Inertia::render('tours/Index', [
             'tours' => $tours,
             'filter' => $filter,
-            'limits' => $isGuide ? null : [
-                'active' => $tenant?->activeTourCount() ?? 0,
-                'max' => $tenant?->plan->active_tour_limit,
-            ],
+            'limits' => $isGuide ? null : ['active' => $tenant?->activeTourCount() ?? 0],
             'can' => ['create' => $user?->can('create', Tour::class) ?? false],
         ]);
     }

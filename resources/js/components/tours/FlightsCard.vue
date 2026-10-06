@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useFeatures } from '@/composables/useFeatures';
 import { selectClass } from '@/lib/formClasses';
 import { seatPlan, show as showFlight } from '@/routes/flights';
 import { commonAirports, formatFlightTime } from '@/types/flight';
@@ -30,6 +31,12 @@ const props = defineProps<{
     directions: Option[];
     canUpdate: boolean;
 }>();
+
+const features = useFeatures();
+
+// Uçak koltuk planı paketinde yoksa kart uçuş sayfasını (yolcular, PNR) açar.
+const flightUrl = (id: string) =>
+    features.has('flight_seats') ? seatPlan.url(id) : showFlight.url(id);
 
 const open = ref(false);
 const editing = ref<TourFlight | null>(null);
@@ -86,8 +93,8 @@ function remove(flight: TourFlight): void {
         class="vehicle"
         role="link"
         tabindex="0"
-        @click="router.visit(seatPlan.url(flight.id))"
-        @keydown.enter="router.visit(seatPlan.url(flight.id))"
+        @click="router.visit(flightUrl(flight.id))"
+        @keydown.enter="router.visit(flightUrl(flight.id))"
     >
         <span class="ic"><MockIcon name="plane" /></span>
         <div>

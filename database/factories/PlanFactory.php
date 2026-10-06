@@ -26,7 +26,7 @@ class PlanFactory extends Factory
             'price_yearly' => 0,
             'currency' => 'TRY',
             'user_limit' => null,
-            'active_tour_limit' => null,
+            'passenger_limit' => null,
         ];
     }
 

@@ -2,18 +2,32 @@
 
 namespace App\Support\Needs;
 
+use App\Enums\Feature;
 use App\Enums\NeedEffect;
 use App\Models\NeedType;
 use App\Models\PersonNeed;
+use App\Support\Tenancy\CurrentTenant;
 
 /**
  * İhtiyaç profillerini okumanın tek yolu (ekranlar, kurallar, listeler bunu kullanır).
  * Şifreli profiller bir kerede çözülür; ihtiyaç türleri acentenin tablosundan gelir.
+ *
+ * Paketinde "İhtiyaca göre yerleşim kuralları" (Feature::NeedRules) kapalı acentede profil hiç okunmaz:
+ * ekranlar, uyarılar, otomatik yerleştirme ve listeler ihtiyaç yokmuş gibi çalışır (veri silinmez).
  */
 class NeedProfiles
 {
     /** @var array<string, NeedType>|null */
     private ?array $types = null;
+
+    public function __construct(private readonly CurrentTenant $currentTenant) {}
+
+    public function enabled(): bool
+    {
+        $tenant = $this->currentTenant->get();
+
+        return $tenant === null || $tenant->hasFeature(Feature::NeedRules);
+    }
 
     /**
      * @param  iterable<string>  $personIds
@@ -23,7 +37,7 @@ class NeedProfiles
     {
         $ids = collect($personIds)->filter()->unique()->values();
 
-        if ($ids->isEmpty()) {
+        if ($ids->isEmpty() || ! $this->enabled()) {
             return [];
         }
 

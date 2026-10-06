@@ -21,9 +21,9 @@ class UpdateRegistration
         return DB::transaction(function () use ($registration, $data): Registration {
             $newStatus = RegistrationStatus::from($data['status']);
 
-            // İptal edilmiş bir kayıt yeniden açılıyorsa kapasiteye tekrar girer.
+            // İptal edilmiş bir kayıt yeniden açılıyorsa kapasiteye ve yolcu kotasına tekrar girer.
             if ($registration->status === RegistrationStatus::Cancelled && $newStatus !== RegistrationStatus::Cancelled) {
-                $this->registerPerson->ensureCapacity($registration->tour, $newStatus);
+                $this->registerPerson->ensureRoom($registration->tour, $newStatus);
             }
 
             unset($data['person_id']);

@@ -9,7 +9,7 @@ export type TenantOptions = {
         id: string;
         name: string;
         user_limit: number | null;
-        active_tour_limit: number | null;
+        passenger_limit: number | null;
     }[];
     statuses: { value: string; label: string }[];
     currencies: string[];
@@ -57,9 +57,8 @@ const limitText = (n: number | null) => (n === null ? 'sınırsız' : String(n))
                     :value="plan.id"
                     :selected="values.plan_id === plan.id"
                 >
-                    {{ plan.name }} —
-                    {{ limitText(plan.user_limit) }} kullanıcı,
-                    {{ limitText(plan.active_tour_limit) }} aktif tur
+                    {{ plan.name }} — {{ limitText(plan.user_limit) }} personel,
+                    {{ limitText(plan.passenger_limit) }} yolcu / yıl
                 </option>
             </select>
             <InputError :message="errors.plan_id" />

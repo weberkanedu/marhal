@@ -71,18 +71,19 @@ class TenantAccessTest extends TestCase
 
     public function test_plan_limits_are_enforced(): void
     {
-        $plan = Plan::factory()->create(['user_limit' => 1, 'active_tour_limit' => 1]);
+        $plan = Plan::factory()->create(['user_limit' => 1]);
         $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
 
         $this->assertTrue($tenant->canAddUser());
-        $this->assertTrue($tenant->canAddActiveTour());
+
+        User::factory()->forTenant($tenant)->role(UserRole::Guide)->create();
+        $this->assertTrue($tenant->canAddUser(), 'Rehberler personel sınırına sayılmaz.');
 
         User::factory()->forTenant($tenant)->create();
         Tour::factory()->create(['tenant_id' => $tenant->id]);
         Tour::factory()->completed()->create(['tenant_id' => $tenant->id]);
 
         $this->assertFalse($tenant->canAddUser());
-        $this->assertSame(1, $tenant->activeTourCount(), 'Tamamlanmış tur limite sayılmaz.');
-        $this->assertFalse($tenant->canAddActiveTour());
+        $this->assertSame(1, $tenant->activeTourCount(), 'Tamamlanmış tur sayılmaz.');
     }
 }

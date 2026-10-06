@@ -45,7 +45,7 @@ class UserController extends Controller
         return Inertia::render('users/Index', [
             'users' => $users,
             'limit' => [
-                'active' => $users->where('is_active', true)->count(),
+                'active' => $tenant?->staffCount() ?? 0,
                 'max' => $tenant?->plan->user_limit,
             ],
             'roles' => self::roleOptions(),

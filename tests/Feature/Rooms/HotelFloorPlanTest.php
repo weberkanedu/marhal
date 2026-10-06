@@ -46,7 +46,7 @@ class HotelFloorPlanTest extends TestCase
     {
         parent::setUp();
 
-        $plan = Plan::factory()->withFeatures([Feature::Passengers, Feature::RoomPlanning, Feature::BasicReports])->create();
+        $plan = Plan::factory()->withFeatures([Feature::Passengers, Feature::RoomPlanning, Feature::NeedRules, Feature::BasicReports])->create();
         $this->tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
         DefaultNeedTypes::seed($this->tenant);
         $this->staff = User::factory()->forTenant($this->tenant)->role(UserRole::Operations)->create();

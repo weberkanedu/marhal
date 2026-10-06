@@ -13,7 +13,7 @@ import type { TourListItem } from '@/types/tour';
 defineProps<{
     tours: TourListItem[];
     filter: 'active' | 'past' | 'all';
-    limits: { active: number; max: number | null } | null;
+    limits: { active: number } | null;
     can: { create: boolean };
 }>();
 
@@ -50,9 +50,6 @@ function occupancy(tour: TourListItem): number | null {
                 </h1>
                 <p v-if="limits" class="text-sm text-muted-foreground">
                     Aktif tur: {{ limits.active }}
-                    <template v-if="limits.max !== null">
-                        / {{ limits.max }} (paket sınırı)
-                    </template>
                 </p>
                 <p v-else class="text-sm text-muted-foreground">
                     Rehberi olduğunuz grupların turları

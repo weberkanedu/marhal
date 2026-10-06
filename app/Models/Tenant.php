@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\Feature;
 use App\Enums\TenantStatus;
 use App\Enums\TourStatus;
+use App\Enums\UserRole;
 use App\Support\Features\FeatureGate;
 use App\Support\Tenancy\TenantScope;
 use Carbon\CarbonImmutable as Carbon;
@@ -116,12 +117,22 @@ class Tenant extends Model
         return app(FeatureGate::class)->enabledFor($this);
     }
 
+    /**
+     * Personel sınırına sayılan kullanıcılar: aktif yönetici ve operasyon. Rehberler her pakette ücretsiz ve sınırsız.
+     */
+    public function staffCount(): int
+    {
+        return $this->users()
+            ->where('is_active', true)
+            ->where('role', '!=', UserRole::Guide)
+            ->count();
+    }
+
     public function canAddUser(): bool
     {
         $limit = $this->plan->user_limit;
 
-        // Pasif kullanıcılar limite sayılmaz.
-        return $limit === null || $this->users()->where('is_active', true)->count() < $limit;
+        return $limit === null || $this->staffCount() < $limit;
     }
 
     public function activeTourCount(): int
@@ -130,12 +141,5 @@ class Tenant extends Model
             ->whereIn('status', TourStatus::active())
             ->whereDate('end_date', '>=', today())
             ->count();
-    }
-
-    public function canAddActiveTour(): bool
-    {
-        $limit = $this->plan->active_tour_limit;
-
-        return $limit === null || $this->activeTourCount() < $limit;
     }
 }

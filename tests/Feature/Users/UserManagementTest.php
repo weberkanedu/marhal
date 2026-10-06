@@ -47,16 +47,25 @@ class UserManagementTest extends TestCase
         $this->assertNotNull($user->email_verified_at);
     }
 
-    public function test_user_limit_counts_only_active_users(): void
+    public function test_user_limit_counts_only_active_staff_and_guides_are_free(): void
     {
         $extra = User::factory()->forTenant($this->tenant)->count(2)->create();
 
-        $this->actingAs($this->admin)->post(route('users.store'), ['name' => 'X', 'email' => 'x@t.test', 'role' => 'rehber'])
+        $this->actingAs($this->admin)->post(route('users.store'), ['name' => 'X', 'email' => 'x@t.test', 'role' => 'operasyon'])
             ->assertSessionHasErrors('email');
+
+        // Rehber hesapları her pakette ücretsiz ve sınırsız.
+        $this->actingAs($this->admin)->post(route('users.store'), ['name' => 'R', 'email' => 'r@t.test', 'role' => 'rehber'])
+            ->assertSessionHasNoErrors();
+        $guide = User::where('email', 'r@t.test')->sole();
+
+        // Rehberi personele çevirmek sınıra takılır.
+        $this->actingAs($this->admin)->put(route('users.update', $guide), ['name' => 'R', 'role' => 'operasyon', 'is_active' => true])
+            ->assertSessionHasErrors('role');
 
         $extra[0]->update(['is_active' => false]);
 
-        $this->actingAs($this->admin)->post(route('users.store'), ['name' => 'X', 'email' => 'x@t.test', 'role' => 'rehber'])
+        $this->actingAs($this->admin)->post(route('users.store'), ['name' => 'X', 'email' => 'x@t.test', 'role' => 'operasyon'])
             ->assertSessionHasNoErrors();
     }
 

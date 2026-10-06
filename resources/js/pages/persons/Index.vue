@@ -4,6 +4,7 @@ import { useDebounceFn } from '@vueuse/core';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import MockIcon from '@/components/mock/MockIcon.vue';
 import MockTop from '@/components/mock/MockTop.vue';
+import { useFeatures } from '@/composables/useFeatures';
 import { ageFrom } from '@/lib/format';
 import { show as importPage } from '@/routes/person-import';
 import { create, index, show } from '@/routes/persons';
@@ -33,6 +34,7 @@ defineOptions({
     },
 });
 
+const features = useFeatures();
 const search = ref(props.filters.q);
 
 function load(params: { q?: string; filtre?: FilterKey | null }): void {
@@ -166,6 +168,7 @@ const passportChip = (p: PersonListItem): [string, string] =>
                     >
                 </div>
                 <div
+                    v-if="features.has('need_rules')"
                     class="card"
                     role="button"
                     tabindex="0"

@@ -24,6 +24,10 @@ export function formatMoney(
     }).format(Number(amount));
 }
 
+export function formatNumber(value: number): string {
+    return new Intl.NumberFormat('tr-TR').format(value);
+}
+
 export function ageFrom(birthDate: string | null | undefined): number | null {
     if (!birthDate) {
         return null;

@@ -39,7 +39,7 @@ export function agencySettingsTabs(
         tabs.push({ title: 'Personel', href: usersIndex(), icon: UserCog });
     }
 
-    if (staff && features.includes('passengers')) {
+    if (staff && features.includes('need_rules')) {
         tabs.push({
             title: 'İhtiyaç türleri',
             href: needTypesIndex(),
@@ -67,7 +67,7 @@ export function agencySettingsTabs(
         });
     }
 
-    if (staff && features.includes('flight_lists')) {
+    if (staff && features.includes('flight_seats')) {
         tabs.push({
             title: 'Uçak tipleri',
             href: aircraftTypesIndex(),

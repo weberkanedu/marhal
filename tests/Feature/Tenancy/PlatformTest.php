@@ -31,7 +31,7 @@ class PlatformTest extends TestCase
     {
         $this->actingAs($this->superAdmin)->post(route('platform.tenants.store'), [
             'name' => 'Yeni Umre Turizm',
-            'plan_id' => Plan::where('slug', 'baslangic')->value('id'),
+            'plan_id' => Plan::where('slug', 'mikat')->value('id'),
             'status' => 'trial',
             'trial_ends_at' => now()->addDays(14)->toDateString(),
             'default_currency' => 'USD',
@@ -51,22 +51,22 @@ class PlatformTest extends TestCase
 
     public function test_super_admin_can_change_plan_status_and_feature_overrides(): void
     {
-        $tenant = Tenant::factory()->create(['plan_id' => Plan::where('slug', 'baslangic')->value('id')]);
-        $this->assertFalse($tenant->hasFeature(Feature::RoomPlanning));
+        $tenant = Tenant::factory()->create(['plan_id' => Plan::where('slug', 'mikat')->value('id')]);
+        $this->assertFalse($tenant->hasFeature(Feature::FamilyScreen));
 
         $this->actingAs($this->superAdmin)->put(route('platform.tenants.features.update', $tenant), [
-            'feature' => 'room_planning', 'enabled' => true,
+            'feature' => 'family_screen', 'enabled' => true,
         ])->assertSessionHasNoErrors();
-        $this->assertTrue($tenant->fresh()->hasFeature(Feature::RoomPlanning));
+        $this->assertTrue($tenant->fresh()->hasFeature(Feature::FamilyScreen));
 
         $this->actingAs($this->superAdmin)->put(route('platform.tenants.features.update', $tenant), [
-            'feature' => 'room_planning', 'enabled' => null,
+            'feature' => 'family_screen', 'enabled' => null,
         ]);
-        $this->assertFalse($tenant->fresh()->hasFeature(Feature::RoomPlanning), 'Paket varsayılanına döner.');
+        $this->assertFalse($tenant->fresh()->hasFeature(Feature::FamilyScreen), 'Paket varsayılanına döner.');
 
         $this->actingAs($this->superAdmin)->put(route('platform.tenants.update', $tenant), [
             'name' => $tenant->name,
-            'plan_id' => Plan::where('slug', 'kurumsal')->value('id'),
+            'plan_id' => Plan::where('slug', 'kervan')->value('id'),
             'status' => 'suspended',
             'default_currency' => 'USD',
         ])->assertSessionHasNoErrors();
@@ -79,7 +79,7 @@ class PlatformTest extends TestCase
 
     public function test_tenant_detail_page_lists_features_and_users_but_no_business_data(): void
     {
-        $tenant = Tenant::factory()->create(['plan_id' => Plan::where('slug', 'profesyonel')->value('id')]);
+        $tenant = Tenant::factory()->create(['plan_id' => Plan::where('slug', 'kafile')->value('id')]);
         User::factory()->forTenant($tenant)->count(2)->create();
 
         $this->actingAs($this->superAdmin)->get(route('platform.tenants.show', $tenant))

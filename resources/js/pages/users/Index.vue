@@ -87,13 +87,14 @@ const limitReached = () =>
             <div>
                 <h2 class="text-lg font-semibold tracking-tight">Personel</h2>
                 <p class="text-sm text-muted-foreground">
-                    Aktif kullanıcı: {{ limit.active }}
+                    Aktif personel: {{ limit.active }}
                     <template v-if="limit.max !== null">
                         / {{ limit.max }} (paket sınırı)
                     </template>
+                    · Rehber hesapları sınırsız
                 </p>
             </div>
-            <Button :disabled="limitReached()" @click="createOpen = true">
+            <Button @click="createOpen = true">
                 <UserPlus /> Kullanıcı ekle
             </Button>
         </div>
@@ -102,8 +103,9 @@ const limitReached = () =>
             v-if="limitReached()"
             class="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm text-warning"
         >
-            Paketinizdeki kullanıcı sınırına ulaştınız. Yeni kullanıcı için
-            kullanmadığınız bir hesabı pasif yapın veya paketinizi yükseltin.
+            Paketinizdeki personel sınırına ulaştınız. Rehber hesabı yine
+            eklenebilir; yeni personel için kullanmadığınız bir hesabı pasif
+            yapın veya paketinizi yükseltin.
         </p>
 
         <Card class="py-0">

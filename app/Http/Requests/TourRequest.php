@@ -4,11 +4,8 @@ namespace App\Http\Requests;
 
 use App\Enums\TourStatus;
 use App\Enums\TourType;
-use App\Models\Tour;
-use App\Support\Tenancy\CurrentTenant;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Validator;
 
 class TourRequest extends FormRequest
 {
@@ -48,36 +45,5 @@ class TourRequest extends FormRequest
             'whatsapp_link' => 'WhatsApp grup bağlantısı',
             'notes' => 'notlar',
         ];
-    }
-
-    /**
-     * Paket limiti: aktif olmayan bir tur aktif hale gelirken (veya yeni aktif tur açılırken)
-     * "aynı anda aktif tur" sınırı kontrol edilir.
-     *
-     * @return array<int, callable(Validator): void>
-     */
-    public function after(): array
-    {
-        return [function (Validator $validator): void {
-            if ($validator->errors()->isNotEmpty()) {
-                return;
-            }
-
-            $tenant = app(CurrentTenant::class)->get();
-            /** @var Tour|null $tour */
-            $tour = $this->route('tour');
-
-            $becomesActive = TourStatus::from($this->string('status')->toString())->isActive()
-                && $this->date('end_date')?->endOfDay()->isFuture();
-            $wasActive = $tour !== null && $tour->status->isActive() && $tour->end_date->endOfDay()->isFuture();
-
-            if ($tenant && $becomesActive && ! $wasActive && ! $tenant->canAddActiveTour()) {
-                $validator->errors()->add(
-                    'status',
-                    "Paketinizde aynı anda en fazla {$tenant->plan->active_tour_limit} aktif tur olabilir. ".
-                    'Biten bir turu "Tamamlandı" yapın veya paketinizi yükseltin.',
-                );
-            }
-        }];
     }
 }

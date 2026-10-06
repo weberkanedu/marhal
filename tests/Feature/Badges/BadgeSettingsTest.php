@@ -41,7 +41,7 @@ class BadgeSettingsTest extends TestCase
     {
         parent::setUp();
 
-        $plan = Plan::factory()->withFeatures([Feature::Passengers, Feature::BadgeGeneration, Feature::BusPlanning, Feature::BasicReports])->create();
+        $plan = Plan::factory()->withFeatures([Feature::Passengers, Feature::BadgeGeneration, Feature::BusPlanning, Feature::BasicReports, Feature::NeedRules])->create();
         $this->tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
         $this->staff = User::factory()->forTenant($this->tenant)->role(UserRole::Operations)->create();
         $this->tour = Tour::factory()->create(['tenant_id' => $this->tenant->id]);

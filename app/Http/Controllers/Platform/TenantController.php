@@ -11,6 +11,7 @@ use App\Models\Plan;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\Features\FeatureGate;
+use App\Support\Plans\PassengerQuota;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -83,10 +84,12 @@ class TenantController extends Controller
                 'subscription_ends_at' => $tenant->subscription_ends_at?->toDateString(),
                 'accessible' => $tenant->isAccessible(),
                 'active_tours' => $tenant->activeTourCount(),
+                'passengers_used' => app(PassengerQuota::class)->used($tenant),
+                'passenger_limit' => $tenant->plan->passenger_limit,
             ],
             'features' => collect(Feature::cases())->map(fn (Feature $f) => [
                 'key' => $f->value,
-                'label' => self::featureLabel($f),
+                'label' => $f->label(),
                 'plan' => (bool) ($planFeatures[$f->value] ?? false),
                 'override' => $overrides->has($f->value) ? (bool) $overrides[$f->value] : null,
                 'effective' => $gate->allows($tenant, $f),
@@ -192,7 +195,7 @@ class TenantController extends Controller
     private function options(): array
     {
         return [
-            'plans' => Plan::query()->orderBy('price_monthly')->get(['id', 'name', 'user_limit', 'active_tour_limit']),
+            'plans' => Plan::query()->orderBy('sort')->orderBy('price_monthly')->get(['id', 'name', 'user_limit', 'passenger_limit']),
             'statuses' => [
                 ['value' => TenantStatus::Trial->value, 'label' => 'Deneme'],
                 ['value' => TenantStatus::Active->value, 'label' => 'Aktif'],
@@ -200,23 +203,5 @@ class TenantController extends Controller
             ],
             'currencies' => config('marhal.currencies'),
         ];
-    }
-
-    public static function featureLabel(Feature $feature): string
-    {
-        return match ($feature) {
-            Feature::Passengers => 'Yolcu ve tur yönetimi',
-            Feature::Payments => 'Ödeme ve tahsilat',
-            Feature::BasicReports => 'Temel raporlar (Excel/PDF)',
-            Feature::RoomPlanning => 'Oda yerleşimi',
-            Feature::BusPlanning => 'Otobüs yerleşimi',
-            Feature::FlightLists => 'Uçuş listeleri',
-            Feature::BadgeGeneration => 'Yaka kartı',
-            Feature::Readiness => 'Hazırlık takibi',
-            Feature::FamilyScreen => 'Aile ekranı',
-            Feature::OnlineSignup => 'Telefonla ön kayıt',
-            Feature::AdvancedReporting => 'Gelişmiş raporlar',
-            Feature::ApiAccess => 'API erişimi',
-        };
     }
 }

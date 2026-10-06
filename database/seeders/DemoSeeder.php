@@ -44,7 +44,7 @@ class DemoSeeder extends Seeder
         $tenant = Tenant::create([
             'name' => 'Demo Turizm',
             'slug' => 'demo-turizm',
-            'plan_id' => Plan::where('slug', 'profesyonel')->value('id'),
+            'plan_id' => Plan::where('slug', 'kafile')->value('id'),
             'status' => TenantStatus::Active,
             'default_currency' => 'USD',
             'phone' => '0212 555 00 00',

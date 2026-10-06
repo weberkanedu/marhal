@@ -37,7 +37,7 @@ class FlightSeatPlanTest extends TestCase
     {
         parent::setUp();
 
-        $plan = Plan::factory()->withFeatures([Feature::Passengers, Feature::FlightLists, Feature::BasicReports])->create();
+        $plan = Plan::factory()->withFeatures([Feature::Passengers, Feature::FlightLists, Feature::FlightSeats, Feature::NeedRules, Feature::BasicReports])->create();
         $this->tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
         $this->staff = User::factory()->forTenant($this->tenant)->role(UserRole::Operations)->create();
         $tour = Tour::factory()->create(['tenant_id' => $this->tenant->id]);

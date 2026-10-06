@@ -8,7 +8,7 @@ import NextTourCard from '@/components/dashboard/NextTourCard.vue';
 import ToursStatus from '@/components/dashboard/ToursStatus.vue';
 import MockIcon from '@/components/mock/MockIcon.vue';
 import MockTop from '@/components/mock/MockTop.vue';
-import { formatMoney } from '@/lib/format';
+import { formatMoney, formatNumber } from '@/lib/format';
 import { dashboard } from '@/routes';
 import { index as collectionsIndex } from '@/routes/collections';
 import { create as createPerson } from '@/routes/persons';
@@ -27,8 +27,11 @@ const props = defineProps<{
     stats: {
         persons: number;
         personsWeek: number;
-        activeTours: number;
-        activeTourLimit: number | null;
+        quota: {
+            used: number;
+            limit: number | null;
+            renews_at: string;
+        } | null;
         plan: string | null;
         outstanding: Record<string, string>;
     };
@@ -151,11 +154,12 @@ onBeforeUnmount(() => document.removeEventListener('click', outside));
                     >
                 </div>
                 <div class="card a-s2">
-                    <span class="lbl">Aktif tur</span>
+                    <span class="lbl">Yolcu kotası</span>
                     <div class="big">
-                        {{ stats.activeTours }}
-                        <small v-if="stats.activeTourLimit !== null" class="lbl"
-                            >/ {{ stats.activeTourLimit }} paket limiti</small
+                        {{ formatNumber(stats.quota?.used ?? 0) }}
+                        <small v-if="stats.quota?.limit != null" class="lbl"
+                            >/ {{ formatNumber(stats.quota.limit) }} yıllık
+                            kota</small
                         >
                     </div>
                     <span class="lbl">{{

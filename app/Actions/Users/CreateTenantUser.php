@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
  * Acenteye kullanıcı ekler. E-posta altyapısı olmadan çalışabilmesi için tek seferlik
  * geçici şifre üretir; kullanıcı ilk girişte şifresini değiştirmek zorundadır.
  *
- * Kurallar: paketin kullanıcı limiti aşılamaz; platform yöneticisi rolü verilemez.
+ * Kurallar: paketin personel sınırı aşılamaz (rehberler sayılmaz); platform yöneticisi rolü verilemez.
  */
 class CreateTenantUser
 {
@@ -25,9 +25,9 @@ class CreateTenantUser
             throw ValidationException::withMessages(['role' => 'Acente kullanıcısına platform yöneticisi rolü verilemez.']);
         }
 
-        if ($enforceLimit && ! $tenant->canAddUser()) {
+        if ($enforceLimit && $role !== UserRole::Guide && ! $tenant->canAddUser()) {
             throw ValidationException::withMessages([
-                'email' => "Paketinizdeki kullanıcı sınırına ({$tenant->plan->user_limit}) ulaştınız. Kullanmadığınız bir hesabı pasif yaparak yer açabilir veya paketinizi yükseltebilirsiniz.",
+                'email' => "Paketinizdeki personel sınırına ({$tenant->plan->user_limit}) ulaştınız. Rehber hesapları sınıra sayılmaz. Kullanmadığınız bir hesabı pasif yaparak yer açabilir veya paketinizi yükseltebilirsiniz.",
             ]);
         }
 
