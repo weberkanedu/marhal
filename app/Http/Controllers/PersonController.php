@@ -50,7 +50,9 @@ class PersonController extends Controller
             'filterOptions' => PersonListFilter::options(),
             'stats' => collect(PersonListFilter::cases())
                 ->mapWithKeys(fn (PersonListFilter $f) => [$f->value => $f->apply(Person::query())->count()])
-                ->put('total', Person::count()),
+                ->put('total', Person::count())
+                // "+N bu hafta" (tasarımdaki sayı kartı).
+                ->put('week', Person::query()->where('created_at', '>=', now()->subDays(7))->count()),
         ]);
     }
 

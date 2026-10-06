@@ -67,6 +67,7 @@ class PersonListTest extends TestCase
         $this->actingAs($this->staff)->get(route('persons.index'))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('stats.total', 2)
+                ->where('stats.week', 2)
                 ->where('stats.pasaport', 1)
                 ->where('stats.turda', 1)
                 ->where('stats.kvkk', 1)

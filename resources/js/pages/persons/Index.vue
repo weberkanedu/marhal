@@ -1,32 +1,10 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import {
-    AlertTriangle,
-    ChevronDown,
-    FileSpreadsheet,
-    Link2,
-    PenLine,
-    Plane,
-    Plus,
-    Search,
-    HeartPulse,
-    ShieldAlert,
-    Users,
-} from '@lucide/vue';
 import { useDebounceFn } from '@vueuse/core';
-import { computed, ref, watch } from 'vue';
-import ExportMenu from '@/components/ExportMenu.vue';
-import PersonAvatar from '@/components/persons/PersonAvatar.vue';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import { ageFrom, formatDate } from '@/lib/format';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import MockIcon from '@/components/mock/MockIcon.vue';
+import MockTop from '@/components/mock/MockTop.vue';
+import { ageFrom } from '@/lib/format';
 import { show as importPage } from '@/routes/person-import';
 import { create, index, show } from '@/routes/persons';
 import {
@@ -36,13 +14,17 @@ import {
 import type { ExportItem } from '@/types/export';
 import type { Option, Paginated, PersonListItem } from '@/types/person';
 
+/**
+ * Yolcular — tasarım sayfasındaki "Yolcular" ekranının birebir hâli (gerçek veriyle). Kimlik, telefon
+ * ve pasaport numaraları listede maskeli; tamamı yolcunun sayfasında.
+ */
 type FilterKey = 'pasaport' | 'turda' | 'kvkk' | 'ihtiyac';
 
 const props = defineProps<{
     persons: Paginated<PersonListItem>;
     filters: { q: string; filtre: FilterKey | null };
     filterOptions: Option<FilterKey>[];
-    stats: Record<FilterKey | 'total', number>;
+    stats: Record<FilterKey | 'total' | 'week', number>;
 }>();
 
 defineOptions({
@@ -72,34 +54,6 @@ function toggleFilter(key: FilterKey | null): void {
     load({ filtre: props.filters.filtre === key ? null : key });
 }
 
-// Sayı kartları = hazır süzgeçler (tıklayınca liste süzülür).
-const statCards = computed(() => [
-    {
-        key: null,
-        label: 'Toplam yolcu',
-        value: props.stats.total,
-        icon: Users,
-        tone: '',
-    },
-    ...props.filterOptions.map((o) => ({
-        key: o.value,
-        label: o.label,
-        value: props.stats[o.value],
-        icon: {
-            pasaport: AlertTriangle,
-            turda: Plane,
-            kvkk: ShieldAlert,
-            ihtiyac: HeartPulse,
-        }[o.value],
-        tone:
-            o.value === 'turda'
-                ? ''
-                : props.stats[o.value] > 0
-                  ? 'text-warning'
-                  : '',
-    })),
-]);
-
 // Çıktılar ekrandaki süzgeci taşır.
 const exportItems = computed<ExportItem[]>(() => {
     const query = props.filters.filtre ? { filtre: props.filters.filtre } : {};
@@ -115,287 +69,292 @@ const exportItems = computed<ExportItem[]>(() => {
         },
         {
             title: 'Pasaport kontrol listesi',
-            description: 'Sorunlular üstte · 6 ay kuralı',
+            description: 'Süresi kısa ve eksik olanlar',
             url: passportReport.url({ query }),
         },
     ];
 });
 
-const genderLabels: Record<string, string> = { erkek: 'Erkek', kadin: 'Kadın' };
+// "Yeni yolcu" menüsü (elle / Excel'den).
+const newOpen = ref(false);
+const newMenu = ref<HTMLElement | null>(null);
+
+function outside(e: MouseEvent): void {
+    if (newOpen.value && !newMenu.value?.contains(e.target as Node)) {
+        newOpen.value = false;
+    }
+}
+
+onMounted(() => document.addEventListener('click', outside));
+onBeforeUnmount(() => document.removeEventListener('click', outside));
+
+const ini = (name: string) =>
+    name
+        .trim()
+        .split(/\s+/)
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toLocaleUpperCase('tr');
+// Maskeli numaralar tasarımdaki gibi noktalı.
+const dots = (value: string | null) => value?.replace(/\*/g, '•') ?? '—';
+const passportChip = (p: PersonListItem): [string, string] =>
+    p.passport_issue === null
+        ? ['ok', 'Geçerli']
+        : p.passport_issue.startsWith('6 ay')
+          ? ['warning', '6 aydan kısa']
+          : ['danger', p.passport_issue];
 </script>
 
 <template>
     <Head title="Yolcular" />
 
-    <div class="flex h-full flex-1 flex-col gap-4 p-4">
-        <div class="flex flex-wrap items-end justify-between gap-3">
-            <div>
-                <h1 class="text-2xl font-semibold tracking-tight">Yolcular</h1>
-                <p class="text-sm text-muted-foreground">
-                    Kimlik, telefon ve pasaport numaraları listede maskeli;
-                    tamamı yolcunun sayfasında.
-                </p>
-            </div>
-            <div class="flex flex-wrap gap-2">
-                <ExportMenu :items="exportItems" />
-                <DropdownMenu>
-                    <DropdownMenuTrigger as-child>
-                        <Button
-                            ><Plus /> Yeni yolcu <ChevronDown class="-mr-1"
-                        /></Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" class="w-72">
-                        <DropdownMenuItem as-child>
-                            <Link
-                                :href="create()"
-                                class="flex items-start gap-2"
-                            >
-                                <PenLine class="mt-0.5" />
-                                <span>
-                                    <span class="block font-medium"
-                                        >Bilgileri elle gir</span
-                                    >
-                                    <span
-                                        class="block text-xs text-muted-foreground"
-                                        >Kimlik, pasaport, iletişim</span
-                                    >
-                                </span>
-                            </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem as-child>
-                            <Link
-                                :href="importPage()"
-                                class="flex items-start gap-2"
-                            >
-                                <FileSpreadsheet class="mt-0.5" />
-                                <span>
-                                    <span class="block font-medium"
-                                        >Excel'den aktar</span
-                                    >
-                                    <span
-                                        class="block text-xs text-muted-foreground"
-                                        >Toplu yükleme, önizlemeli</span
-                                    >
-                                </span>
-                            </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            disabled
-                            class="flex items-start gap-2"
-                        >
-                            <Link2 class="mt-0.5" />
-                            <span>
-                                <span class="block font-medium"
-                                    >Ön kayıt linki gönder</span
-                                >
-                                <span
-                                    class="block text-xs text-muted-foreground"
-                                    >Yolcu kendisi doldurur · yakında</span
-                                >
-                            </span>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
-        </div>
-
-        <!-- Sayı kartları (süzgeç) -->
-        <div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-            <button
-                v-for="card in statCards"
-                :key="card.label"
-                type="button"
-                class="kpi-tile"
-                :class="{
-                    'border-primary!':
-                        filters.filtre === card.key && card.key !== null,
-                }"
-                :aria-pressed="filters.filtre === card.key"
-                @click="toggleFilter(card.key)"
+    <div class="mx">
+        <div class="main">
+            <MockTop
+                :crumbs="[{ label: 'Yolcular' }]"
+                title="Yolcular"
+                :exports="exportItems"
             >
-                <span
-                    class="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-accent-foreground"
-                >
-                    <component :is="card.icon" class="size-5" />
-                </span>
-                <span class="min-w-0">
-                    <small>{{ card.label }}</small>
-                    <span class="kpi-value num text-xl" :class="card.tone">{{
-                        card.value
-                    }}</span>
-                </span>
-            </button>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2">
-            <div class="relative w-full max-w-md">
-                <Search
-                    class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-                />
-                <Input
-                    v-model="search"
-                    class="pl-9"
-                    placeholder="Ad, soyad, telefon, T.C. Kimlik No veya pasaport no"
-                />
-            </div>
-            <button
-                v-for="option in filterOptions"
-                :key="option.value"
-                type="button"
-                class="rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors"
-                :class="
-                    filters.filtre === option.value
-                        ? 'border-primary bg-accent text-foreground'
-                        : 'text-muted-foreground hover:text-foreground'
-                "
-                @click="toggleFilter(option.value)"
-            >
-                {{ option.label }}
-            </button>
-        </div>
-
-        <Card class="py-0">
-            <CardContent class="overflow-x-auto p-0">
-                <div
-                    v-if="persons.data.length === 0"
-                    class="p-8 text-center text-sm text-muted-foreground"
-                >
-                    <template v-if="filters.q || filters.filtre">
-                        Bu aramaya / süzgece uyan yolcu yok.
-                    </template>
-                    <template v-else> Henüz yolcu eklenmedi. </template>
+                <div ref="newMenu" class="exp">
+                    <button
+                        class="btn"
+                        type="button"
+                        :aria-expanded="newOpen"
+                        aria-haspopup="menu"
+                        @click="newOpen = !newOpen"
+                    >
+                        <MockIcon name="plus" />Yeni yolcu
+                    </button>
+                    <div v-if="newOpen" class="menu" role="menu">
+                        <Link class="mi" role="menuitem" :href="create()">
+                            <div>
+                                <b>Bilgileri elle gir</b
+                                ><small>Kimlik, pasaport, iletişim</small>
+                            </div>
+                        </Link>
+                        <Link class="mi" role="menuitem" :href="importPage()">
+                            <div>
+                                <b>Excel'den aktar</b
+                                ><small>Toplu yükleme, önizlemeli</small>
+                            </div>
+                        </Link>
+                    </div>
                 </div>
-                <table v-else class="w-full text-sm">
-                    <thead class="text-left text-xs text-muted-foreground">
-                        <tr>
-                            <th class="px-4 py-2.5 font-medium">Yolcu</th>
-                            <th class="px-4 py-2.5 font-medium">Telefon</th>
-                            <th class="px-4 py-2.5 font-medium">
-                                T.C. Kimlik No
-                            </th>
-                            <th class="px-4 py-2.5 font-medium">Pasaport</th>
-                            <th class="px-4 py-2.5 font-medium">Durum</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="person in persons.data"
-                            :key="person.id"
-                            class="cursor-pointer border-t hover:bg-muted"
-                            @click="router.visit(show(person.id))"
+            </MockTop>
+
+            <div class="g3">
+                <div class="card">
+                    <span class="lbl">Kayıtlı kişi</span>
+                    <div class="big">{{ stats.total }}</div>
+                    <span class="lbl"
+                        ><span class="chip ok">+{{ stats.week }}</span> bu
+                        hafta</span
+                    >
+                </div>
+                <div
+                    class="card"
+                    role="button"
+                    tabindex="0"
+                    style="cursor: pointer"
+                    @click="toggleFilter('pasaport')"
+                >
+                    <span class="lbl">Pasaportu sorunlu</span>
+                    <div class="big">{{ stats.pasaport }}</div>
+                    <span class="lbl"
+                        >Tur tarihine göre 6 ay kuralı, eksik bilgi</span
+                    >
+                </div>
+                <div
+                    class="card"
+                    role="button"
+                    tabindex="0"
+                    style="cursor: pointer"
+                    @click="toggleFilter('ihtiyac')"
+                >
+                    <span class="lbl">Özel ihtiyacı olan</span>
+                    <div class="big">{{ stats.ihtiyac }}</div>
+                    <span class="lbl"
+                        >Yürüme güçlüğü, tekerlekli sandalye, diyet</span
+                    >
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="row">
+                    <div class="search">
+                        <MockIcon name="search" /><input
+                            v-model="search"
+                            placeholder="Ad soyad, telefon, T.C. Kimlik No veya pasaport no"
+                            aria-label="Yolcu ara"
+                        />
+                    </div>
+                    <div class="pills">
+                        <span
+                            class="pill"
+                            :class="{ on: !filters.filtre }"
+                            role="button"
+                            tabindex="0"
+                            @click="toggleFilter(null)"
+                            >Tümü</span
                         >
-                            <td class="px-4 py-2">
-                                <Link
-                                    :href="show(person.id)"
-                                    class="flex items-center gap-2.5"
-                                    @click.stop
-                                >
-                                    <PersonAvatar
-                                        :name="person.full_name"
-                                        :gender="person.gender"
-                                    />
-                                    <span>
-                                        <span class="block font-medium">{{
-                                            person.full_name
-                                        }}</span>
-                                        <span
-                                            class="block text-xs text-muted-foreground"
-                                        >
-                                            {{ genderLabels[person.gender] }}
-                                            <template v-if="person.birth_date">
-                                                ·
-                                                {{ ageFrom(person.birth_date) }}
-                                            </template>
-                                        </span>
-                                    </span>
-                                </Link>
-                            </td>
-                            <td
-                                class="px-4 py-2 whitespace-nowrap tabular-nums"
+                        <span
+                            v-for="option in filterOptions"
+                            :key="option.value"
+                            class="pill"
+                            :class="{ on: filters.filtre === option.value }"
+                            role="button"
+                            tabindex="0"
+                            @click="toggleFilter(option.value)"
+                            >{{ option.label }}</span
+                        >
+                    </div>
+                </div>
+                <div class="tbl">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Ad Soyad</th>
+                                <th class="num hide-sm">TC Kimlik</th>
+                                <th class="num hide-sm">Telefon</th>
+                                <th>Pasaport</th>
+                                <th>Durum</th>
+                                <th>İhtiyaç</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="person in persons.data"
+                                :key="person.id"
+                                style="cursor: pointer"
+                                @click="router.visit(show(person.id))"
                             >
-                                {{ person.masked_phone ?? '—' }}
-                            </td>
-                            <td class="px-4 py-2 font-mono text-xs">
-                                {{ person.masked_national_id ?? '—' }}
-                            </td>
-                            <td class="px-4 py-2 whitespace-nowrap">
-                                <span class="font-mono text-xs">
-                                    {{ person.masked_passport_no ?? '—' }}
-                                </span>
-                                <span
-                                    v-if="person.passport_expiry_date"
-                                    class="block text-xs text-muted-foreground"
-                                >
-                                    {{
-                                        formatDate(person.passport_expiry_date)
-                                    }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-2">
-                                <div class="flex flex-wrap gap-1">
-                                    <span
-                                        v-if="person.passport_issue"
-                                        class="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-semibold text-warning"
+                                <td>
+                                    <div class="person">
+                                        <span
+                                            class="av"
+                                            :class="
+                                                person.gender === 'kadin'
+                                                    ? 'k'
+                                                    : 'e'
+                                            "
+                                            >{{ ini(person.full_name) }}</span
+                                        >
+                                        <div>
+                                            <Link
+                                                :href="show(person.id)"
+                                                @click.stop
+                                                >{{ person.full_name }}</Link
+                                            ><small
+                                                >{{
+                                                    person.gender === 'kadin'
+                                                        ? 'Kadın'
+                                                        : 'Erkek'
+                                                }}<template
+                                                    v-if="person.birth_date"
+                                                >
+                                                    ·
+                                                    {{
+                                                        ageFrom(
+                                                            person.birth_date,
+                                                        )
+                                                    }}
+                                                    yaş</template
+                                                ></small
+                                            >
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="num hide-sm">
+                                    {{ dots(person.masked_national_id) }}
+                                </td>
+                                <td class="num hide-sm">
+                                    {{ dots(person.masked_phone) }}
+                                </td>
+                                <td>
+                                    {{ dots(person.masked_passport_no) }}
+                                    <small
+                                        v-if="person.passport_expiry_date"
+                                        style="color: var(--m-muted)"
+                                        >{{
+                                            person.passport_expiry_date.slice(
+                                                0,
+                                                7,
+                                            )
+                                        }}</small
                                     >
-                                        <AlertTriangle class="size-3" />
-                                        {{ person.passport_issue }}
-                                    </span>
+                                </td>
+                                <td>
+                                    <span
+                                        class="chip"
+                                        :class="passportChip(person)[0]"
+                                        >{{ passportChip(person)[1] }}</span
+                                    >
                                     <span
                                         v-if="person.on_tour"
-                                        class="rounded-full bg-success-soft px-2 py-0.5 text-xs font-semibold text-success"
+                                        class="chip acc"
+                                        style="margin-left: 4px"
+                                        >Turda</span
                                     >
-                                        Turda
-                                    </span>
-                                    <span
-                                        v-for="need in person.needs"
-                                        :key="need"
-                                        class="inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground"
-                                    >
-                                        <HeartPulse class="size-3" />
-                                        {{ need }}
-                                    </span>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </CardContent>
-        </Card>
-
-        <div
-            v-if="persons.last_page > 1"
-            class="flex items-center justify-between text-sm"
-        >
-            <span class="text-muted-foreground">
-                {{ persons.from }}–{{ persons.to }} / {{ persons.total }}
-            </span>
-            <div class="flex gap-2">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    :disabled="!persons.prev_page_url"
-                    @click="
-                        persons.prev_page_url &&
-                        router.visit(persons.prev_page_url, {
-                            preserveScroll: true,
-                        })
-                    "
-                >
-                    Önceki
-                </Button>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    :disabled="!persons.next_page_url"
-                    @click="
-                        persons.next_page_url &&
-                        router.visit(persons.next_page_url, {
-                            preserveScroll: true,
-                        })
-                    "
-                >
-                    Sonraki
-                </Button>
+                                </td>
+                                <td>
+                                    <template v-if="person.needs?.length">
+                                        <span
+                                            v-for="need in person.needs"
+                                            :key="need"
+                                            class="tag"
+                                            style="margin-right: 4px"
+                                            >{{ need }}</span
+                                        >
+                                    </template>
+                                    <span v-else class="lbl">—</span>
+                                </td>
+                            </tr>
+                            <tr v-if="!persons.data.length" class="empty-row">
+                                <td colspan="6">
+                                    {{
+                                        filters.q || filters.filtre
+                                            ? 'Bu filtrede yolcu yok'
+                                            : 'Henüz yolcu eklenmedi'
+                                    }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div v-if="persons.last_page > 1" class="row">
+                    <span class="lbl"
+                        >{{ persons.from }}–{{ persons.to }} /
+                        {{ persons.total }}</span
+                    >
+                    <span style="flex: 1" />
+                    <button
+                        class="btn ghost sm"
+                        type="button"
+                        :disabled="!persons.prev_page_url"
+                        @click="
+                            persons.prev_page_url &&
+                            router.visit(persons.prev_page_url, {
+                                preserveScroll: true,
+                            })
+                        "
+                    >
+                        Önceki
+                    </button>
+                    <button
+                        class="btn ghost sm"
+                        type="button"
+                        :disabled="!persons.next_page_url"
+                        @click="
+                            persons.next_page_url &&
+                            router.visit(persons.next_page_url, {
+                                preserveScroll: true,
+                            })
+                        "
+                    >
+                        Sonraki
+                    </button>
+                </div>
             </div>
         </div>
     </div>
