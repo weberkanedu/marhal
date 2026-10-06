@@ -7,6 +7,7 @@ use App\Http\Controllers\BadgeSettingController;
 use App\Http\Controllers\BusController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FamilyLinkController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\FlightController;
 use App\Http\Controllers\FlightPassengerController;
@@ -27,10 +28,12 @@ use App\Http\Controllers\RoomAssignmentController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\RoomPlanController;
 use App\Http\Controllers\SeatAssignmentController;
+use App\Http\Controllers\PublicFamilyController;
 use App\Http\Controllers\ReadinessItemController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SeatPlanController;
 use App\Http\Controllers\TourBadgeController;
+use App\Http\Controllers\TourProgramController;
 use App\Http\Controllers\TourReadinessController;
 use App\Http\Controllers\TourController;
 use App\Http\Controllers\TourHotelController;
@@ -40,6 +43,9 @@ use Illuminate\Support\Facades\Route;
 
 // Ana adres: giriş yapmışsa panele, değilse giriş ekranına.
 Route::get('/', fn () => auth()->check() ? to_route('dashboard') : to_route('login'))->name('home');
+
+// Aile ekranı (giriş gerektirmez; link yolcunun izniyle personel tarafından verilir)
+Route::get('aile/{token}', PublicFamilyController::class)->middleware('throttle:60,1')->where('token', '[A-Za-z0-9]{16,64}')->name('family.show');
 
 // Acente ekranları
 Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
@@ -87,6 +93,13 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
             Route::put('groups/{group}/color', [TourBadgeController::class, 'color'])->name('groups.color');
         });
         Route::delete('person-relations/{relation}', [PersonRelationController::class, 'destroy'])->name('person-relations.destroy');
+        Route::post('tours/{tour}/program', [TourProgramController::class, 'store'])->name('tours.program.store');
+        Route::put('program-items/{item}', [TourProgramController::class, 'update'])->name('program-items.update');
+        Route::delete('program-items/{item}', [TourProgramController::class, 'destroy'])->name('program-items.destroy');
+        Route::middleware('feature:family_screen')->group(function () {
+            Route::post('registrations/{registration}/family-link', [FamilyLinkController::class, 'store'])->name('registrations.family-link.store');
+            Route::delete('family-links/{link}', [FamilyLinkController::class, 'destroy'])->name('family-links.destroy');
+        });
 
         // Turlar, gruplar ve kayıtlar
         Route::resource('tours', TourController::class);

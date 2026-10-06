@@ -672,3 +672,42 @@
 .mx.mx-side .me[data-state='open'] {
     background: var(--m-panel2);
 }
+/* Aile ekranı (pages/public/Family.vue): tasarımdaki telefon ekranı, gerçek telefonda tam boy. */
+.mx.fam-page {
+    min-height: 100dvh;
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+    container-type: normal;
+}
+.mx.fam-page .screen {
+    width: min(420px, 100%);
+    height: auto;
+    min-height: 0;
+    padding: 18px;
+    gap: 12px;
+    border-radius: 24px;
+    box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.35);
+}
+.mx.fam-page .screen h5 {
+    font-size: 20px;
+}
+.mx.fam-page .screen .box {
+    font-size: 14px;
+}
+.mx.fam-page .screen .box small,
+.mx.fam-page .screen .ev {
+    font-size: 12.5px;
+}
+.mx.fam-page .dayp {
+    overflow-x: auto;
+    padding-bottom: 2px;
+}
+.mx.fam-page .dayp span {
+    flex: none;
+    padding: 7px 12px;
+    font-size: 12px;
+}
+.mx.fam-page .sched {
+    overflow: visible;
+}

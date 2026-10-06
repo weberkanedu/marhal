@@ -69,6 +69,13 @@ export type RegistrationRow = {
     placements: { label: string; value: string }[];
     rooms: { label: string; value: string }[];
     seat: { label: string; value: string } | null;
+    // Aile ekranı linki (etkinse; yalnız personel, modül açıksa).
+    family_link?: {
+        id: string;
+        url: string;
+        views: number;
+        expires_at: string;
+    } | null;
     // İhtiyaç adları (tekerlekli sandalye, diyabet …); notlar yolcu sayfasında.
     needs: string[];
     status: RegistrationStatus;
@@ -161,4 +168,13 @@ export type ReadinessBoardData = {
     } | null;
     // Personel için acentenin bütün açık maddeleri (madde hapları); rehberde boş.
     all_items: { id: string; name: string }[];
+};
+
+/** Turun gün gün programındaki etkinlik (aile ekranı ve "Tur programı" çıktısı). */
+export type ProgramItem = {
+    id: string;
+    day: string;
+    time: string | null;
+    title: string;
+    place: string | null;
 };

@@ -213,6 +213,7 @@ class TenantController extends Controller
             Feature::FlightLists => 'Uçuş listeleri',
             Feature::BadgeGeneration => 'Yaka kartı',
             Feature::Readiness => 'Hazırlık takibi',
+            Feature::FamilyScreen => 'Aile ekranı',
             Feature::AdvancedReporting => 'Gelişmiş raporlar',
             Feature::ApiAccess => 'API erişimi',
         };

@@ -233,7 +233,18 @@ Yerleşim bilgisi (otel / oda / koltuk) yaka kartı, tur tablosu ve aile ekranı
       SetRavzaAppointments). Ekran tasarımdaki kartın aynısı (madde hapları, `.tbl.mx` tablo, `.slots2` Ravza); hücre tıklaması
       anında görünür (async + iyimser güncelleme).
     - Acente ayarları → **Hazırlık maddeleri** (ekle, adını / türünü değiştir, kapat, yeni turlarda seçili). Demo paketi `tasarim-6-hazirlik`.
-7. ⏳ Aile ekranı + fotoğrafla ön kayıt (MRZ okuma servisi için önce seçenek / maliyet).
+7. 🔄 Aile ekranı + telefonla ön kayıt. Kararlar (2026-10-07): pasaport okuma **tarayıcıda, ücretsiz** (açık kaynak OCR; foto telefondan
+   çıkmaz; Azure ≈ $10 / 1000 belge ve ticari SDK'lar seçenek olarak duruyor); tura **gün gün program** eklendi; aile linki için
+   **personel yolcunun iznini işaretler**; ön kayıt başvurusunu **personel onaylar**.
+    - ✅ 7a Program + aile ekranı. Migration `create_tour_program_and_family_links`: `tour_program_items` (gün, saat, etkinlik, yer),
+      `family_links` (token şifreli + `token_hash` ile bulma, izin tarihi / kim, bitiş = tur sonu + 7 gün, iptal, görüntülenme),
+      `Feature::FamilyScreen` bütün paketlerde. Tur → **Program** sekmesi (aile ekranı ve "Tur programı" çıktısı buradan okur;
+      saatler Suudi Arabistan saati). Yolcular satırında ♥ simgesi → aile linki (izin kutusu, kopyala, WhatsApp'ta gönder, iptal).
+      Herkese açık `/aile/{token}` (`PublicFamilyController`, `FamilyView`): şu an nerede (şehir / otel / oda, yalnız aile bağı olan
+      oda arkadaşı), gün gün program (geçenler soluk ✓), rehber ve acentenin acil telefonu; kimlik / pasaport / sağlık / ödeme yok;
+      `noindex`, `no-referrer`, dakikada 60 istek. Demo paketi `tasarim-7-aile-program` (çıktıda aile linki yazar).
+    - Tur sayfası hızlandı: bütün parçalar istenince hesaplanıyor (kısmi yenileme ~2 sn → ~0,7 sn yerelde).
+    - ⏳ 7b Telefonla ön kayıt (tur linki, pasaport fotoğrafı → MRZ, onay listesi).
 8. ⏳ WhatsApp tahsilat asistanı (önce sağlayıcı + sanal POS seçenekleri / maliyet).
 9. ⏳ Faz 4 entegrasyonlar + NFC (`tenant_integrations`, acente ayarından aç/kapa; önce seçenek / maliyet).
    Son: paketler, hesap paylaşımı koruması, iyzico abonelik, platform paneli (ayrı plan).

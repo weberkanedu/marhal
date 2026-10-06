@@ -65,6 +65,16 @@ class Tour extends Model
     }
 
     /**
+     * Gün gün program (aile ekranı ve "Tur programı" çıktısı).
+     *
+     * @return HasMany<TourProgramItem, $this>
+     */
+    public function programItems(): HasMany
+    {
+        return $this->hasMany(TourProgramItem::class)->orderBy('day')->orderByRaw('time IS NULL')->orderBy('time');
+    }
+
+    /**
      * @return HasMany<Registration, $this>
      */
     public function registrations(): HasMany

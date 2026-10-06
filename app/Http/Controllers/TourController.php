@@ -13,6 +13,7 @@ use App\Enums\UserRole;
 use App\Actions\Rooms\StayOccupancy;
 use App\Http\Requests\TourRequest;
 use App\Models\Bus;
+use App\Models\FamilyLink;
 use App\Models\Flight;
 use App\Models\Group;
 use App\Models\Hotel;
@@ -21,6 +22,7 @@ use App\Models\ReadinessItem;
 use App\Models\Registration;
 use App\Models\Tour;
 use App\Models\TourHotel;
+use App\Models\TourProgramItem;
 use App\Models\User;
 use App\Models\VehicleType;
 use App\Support\Dashboard\TourReadiness;
@@ -116,47 +118,18 @@ class TourController extends Controller
             ? $tour->groups()->where('guide_user_id', $user->getKey())->pluck('id')->all()
             : null;
 
-        $groups = $tour->groups()
-            ->when($guideOf !== null, fn (Builder $q) => $q->whereIn('id', $guideOf ?? []))
-            ->withCount(['registrations' => fn (Builder $q) => $q->where('status', '!=', RegistrationStatus::Cancelled)])
-            ->orderBy('name')
-            ->get();
-        $colors = GroupColors::forGroups($groups);
-        $groups = $groups
-            ->map(fn (Group $group) => [
-                ...$group->only(['id', 'name', 'guide_user_id', 'guide_name', 'guide_phone', 'notes']),
-                'color' => $colors[$group->id],
-                'color_chosen' => $group->color !== null,
-                'guide_display' => $group->guide_name,
-                'registrations_count' => $group->registrations_count,
-            ]);
-
+        // Her parça yalnız istenince hesaplanır (kısmi yenilemede, ör. sadece "program", gerisi çalışmaz).
+        $groups = fn () => $this->groupRows($tour, $guideOf);
         $rooms = $currentTenant->get()?->hasFeature(Feature::RoomPlanning) ?? false;
+        $familyScreen = $guideOf === null && ($currentTenant->get()?->hasFeature(Feature::FamilyScreen) ?? false);
         $busPlanning = $currentTenant->get()?->hasFeature(Feature::BusPlanning) ?? false;
 
-        $registrations = $tour->registrations()
-            ->when($guideOf !== null, fn (Builder $q) => $q->whereIn('group_id', $guideOf ?? [])->where('status', '!=', RegistrationStatus::Cancelled))
-            ->with(['person', 'group:id,name'])
-            // Oda / koltuk bilgisi (modülü açıksa): listede ve rehber ekranında görünür.
-            ->when($rooms, fn (Builder $q) => $q->with(Placements::ROOM_RELATIONS))
-            ->when($busPlanning, fn (Builder $q) => $q->with(Placements::SEAT_RELATIONS))
-            ->withPaidTotal()
-            ->get()
-            ->sort(fn (Registration $a, Registration $b) => ($a->status === RegistrationStatus::Cancelled) <=> ($b->status === RegistrationStatus::Cancelled)
-                ?: TurkishText::compare($a->person->last_name.' '.$a->person->first_name, $b->person->last_name.' '.$b->person->first_name))
-            ->values();
-
-        // İhtiyaç adları (rehber dahil; notlar yalnız yolcu sayfasında, personele).
-        $needs = NeedProfiles::labels($profiles->forPersons($registrations->pluck('person_id')));
-        $registrations = $registrations->map(fn (Registration $registration) => [
-            ...$this->registrationRow($registration, $tour, $finance),
-            'needs' => $needs[$registration->person_id] ?? [],
-        ]);
-
-        $active = $registrations->where('status', '!=', RegistrationStatus::Cancelled->value);
-
+        $rowsMemo = null;
+        $registrations = function () use (&$rowsMemo, $tour, $guideOf, $familyScreen, $rooms, $busPlanning, $profiles, $finance) {
+            return $rowsMemo ??= $this->registrationRows($tour, $guideOf, $familyScreen, $rooms, $busPlanning, $profiles, $finance);
+        };
         // Konaklama (oda planı modülü açıksa): rehber sadece kendi gruplarının otellerini görür.
-        $stays = $rooms ? $tour->stays()
+        $stays = fn () => $rooms ? $tour->stays()
             ->when($guideOf !== null, fn (Builder $q) => $q->whereHas('groups', fn (Builder $g) => $g->whereIn('groups.id', $guideOf ?? [])))
             ->with(['hotel', 'groups:id,name'])
             ->withCount(['rooms', 'roomAssignments'])
@@ -181,10 +154,10 @@ class TourController extends Controller
                 'expected' => $occupancy->expected($stay)->count(),
                 'floors_count' => $stay->hotel->floors_count,
                 'used_floors' => array_map('intval', $stay->used_floors ?? []),
-            ]) : null;
+            ])->values()->all() : null;
 
         // Uçuşlar (uçuş listesi modülü açıksa). Rehber uçuş bilgisini görür; yolcu sayısı kendi grubuyla sınırlı.
-        $flights = ($currentTenant->get()?->hasFeature(Feature::FlightLists) ?? false) ? $tour->flights()
+        $flights = fn () => ($currentTenant->get()?->hasFeature(Feature::FlightLists) ?? false) ? $tour->flights()
             ->withCount(['passengers' => fn (Builder $q) => $q->when($guideOf !== null, fn (Builder $p) => $p->whereHas('registration', fn (Builder $r) => $r->whereIn('group_id', $guideOf ?? [])))])
             ->withCount(['passengers as seated_count' => fn (Builder $q) => $q->whereNotNull('seat_no')])
             ->with('aircraftType:id,name')
@@ -198,7 +171,7 @@ class TourController extends Controller
             ]) : null;
 
         // Otobüsler (otobüs planı modülü açıksa): rehber sadece kendi gruplarının otobüslerini görür.
-        $buses = $busPlanning ? $tour->buses()
+        $buses = fn () => $busPlanning ? $tour->buses()
             ->when($guideOf !== null, fn (Builder $q) => $q->whereHas('groups', fn (Builder $g) => $g->whereIn('groups.id', $guideOf ?? [])))
             ->with(['groups:id,name', 'vehicleType:id,name'])
             ->withCount('seats')
@@ -212,28 +185,36 @@ class TourController extends Controller
                 'groups' => $bus->groups->map(fn (Group $g) => ['id' => $g->id, 'name' => $g->name])->values(),
                 'seats' => $bus->layout()->seatCount() - count($bus->reserved()),
                 'occupied' => $bus->seats_count,
-            ]) : null;
+            ])->values()->all() : null;
 
         return Inertia::render('tours/Show', [
             'tour' => [
                 ...$this->summary($tour, $finance),
                 'notes' => $tour->notes,
             ],
-            'stats' => [
-                'registered' => $active->count(),
+            'stats' => fn () => [
+                'registered' => ($active = collect($registrations())->where('status', '!=', RegistrationStatus::Cancelled->value))->count(),
                 'confirmed' => $active->where('status', RegistrationStatus::Confirmed->value)->count(),
                 'pending' => $active->where('status', RegistrationStatus::Pending->value)->count(),
-                'cancelled' => $registrations->count() - $active->count(),
+                'cancelled' => count($registrations()) - $active->count(),
                 'unassigned' => $active->whereNull('group_id')->count(),
                 'total' => $finance ? $active->reduce(fn (string $c, array $r) => Money::add($c, $r['net_price']), '0.00') : null,
                 'paid' => $finance ? $active->reduce(fn (string $c, array $r) => Money::add($c, $r['paid']), '0.00') : null,
                 'balance' => $finance ? $active->reduce(fn (string $c, array $r) => Money::add($c, $r['balance']), '0.00') : null,
             ],
-            'journey' => $journey->for($tour, $currentTenant->get()),
+            'journey' => fn () => $journey->for($tour, $currentTenant->get()),
             // Hazırlık halkaları (oda / koltuk / uçuş / tahsilat): ana paneldeki "Turların durumu" ile aynı hesap.
             // Rehber tur genelini değil kendi grubunu görür; halkalar personele.
-            'readiness' => $guideOf === null ? $this->readiness($readiness->for($tour, $currentTenant->get()), $finance) : null,
+            'readiness' => fn () => $guideOf === null ? $this->readiness($readiness->for($tour, $currentTenant->get()), $finance) : null,
             // Hazırlık sekmesi (modül açıksa): sekme açılınca yüklenir; rehber yalnız kendi grupları.
+            // Gün gün program (aile ekranı ve "Tur programı" çıktısı).
+            'program' => fn () => $tour->programItems()->get()->map(fn (TourProgramItem $i) => [
+                'id' => $i->id,
+                'day' => $i->day->toDateString(),
+                'time' => $i->time ? substr($i->time, 0, 5) : null,
+                'title' => $i->title,
+                'place' => $i->place,
+            ]),
             'readinessBoard' => ($currentTenant->get()?->hasFeature(Feature::Readiness) ?? false)
                 ? Inertia::defer(fn () => [
                     ...$board->build($tour, $guideOf === null ? null : array_values(array_map('strval', $guideOf))),
@@ -247,7 +228,7 @@ class TourController extends Controller
             'stays' => $stays,
             'buses' => $buses,
             'flights' => $flights,
-            'options' => [
+            'options' => fn () => [
                 'vehicleTypes' => $busPlanning && ($user?->can('update', $tour) ?? false)
                     ? VehicleType::query()->orderBy('name')->get()
                         ->map(fn (VehicleType $t) => ['id' => $t->id, 'name' => $t->name, 'label' => $t->layout()->label()])
@@ -316,6 +297,67 @@ class TourController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => "{$tour->name} silindi."]);
 
         return to_route('tours.index');
+    }
+
+    /**
+     * Turun grupları (rehberse yalnız kendi grupları), renk ve aktif yolcu sayısıyla.
+     *
+     * @param  array<int, mixed>|null  $guideOf
+     * @return list<array<string, mixed>>
+     */
+    private function groupRows(Tour $tour, ?array $guideOf): array
+    {
+        $groups = $tour->groups()
+            ->when($guideOf !== null, fn (Builder $q) => $q->whereIn('id', $guideOf ?? []))
+            ->withCount(['registrations' => fn (Builder $q) => $q->where('status', '!=', RegistrationStatus::Cancelled)])
+            ->orderBy('name')
+            ->get();
+        $colors = GroupColors::forGroups($groups);
+
+        return array_values($groups->map(fn (Group $group) => [
+            ...$group->only(['id', 'name', 'guide_user_id', 'guide_name', 'guide_phone', 'notes']),
+            'color' => $colors[$group->id],
+            'color_chosen' => $group->color !== null,
+            'guide_display' => $group->guide_name,
+            'registrations_count' => $group->registrations_count,
+        ])->all());
+    }
+
+    /**
+     * Tur yolcuları tablosunun satırları (oda / koltuk, ihtiyaç adları, aile linki).
+     *
+     * @param  array<int, mixed>|null  $guideOf
+     * @return list<array<string, mixed>>
+     */
+    private function registrationRows(Tour $tour, ?array $guideOf, bool $familyScreen, bool $rooms, bool $busPlanning, NeedProfiles $profiles, bool $finance): array
+    {
+        $registrations = $tour->registrations()
+            ->when($guideOf !== null, fn (Builder $q) => $q->whereIn('group_id', $guideOf ?? [])->where('status', '!=', RegistrationStatus::Cancelled))
+            ->with(['person', 'group:id,name'])
+            // Aile ekranı linki (personel kopyalar / iptal eder).
+            ->when($familyScreen, fn (Builder $q) => $q->with(['familyLinks' => fn ($l) => $l->active()]))
+            // Oda / koltuk bilgisi (modülü açıksa): listede ve rehber ekranında görünür.
+            ->when($rooms, fn (Builder $q) => $q->with(Placements::ROOM_RELATIONS))
+            ->when($busPlanning, fn (Builder $q) => $q->with(Placements::SEAT_RELATIONS))
+            ->withPaidTotal()
+            ->get()
+            ->sort(fn (Registration $a, Registration $b) => ($a->status === RegistrationStatus::Cancelled) <=> ($b->status === RegistrationStatus::Cancelled)
+                ?: TurkishText::compare($a->person->last_name.' '.$a->person->first_name, $b->person->last_name.' '.$b->person->first_name))
+            ->values();
+
+        // İhtiyaç adları (rehber dahil; notlar yalnız yolcu sayfasında, personele).
+        $needs = NeedProfiles::labels($profiles->forPersons($registrations->pluck('person_id')));
+
+        return array_values($registrations->map(fn (Registration $registration) => [
+            ...$this->registrationRow($registration, $tour, $finance),
+            'needs' => $needs[$registration->person_id] ?? [],
+            'family_link' => $familyScreen && ($link = $registration->familyLinks->first()) instanceof FamilyLink ? [
+                'id' => $link->id,
+                'url' => route('family.show', $link->token),
+                'views' => $link->view_count,
+                'expires_at' => $link->expires_at->toDateString(),
+            ] : null,
+        ])->all());
     }
 
     /**

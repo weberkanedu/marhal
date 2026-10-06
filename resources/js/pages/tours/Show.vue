@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { IdCard, Pencil, Trash2, Wallet } from '@lucide/vue';
+import { HeartHandshake, IdCard, Pencil, Trash2, Wallet } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { toast } from 'vue-sonner';
 import GroupController from '@/actions/App/Http/Controllers/GroupController';
@@ -12,6 +12,8 @@ import BusesCard from '@/components/tours/BusesCard.vue';
 import FlightsCard from '@/components/tours/FlightsCard.vue';
 import GroupDialog from '@/components/tours/GroupDialog.vue';
 import RegistrationDialog from '@/components/tours/RegistrationDialog.vue';
+import FamilyLinkDialog from '@/components/tours/FamilyLinkDialog.vue';
+import ProgramTab from '@/components/tours/ProgramTab.vue';
 import ReadinessTab from '@/components/tours/ReadinessTab.vue';
 import StaysCard from '@/components/tours/StaysCard.vue';
 import { index as collectionsIndex } from '@/routes/collections';
@@ -32,6 +34,7 @@ import type { HotelOption, TourStay } from '@/types/hotel';
 import type { Option } from '@/types/person';
 import type {
     JourneyStep,
+    ProgramItem,
     ReadinessBoardData,
     RegistrationRow,
     TourGroup,
@@ -59,6 +62,7 @@ const props = defineProps<{
     flights: TourFlight[] | null;
     // Hazırlık modülü kapalıysa null; açıksa sekme açılınca (ertelenmiş) gelir.
     readinessBoard?: ReadinessBoardData | null;
+    program: ProgramItem[];
     options: TourShowOptions & {
         flightDirections: Option[];
         hotels: HotelOption[];
@@ -272,9 +276,10 @@ async function copyWhatsappLink(): Promise<void> {
 }
 
 // Sekmeler (adres ?tab= ile açılır; plan ekranlarından geri gelince doğru sekme).
-type TabKey = 'yolcular' | 'konaklama' | 'ulasim' | 'hazirlik';
+type TabKey = 'yolcular' | 'program' | 'konaklama' | 'ulasim' | 'hazirlik';
 const tabs = computed(() => [
     { key: 'yolcular' as TabKey, label: 'Yolcular' },
+    { key: 'program' as TabKey, label: 'Program' },
     ...(props.stays !== null
         ? [{ key: 'konaklama' as TabKey, label: 'Konaklama' }]
         : []),
@@ -411,6 +416,20 @@ function removeRegistration(registration: RegistrationRow): void {
             preserveScroll: true,
         });
     }
+}
+
+// Aile ekranı linki (yolcunun izniyle; personel).
+const familyEnabled = computed(
+    () => features.value.includes('family_screen') && props.can.update,
+);
+const familyOpen = ref(false);
+const familyId = ref<string | null>(null);
+const familyRow = computed(
+    () => props.registrations.find((r) => r.id === familyId.value) ?? null,
+);
+function openFamily(registration: RegistrationRow): void {
+    familyId.value = registration.id;
+    familyOpen.value = true;
 }
 
 const badgeUrl = (id: string) =>
@@ -819,6 +838,28 @@ const badgeUrl = (id: string) =>
                                     </td>
                                     <td class="acts-cell">
                                         <span class="acts">
+                                            <button
+                                                v-if="
+                                                    familyEnabled &&
+                                                    r.status !== 'iptal'
+                                                "
+                                                type="button"
+                                                :title="
+                                                    r.family_link
+                                                        ? `Aile linki (${r.family_link.views} kez açıldı)`
+                                                        : 'Aile ekranı linki oluştur'
+                                                "
+                                                :style="
+                                                    r.family_link
+                                                        ? 'color: var(--m-ok)'
+                                                        : undefined
+                                                "
+                                                @click="openFamily(r)"
+                                            >
+                                                <HeartHandshake
+                                                    class="size-3.5"
+                                                />
+                                            </button>
                                             <a
                                                 v-if="
                                                     badgesEnabled &&
@@ -879,6 +920,13 @@ const badgeUrl = (id: string) =>
                     </p>
                 </template>
 
+                <ProgramTab
+                    v-if="tab === 'program'"
+                    :tour="tour"
+                    :items="program"
+                    :can-update="can.update"
+                />
+
                 <ReadinessTab
                     v-if="tab === 'hazirlik' && readinessBoard !== null"
                     :tour-id="tour.id"
@@ -917,6 +965,11 @@ const badgeUrl = (id: string) =>
         </div>
     </div>
 
+    <FamilyLinkDialog
+        v-if="familyEnabled"
+        v-model:open="familyOpen"
+        :registration="familyRow"
+    />
     <GroupDialog
         v-model:open="groupDialogOpen"
         :tour-id="tour.id"

@@ -15,5 +15,6 @@ export type FeatureKey =
     | 'flight_lists'
     | 'badge_generation'
     | 'readiness'
+    | 'family_screen'
     | 'advanced_reporting'
     | 'api_access';

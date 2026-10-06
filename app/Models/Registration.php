@@ -175,6 +175,16 @@ class Registration extends Model
     }
 
     /**
+     * Ailesine verilen aile ekranı linkleri (en fazla biri etkin).
+     *
+     * @return HasMany<FamilyLink, $this>
+     */
+    public function familyLinks(): HasMany
+    {
+        return $this->hasMany(FamilyLink::class);
+    }
+
+    /**
      * @return HasMany<Installment, $this>
      */
     public function installments(): HasMany
