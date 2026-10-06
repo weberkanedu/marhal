@@ -15,6 +15,7 @@ artifact okuma aracıyla açılır): ✅ 10a paket yapısı + yolcu kotası + Pl
 ve Ön kayıt Kafile ve üstünde (Hazırlık her pakette); yolcu kotası = abonelik yılı içindeki tur kayıtları (iptal geri döner);
 aktif tur sınırı kaldırıldı, yalnız yolcu kotası. WhatsApp mesaj kotası (8. adım iptal) paketlere girmedi.
 **10a (2026-10-07):**
+
 - Migration `add_quota_and_sales_to_plans`: `plans.passenger_limit / is_public / is_featured / tagline / sort`; veri düzeltmesi
   baslangic→mikat, profesyonel→kafile, kurumsal→kervan (fiyat 1490 / 3490 / 7490, yıllık = aylık × 10 `Plan::YEARLY_MONTHS`,
   personel 3 / 10 / 30, yolcu 300 / 1500 / 5000). `plans.active_tour_limit` artık kullanılmıyor — sonraki bir migration'da silinecek.
@@ -26,9 +27,9 @@ aktif tur sınırı kaldırıldı, yalnız yolcu kotası. WhatsApp mesaj kotası
 - Personel sınırına rehberler sayılmaz (`Tenant::staffCount`); rehberi personele çevirmek sınıra takılır.
 - Platform → Paketler tasarımdaki gibi (`.pe`): anında kayıt, satışta düğmesi (en az bir paket satışta kalır), kural `UpdatePlan`.
 - Ekranda modül kontrolü: `composables/useFeatures`. Demo paketi gerekmedi (veri düzeltmesi migration'da).
-**9. adım (Faz 4 entegrasyonlar: Nusuk / Masar, Diyanet, vize, NFC) en sona bırakıldı** — paketlerden sonra, yine önce seçenek + maliyet.
-**8. adım (WhatsApp tahsilat asistanı) kullanıcı kararıyla plandan çıkarıldı (2026-10-07).**
-**Bekleyen:** kullanıcı "küçük kusurlar var, sonra birlikte bakacağız" dedi (2026-10-07) — liste kullanıcıdan alınacak.
+  **9. adım (Faz 4 entegrasyonlar: Nusuk / Masar, Diyanet, vize, NFC) en sona bırakıldı** — paketlerden sonra, yine önce seçenek + maliyet.
+  **8. adım (WhatsApp tahsilat asistanı) kullanıcı kararıyla plandan çıkarıldı (2026-10-07).**
+  **Bekleyen:** kullanıcı "küçük kusurlar var, sonra birlikte bakacağız" dedi (2026-10-07) — liste kullanıcıdan alınacak.
 
 **Kullanıcının kalıcı kuralları (hepsi geçerli):**
 
