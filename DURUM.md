@@ -7,9 +7,10 @@
 
 **Şu an:** dal `tasarim-yenileme`, son commit "Tasarım yenileme 7b: telefonla ön kayıt"; staging ile aynı (hepsi gönderildi).
 Tasarım yenilemenin 1–7. adımları ve "tasarıma birebir uyum" turu bitti (aşağıda "Tasarım yenileme" bölümü).
-**Sıradaki:** 8. adım — WhatsApp tahsilat asistanı. Kod yazmadan önce: sağlayıcı seçenekleri (WhatsApp Business API:
-Meta Cloud API doğrudan / BSP'ler) ve sanal POS seçenekleri (iyzico, PayTR vb.) **maliyetleriyle** kullanıcıya sunulacak,
-kullanıcı seçince plan + migration listesi sunulup onay beklenecek.
+**Sıradaki:** 9. adım — Faz 4 entegrasyonlar + NFC (`tenant_integrations`, acente ayarından aç / kapa). Kod yazmadan önce
+hangi entegrasyonların (Nusuk / Masar, Diyanet, vize, NFC pasaport okuma uygulaması) gerektiği, seçenekleri ve **maliyetleri**
+kullanıcıya sunulacak; kullanıcı seçince plan + migration listesi sunulup onay beklenecek.
+**8. adım (WhatsApp tahsilat asistanı) kullanıcı kararıyla plandan çıkarıldı (2026-10-07).**
 **Bekleyen:** kullanıcı "küçük kusurlar var, sonra birlikte bakacağız" dedi (2026-10-07) — liste kullanıcıdan alınacak.
 
 **Kullanıcının kalıcı kuralları (hepsi geçerli):**
@@ -293,7 +294,7 @@ Yerleşim bilgisi (otel / oda / koltuk) yaka kartı, tur tablosu ve aile ekranı
       "Ön kayıt", ihtiyaçlar rızayla; onay / redden sonra başvuruda yalnız ad soyad kalır). Tur → Yolcular üstünde ön kayıt kutusu
       (kopyala / WhatsApp / yenile / kapat, "N kişi açtı, M'i tamamladı") ve bekleyen başvurular (Onayla / Reddet).
       Demo paketi `tasarim-7b-on-kayit` (uydurma iki başvuru; link çıktıda). NFC çip okuma telefona uygulama ister, sonraya.
-8. ⏳ WhatsApp tahsilat asistanı (önce sağlayıcı + sanal POS seçenekleri / maliyet).
+8. ✖ WhatsApp tahsilat asistanı — kullanıcı kararıyla plandan çıkarıldı (2026-10-07), yapılmayacak.
 9. ⏳ Faz 4 entegrasyonlar + NFC (`tenant_integrations`, acente ayarından aç/kapa; önce seçenek / maliyet).
    Son: paketler, hesap paylaşımı koruması, iyzico abonelik, platform paneli (ayrı plan).
 
