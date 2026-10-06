@@ -11,6 +11,12 @@ Tasarım yenilemenin 1–7. adımları ve "tasarıma birebir uyum" turu bitti (a
 kaynak: paketler tasarım sayfası (claude.ai artifact 5Mxqaa5YmxceQ3qi7xzPCq; artifact okuma aracıyla açılır). Kod yazmadan önce
 bu sayfa okunup kullanıcıya adım adım plan + migration listesi sunulacak; abonelik ödemesi (iyzico vb. sanal POS) dış servis
 olduğundan önce seçenekler ve **maliyetleri** sorulacak.
+**Paketler planı (kullanıcı onayı bekliyor, 2026-10-07):** 10a paket yapısı + yolcu kotası + Platform → Paketler ·
+10b abonelik durumu (deneme / aktif / gecikmede / salt okunur), "Paketim" sekmesi, havale-EFT elle onay ·
+10c Platform → Acenteler + Geri bildirim yanıtı · 10d hesap paylaşımı koruması (oturum, cihaz, şüpheli giriş, acente kimliği) ·
+10e iyzico + e-fatura (önce seçenek / maliyet). **Kararlar:** paket adları Mikat · Kafile · Kervan; Aile ekranı ve Ön kayıt
+Kafile ve üstünde (Hazırlık her pakette); yolcu kotası = abonelik yılı içindeki tur kayıtları (iptal geri döner);
+aktif tur sınırı kaldırılır, yalnız yolcu kotası.
 **9. adım (Faz 4 entegrasyonlar: Nusuk / Masar, Diyanet, vize, NFC) en sona bırakıldı** — paketlerden sonra, yine önce seçenek + maliyet.
 **8. adım (WhatsApp tahsilat asistanı) kullanıcı kararıyla plandan çıkarıldı (2026-10-07).**
 **Bekleyen:** kullanıcı "küçük kusurlar var, sonra birlikte bakacağız" dedi (2026-10-07) — liste kullanıcıdan alınacak.
