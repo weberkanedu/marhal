@@ -13,8 +13,8 @@ use Illuminate\Validation\ValidationException;
  * Paketin yıllık yolcu kotası (kullanıcı kararı 2026-10-07): abonelik yılı içinde turlara yapılan,
  * iptal edilmemiş kayıtlar sayılır; iptal ya da silinen kayıt kotaya geri döner. Yıl yenilenince sıfırlanır.
  *
- * Abonelik yılı: abonelik bitiş tarihinin (yoksa acentenin açıldığı günün) yıl dönümlerinden bugünü
- * içine alanı. Ana panel, platform paneli ve kayıt kuralı (RegisterPerson) bu sınıfı kullanır.
+ * Abonelik yılı: aboneliğin başladığı günün (yoksa acentenin açıldığı günün) yıl dönümlerinden bugünü
+ * içine alanı. Aylık ödemede dönem her ay uzasa da kota yılı kaymaz. Ana panel, platform paneli ve kayıt kuralı (RegisterPerson) bu sınıfı kullanır.
  */
 class PassengerQuota
 {
@@ -24,7 +24,7 @@ class PassengerQuota
     public function period(Tenant $tenant): array
     {
         $now = CarbonImmutable::now();
-        $start = CarbonImmutable::instance($tenant->subscription_ends_at ?? $tenant->created_at ?? $now);
+        $start = CarbonImmutable::instance($tenant->subscription_started_at ?? $tenant->created_at ?? $now);
 
         while ($start->greaterThan($now)) {
             $start = $start->subYear();

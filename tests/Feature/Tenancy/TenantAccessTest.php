@@ -21,11 +21,14 @@ class TenantAccessTest extends TestCase
         $this->actingAs($user)->get(route('dashboard'))->assertForbidden();
     }
 
-    public function test_expired_trial_tenant_users_are_blocked(): void
+    public function test_expired_trial_tenant_becomes_read_only_not_locked_out(): void
     {
-        $user = User::factory()->forTenant(Tenant::factory()->trialExpired()->create())->create();
+        // 10b: deneme bitince hesap salt okunur olur (görür, indirir, değiştiremez); veri silinmez.
+        $tenant = Tenant::factory()->trialExpired()->create();
+        $user = User::factory()->forTenant($tenant)->create();
 
-        $this->actingAs($user)->get(route('dashboard'))->assertForbidden();
+        $this->assertTrue($tenant->isReadOnly());
+        $this->actingAs($user)->get(route('dashboard'))->assertOk();
     }
 
     public function test_inactive_users_are_logged_out(): void

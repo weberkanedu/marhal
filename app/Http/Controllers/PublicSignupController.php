@@ -92,6 +92,8 @@ class PublicSignupController extends Controller
         abort_if(
             $link === null
             || ! $link->tenant->isAccessible()
+            // Salt okunur acente yeni başvuru alamaz (kullanıcı kararı 2026-10-07); aile ekranı açık kalır.
+            || $link->tenant->isReadOnly()
             || ! $link->tenant->hasFeature(Feature::OnlineSignup)
             || $link->tour->end_date->isPast(),
             404,

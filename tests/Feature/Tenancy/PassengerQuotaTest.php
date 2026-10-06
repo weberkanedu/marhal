@@ -94,7 +94,7 @@ class PassengerQuotaTest extends TestCase
     public function test_quota_resets_on_the_subscription_anniversary(): void
     {
         Carbon::setTestNow('2026-10-07 10:00');
-        $this->tenant->update(['subscription_ends_at' => '2027-03-01 00:00']);
+        $this->tenant->update(['subscription_started_at' => '2025-03-01 00:00', 'subscription_ends_at' => '2026-11-01 00:00']);
 
         [$start, $end] = app(PassengerQuota::class)->period($this->tenant->fresh());
         $this->assertSame('2026-03-01', $start->toDateString());
@@ -107,7 +107,7 @@ class PassengerQuotaTest extends TestCase
         $this->assertSame(1, app(PassengerQuota::class)->used($this->tenant->fresh()));
 
         // Aboneliği olmayan (deneme) acentede yıl, açıldığı günden sayılır.
-        $trial = Tenant::factory()->create(['created_at' => '2025-11-15 09:00', 'subscription_ends_at' => null]);
+        $trial = Tenant::factory()->create(['created_at' => '2025-11-15 09:00', 'subscription_started_at' => null]);
         $this->assertSame('2025-11-15', app(PassengerQuota::class)->period($trial)[0]->toDateString());
 
         Carbon::setTestNow();

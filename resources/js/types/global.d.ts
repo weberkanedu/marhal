@@ -23,6 +23,12 @@ declare module '@inertiajs/core' {
             sidebarOpen: boolean;
             tenant: Tenant | null;
             features: FeatureKey[];
+            subscription: {
+                state: string;
+                label: string;
+                tone: string;
+                message: string;
+            } | null;
             [key: string]: unknown;
         };
     }

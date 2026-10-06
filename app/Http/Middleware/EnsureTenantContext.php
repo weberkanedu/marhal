@@ -7,14 +7,21 @@ use App\Support\Tenancy\CurrentTenant;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Acente ekranları için: kullanıcının acentesini istek bağlamına koyar,
  * pasif kullanıcıyı / askıdaki acenteyi içeri almaz.
+ *
+ * Salt okunur acente (deneme bitti / ödeme ek süresi doldu) her şeyi görür ve indirir ama değişiklik
+ * yapamaz; yalnız aşağıdaki işlemler açıktır (paket talebi, geri bildirim). Veri hiç silinmez.
  */
 class EnsureTenantContext
 {
+    /** Salt okunurken de yapılabilen değişiklikler (rota adları). */
+    public const READ_ONLY_ALLOWED = ['feedback.store', 'agency.plan-request.store', 'agency.plan-request.destroy'];
+
     public function __construct(private readonly CurrentTenant $currentTenant) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -43,6 +50,15 @@ class EnsureTenantContext
         abort_unless($tenant->isAccessible(), 403, 'Acente hesabı askıda veya deneme süresi dolmuş.');
 
         $this->currentTenant->set($tenant);
+
+        if (! $request->isMethodSafe() && ! $request->routeIs(self::READ_ONLY_ALLOWED) && $tenant->isReadOnly()) {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => 'Hesabınız salt okunur: bilgileri görebilir ve indirebilirsiniz, değişiklik için paketinizi yenileyin.',
+            ]);
+
+            return back();
+        }
 
         return $next($request);
     }

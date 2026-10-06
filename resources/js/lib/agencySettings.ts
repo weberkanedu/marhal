@@ -3,13 +3,14 @@ import {
     BusFront,
     HeartPulse,
     ListChecks,
+    Package,
     Hotel,
     Plane,
     ScrollText,
     UserCog,
 } from '@lucide/vue';
 import { index as aircraftTypesIndex } from '@/routes/aircraft-types';
-import { edit as agencyEdit } from '@/routes/agency';
+import { edit as agencyEdit, plan as agencyPlan } from '@/routes/agency';
 import { index as auditIndex } from '@/routes/audit';
 import { index as hotelsIndex } from '@/routes/hotels';
 import { index as needTypesIndex } from '@/routes/need-types';
@@ -37,6 +38,7 @@ export function agencySettingsTabs(
             icon: Building2,
         });
         tabs.push({ title: 'Personel', href: usersIndex(), icon: UserCog });
+        tabs.push({ title: 'Paketim', href: agencyPlan(), icon: Package });
     }
 
     if (staff && features.includes('need_rules')) {

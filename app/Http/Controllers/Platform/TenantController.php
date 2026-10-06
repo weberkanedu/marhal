@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Platform;
 
 use App\Actions\Tenants\CreateTenant;
 use App\Actions\Users\ResetUserPassword;
+use App\Enums\BillingCycle;
 use App\Enums\Feature;
+use App\Enums\SubscriptionPaymentMethod;
 use App\Enums\TenantStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Plan;
@@ -12,6 +14,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Support\Features\FeatureGate;
 use App\Support\Plans\PassengerQuota;
+use App\Support\Subscriptions\SubscriptionSummary;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -28,7 +31,7 @@ class TenantController extends Controller
     public function index(): Response
     {
         $tenants = Tenant::query()
-            ->with('plan:id,name')
+            ->with(['plan:id,name', 'requestedPlan:id,name'])
             ->withCount(['users' => fn ($q) => $q->where('is_active', true)])
             ->orderBy('name')
             ->get()
@@ -37,6 +40,8 @@ class TenantController extends Controller
                 'name' => $tenant->name,
                 'plan' => $tenant->plan->name,
                 'status' => $tenant->status->value,
+                'state' => ['label' => $tenant->subscriptionState()->label(), 'tone' => $tenant->subscriptionState()->tone()],
+                'requested_plan' => $tenant->requestedPlan?->name,
                 'users_count' => $tenant->users_count,
                 'accessible' => $tenant->isAccessible(),
                 'trial_ends_at' => $tenant->trial_ends_at?->toDateString(),
@@ -70,7 +75,7 @@ class TenantController extends Controller
         return to_route('platform.tenants.show', $result['tenant']);
     }
 
-    public function show(Tenant $tenant, FeatureGate $gate): Response
+    public function show(Tenant $tenant, FeatureGate $gate, SubscriptionSummary $summary): Response
     {
         $tenant->load('plan.features', 'featureOverrides');
         $planFeatures = $tenant->plan->features->pluck('enabled', 'feature_key');
@@ -86,6 +91,12 @@ class TenantController extends Controller
                 'active_tours' => $tenant->activeTourCount(),
                 'passengers_used' => app(PassengerQuota::class)->used($tenant),
                 'passenger_limit' => $tenant->plan->passenger_limit,
+            ],
+            'subscriptionDetail' => $summary->detail($tenant->loadMissing(['plan', 'requestedPlan'])),
+            'paymentOptions' => [
+                'plans' => Plan::query()->orderBy('sort')->orderBy('price_monthly')->get(['id', 'name', 'price_monthly', 'price_yearly']),
+                'cycles' => BillingCycle::options(),
+                'methods' => SubscriptionPaymentMethod::options(),
             ],
             'features' => collect(Feature::cases())->map(fn (Feature $f) => [
                 'key' => $f->value,

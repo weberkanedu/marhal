@@ -5,12 +5,12 @@
 
 ## Yeni oturum için başlangıç notu (2026-10-07)
 
-**Şu an:** dal `tasarim-yenileme`, son commit "Paketler 10a: Mikat · Kafile · Kervan, yolcu kotası"; **staging'e henüz gönderilmedi**.
+**Şu an:** dal `tasarim-yenileme`, son commit "Paketler 10b: abonelik durumu, Paketim, ödeme kaydı"; **10a ve 10b staging'e henüz gönderilmedi**.
 Tasarım yenilemenin 1–7. adımları ve "tasarıma birebir uyum" turu bitti (aşağıda "Tasarım yenileme" bölümü).
 **Paketler planı (kullanıcı onayladı, 2026-10-07)** — kaynak: paketler tasarım sayfası (claude.ai artifact 5Mxqaa5YmxceQ3qi7xzPCq;
 artifact okuma aracıyla açılır): ✅ 10a paket yapısı + yolcu kotası + Platform → Paketler ·
-**sıradaki 10b** abonelik durumu (deneme / aktif / gecikmede / salt okunur), "Paketim" sekmesi, havale-EFT elle onay ·
-10c Platform → Acenteler + Geri bildirim yanıtı · 10d hesap paylaşımı koruması (oturum, cihaz, şüpheli giriş, acente kimliği) ·
+✅ 10b abonelik durumu (deneme / aktif / gecikmede / salt okunur), "Paketim" sekmesi, havale-EFT elle onay ·
+**sıradaki 10c** Platform → Acenteler (tasarımdaki tablo, kullanım çubukları, şüpheli rozeti) + Geri bildirim yanıtı · 10d hesap paylaşımı koruması (oturum, cihaz, şüpheli giriş, acente kimliği) ·
 10e iyzico + e-fatura (dış servis: önce seçenek / **maliyet** sor). **Kararlar:** paket adları Mikat · Kafile · Kervan; Aile ekranı
 ve Ön kayıt Kafile ve üstünde (Hazırlık her pakette); yolcu kotası = abonelik yılı içindeki tur kayıtları (iptal geri döner);
 aktif tur sınırı kaldırıldı, yalnız yolcu kotası. WhatsApp mesaj kotası (8. adım iptal) paketlere girmedi.
@@ -27,6 +27,27 @@ aktif tur sınırı kaldırıldı, yalnız yolcu kotası. WhatsApp mesaj kotası
 - Personel sınırına rehberler sayılmaz (`Tenant::staffCount`); rehberi personele çevirmek sınıra takılır.
 - Platform → Paketler tasarımdaki gibi (`.pe`): anında kayıt, satışta düğmesi (en az bir paket satışta kalır), kural `UpdatePlan`.
 - Ekranda modül kontrolü: `composables/useFeatures`. Demo paketi gerekmedi (veri düzeltmesi migration'da).
+
+**10b (2026-10-07). Kararlar:** paket seçimi talep olarak platforma düşer, "Ödeme geldi" ile açılır; salt okunurda aile ekranı açık,
+ön kayıt linki kapalı.
+
+- Durum saklanmaz, tarihlerden hesaplanır (`Tenant::subscriptionState()`, enum `SubscriptionState`): deneme → bitince salt okunur;
+  aktif → dönem bitince 7 gün (`Tenant::GRACE_DAYS`) gecikmede → salt okunur; askıda yalnız elle. Bitiş boşsa süresiz.
+  Gece görevi yok (staging'de zamanlayıcı yok); e-posta bağlanınca hatırlatma görevi eklenecek.
+- Salt okunur: `EnsureTenantContext` GET dışı her isteği durdurur (uyarı bildirimi), izinli olanlar `READ_ONLY_ALLOWED`
+  (paket talebi, geri bildirim). `isAccessible()` artık yalnız askıda false. Ön kayıt linki salt okunurda 404.
+- Migration `add_subscription_fields_to_tenants` (`billing_cycle`, `subscription_started_at`, `requested_plan_id / _billing_cycle / _at`),
+  `create_subscription_payments_table`. Ayrı `subscriptions` tablosu açılmadı (durum ve tarihler zaten acentede).
+- Kurallar: `Actions/Subscriptions/RequestPlan` (talep / geri al), `RecordSubscriptionPayment` (aktif / gecikmede: eski dönem sonundan
+  devam; deneme / salt okunur: bugünden; paket + dönem değişir, talep kapanır), `ExtendAccess` (+7 gün; geçmişteyse bugünden).
+- Kota yılı artık `subscription_started_at`'e bağlı (aylık ödemede kaymasın); yoksa açılış günü.
+- Ekranlar: üstte uyarı şeridi (`SubscriptionBanner`, paylaşılan `subscription`, `SubscriptionSummary::banner`); Acente ayarları →
+  **Paketim** (`agency/Plan`, yalnız yönetici: tasarımdaki paket kartları `.plans/.plan/.seg`, durum, kota, havale, ödeme geçmişi);
+  platform acente sayfasında "Abonelik" kartı (`TenantSubscriptionCard`: talep, Ödeme geldi, +7 gün, ödemeler) — 10c'de tasarıma uyacak.
+- Havale bilgileri `.env`: `BILLING_BANK`, `BILLING_IBAN`, `BILLING_ACCOUNT_HOLDER` (boşsa "bizimle iletişime geçin"; staging'e
+  kullanıcı girecek). Açıklama = acente kodu (slug).
+- Dikkat: sayfa verisine `features` / `subscription` adı verme — paylaşılan verinin üstüne yazar (menü boşalır).
+- Demo paketi `paketler-10b-abonelik`: kullanıcısız üç örnek acente (deneme + talep, gecikmede, salt okunur).
   **9. adım (Faz 4 entegrasyonlar: Nusuk / Masar, Diyanet, vize, NFC) en sona bırakıldı** — paketlerden sonra, yine önce seçenek + maliyet.
   **8. adım (WhatsApp tahsilat asistanı) kullanıcı kararıyla plandan çıkarıldı (2026-10-07).**
   **Bekleyen:** kullanıcı "küçük kusurlar var, sonra birlikte bakacağız" dedi (2026-10-07) — liste kullanıcıdan alınacak.

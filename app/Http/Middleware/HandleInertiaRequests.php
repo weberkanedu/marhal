@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\Subscriptions\SubscriptionSummary;
 use App\Support\Tenancy\CurrentTenant;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -49,6 +50,8 @@ class HandleInertiaRequests extends Middleware
             // Acente bağlamı kurulmayan sayfalarda (ör. ayarlar) kullanıcının acentesi kullanılır ki menü eksik kalmasın.
             'tenant' => fn () => $this->tenant($request)?->only(['id', 'name', 'default_currency']),
             'features' => fn () => $this->tenant($request)?->enabledFeatures() ?? [],
+            // Deneme / gecikmede / salt okunur uyarı şeridi (SubscriptionSummary).
+            'subscription' => fn () => ($tenant = $this->tenant($request)) ? app(SubscriptionSummary::class)->banner($tenant) : null,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

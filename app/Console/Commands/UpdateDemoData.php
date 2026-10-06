@@ -15,6 +15,7 @@ use Database\Seeders\Demo\OnlineSignupDemo;
 use Database\Seeders\Demo\ReadinessDemo;
 use Database\Seeders\Demo\RoomPlanDemo;
 use Database\Seeders\Demo\ScreensDemo;
+use Database\Seeders\Demo\SubscriptionDemo;
 use Database\Seeders\Demo\VehicleAircraftDemo;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -45,6 +46,7 @@ class UpdateDemoData extends Command
         'tasarim-6-hazirlik' => ReadinessDemo::class,
         'tasarim-7-aile-program' => FamilyProgramDemo::class,
         'tasarim-7b-on-kayit' => OnlineSignupDemo::class,
+        'paketler-10b-abonelik' => SubscriptionDemo::class,
     ];
 
     public function handle(CurrentTenant $currentTenant): int

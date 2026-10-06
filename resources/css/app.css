@@ -756,3 +756,190 @@
         grid-template-columns: 1fr;
     }
 }
+/* Abonelik uyarı şeridi (deneme / gecikmede / salt okunur): ekran içeriğinin üstünde, .aitem satırı. */
+.mx.sub-banner {
+    padding: 14px 24px 0;
+}
+.mx.sub-banner .aitem {
+    background: var(--m-panel);
+}
+/* Paketim: paketler tasarım sayfasındaki paket kartları (.seg, .plans, .plan, .plan.hot). */
+.mx .seg {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--m-line);
+    border-radius: 12px;
+    background: var(--m-panel);
+    align-self: flex-start;
+}
+.mx .seg button {
+    all: unset;
+    cursor: pointer;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--m-muted);
+}
+.mx .seg button[aria-pressed='true'] {
+    background: var(--m-accent);
+    color: var(--m-bg);
+}
+.mx .seg button:focus-visible {
+    outline: 2px solid var(--m-accent);
+    outline-offset: 2px;
+}
+.mx .seg em {
+    font-style: normal;
+    font-size: 11px;
+    margin-left: 6px;
+    color: var(--m-accent);
+}
+.mx .seg button[aria-pressed='true'] em {
+    color: inherit;
+    opacity: 0.8;
+}
+.mx .plans {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    align-items: stretch;
+    padding-top: 8px;
+}
+.mx .plan {
+    position: relative;
+    background: var(--m-panel);
+    border: 1px solid var(--m-line);
+    border-radius: 20px;
+    padding: 24px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.mx .plan.hot {
+    background: linear-gradient(170deg, #0f4a38, #0b2f25 70%);
+    color: #f2efe4;
+    border-color: #c9a246;
+    box-shadow: 0 30px 60px -30px rgba(10, 60, 45, 0.6);
+}
+.mx .plan .tag {
+    position: absolute;
+    top: -12px;
+    left: 22px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f3d77e, #c99f30);
+    color: #1d1606;
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+.mx .plan h3 {
+    margin: 0;
+    font-family: var(--m-display);
+    font-size: 26px;
+    font-weight: 600;
+}
+.mx .plan .who {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--m-muted);
+    min-height: 42px;
+}
+.mx .plan .price {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.mx .plan .price b {
+    font-family: var(--m-display);
+    font-size: 40px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+}
+.mx .plan .price span,
+.mx .plan .limits div {
+    font-size: 13px;
+    color: var(--m-muted);
+}
+.mx .plan .limits {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 10px 0;
+    border-block: 1px dashed var(--m-line);
+}
+.mx .plan .limits div {
+    display: flex;
+    flex-direction: column;
+    font-size: 11.5px;
+}
+.mx .plan .limits b {
+    font-size: 16px;
+    color: var(--m-ink);
+    font-variant-numeric: tabular-nums;
+}
+.mx .plan ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    font-size: 13.5px;
+}
+.mx .plan li {
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    gap: 8px;
+}
+.mx .plan li::before {
+    content: '✓';
+    color: var(--m-ok);
+    font-weight: 800;
+}
+.mx .plan li.inh {
+    color: var(--m-muted);
+    font-style: italic;
+}
+.mx .plan li.inh::before {
+    content: '↑';
+    color: var(--m-muted);
+}
+.mx .plan .cta {
+    margin-top: auto;
+    justify-content: center;
+}
+.mx .plan .cta:disabled {
+    opacity: 0.6;
+    cursor: default;
+    filter: none;
+}
+.mx .plan.hot .who,
+.mx .plan.hot .price span,
+.mx .plan.hot .limits div,
+.mx .plan.hot li.inh,
+.mx .plan.hot li.inh::before {
+    color: #b9cbc1;
+}
+.mx .plan.hot .limits {
+    border-color: rgba(255, 255, 255, 0.18);
+}
+.mx .plan.hot .limits b {
+    color: #fff;
+}
+.mx .plan.hot li::before {
+    color: #f3d77e;
+}
+.mx .plan.hot .cta {
+    background: linear-gradient(135deg, #f3d77e, #c99f30);
+    color: #1d1606;
+}
+@media (max-width: 980px) {
+    .mx .plans {
+        grid-template-columns: 1fr;
+    }
+}

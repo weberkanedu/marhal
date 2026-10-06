@@ -29,7 +29,7 @@ type Draft = {
 
 const props = defineProps<{
     plans: PlanRow[];
-    features: { key: string; label: string }[];
+    featureOptions: { key: string; label: string }[];
     yearlyMonths: number;
 }>();
 
@@ -174,7 +174,7 @@ function toggleLive(plan: PlanRow): void {
                     </div>
                     <div>
                         <div
-                            v-for="feature in features"
+                            v-for="feature in featureOptions"
                             :key="feature.key"
                             class="feat"
                         >

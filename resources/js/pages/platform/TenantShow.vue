@@ -3,6 +3,8 @@ import { Form, Head, router } from '@inertiajs/vue3';
 import { KeyRound } from '@lucide/vue';
 import TenantController from '@/actions/App/Http/Controllers/Platform/TenantController';
 import TenantFields from '@/components/platform/TenantFields.vue';
+import TenantSubscriptionCard from '@/components/platform/TenantSubscriptionCard.vue';
+import type { TenantSubscription } from '@/components/platform/TenantSubscriptionCard.vue';
 import type {
     TenantOptions,
     TenantValues,
@@ -47,6 +49,10 @@ const props = defineProps<{
     features: FeatureRow[];
     users: UserRow[];
     options: TenantOptions;
+    subscriptionDetail: TenantSubscription;
+    paymentOptions: InstanceType<
+        typeof TenantSubscriptionCard
+    >['$props']['options'];
 }>();
 
 defineOptions({
@@ -106,6 +112,12 @@ function resetPassword(user: UserRow): void {
                 (bu abonelik yılı)
             </span>
         </div>
+
+        <TenantSubscriptionCard
+            :tenant-id="tenant.id"
+            :subscription="subscriptionDetail"
+            :options="paymentOptions"
+        />
 
         <Card>
             <CardHeader>

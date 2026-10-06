@@ -34,7 +34,7 @@ class PlanController extends Controller
 
         return Inertia::render('platform/Plans', [
             'plans' => $plans,
-            'features' => Feature::options(),
+            'featureOptions' => Feature::options(),
             'yearlyMonths' => Plan::YEARLY_MONTHS,
         ]);
     }

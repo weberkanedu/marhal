@@ -33,6 +33,8 @@ type TenantRow = {
     name: string;
     plan: string;
     status: string;
+    state: { label: string; tone: string };
+    requested_plan: string | null;
     users_count: number;
     accessible: boolean;
     trial_ends_at: string | null;
@@ -50,12 +52,6 @@ defineOptions({
         breadcrumbs: [{ title: 'Acenteler', href: tenantsIndex() }],
     },
 });
-
-const statusLabels: Record<string, string> = {
-    trial: 'Deneme',
-    active: 'Aktif',
-    suspended: 'Askıda',
-};
 
 const createOpen = ref(false);
 </script>
@@ -113,24 +109,21 @@ const createOpen = ref(false);
                             <td class="py-2">
                                 <Badge
                                     :variant="
-                                        tenant.accessible
-                                            ? 'secondary'
-                                            : 'destructive'
+                                        tenant.state.tone === 'danger'
+                                            ? 'destructive'
+                                            : tenant.state.tone === 'ok'
+                                              ? 'secondary'
+                                              : 'outline'
                                     "
                                 >
-                                    {{
-                                        statusLabels[tenant.status] ??
-                                        tenant.status
-                                    }}
-                                    <template
-                                        v-if="
-                                            !tenant.accessible &&
-                                            tenant.status !== 'suspended'
-                                        "
-                                    >
-                                        (süresi doldu)
-                                    </template>
+                                    {{ tenant.state.label }}
                                 </Badge>
+                                <Badge
+                                    v-if="tenant.requested_plan"
+                                    variant="outline"
+                                    class="ml-1"
+                                    >Talep: {{ tenant.requested_plan }}</Badge
+                                >
                             </td>
                             <td class="py-2 text-muted-foreground">
                                 {{

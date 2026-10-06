@@ -3,6 +3,7 @@ import AppBackdrop from '@/components/AppBackdrop.vue';
 import AppContent from '@/components/AppContent.vue';
 import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
+import SubscriptionBanner from '@/components/SubscriptionBanner.vue';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/sonner';
 import type { BreadcrumbItem } from '@/types';
@@ -25,6 +26,7 @@ withDefaults(defineProps<Props>(), {
             <div class="flex h-12 items-center px-3 md:hidden">
                 <SidebarTrigger />
             </div>
+            <SubscriptionBanner />
             <slot />
         </AppContent>
         <Toaster />

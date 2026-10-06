@@ -22,6 +22,7 @@ use App\Http\Controllers\PersonNeedController;
 use App\Http\Controllers\PersonRelationController;
 use App\Http\Controllers\Platform\PlanController;
 use App\Http\Controllers\Platform\TenantController;
+use App\Http\Controllers\Platform\TenantSubscriptionController;
 use App\Http\Controllers\PublicFamilyController;
 use App\Http\Controllers\PublicSignupController;
 use App\Http\Controllers\ReadinessItemController;
@@ -34,6 +35,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SeatAssignmentController;
 use App\Http\Controllers\SeatPlanController;
 use App\Http\Controllers\SignupController;
+use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\TourBadgeController;
 use App\Http\Controllers\TourController;
 use App\Http\Controllers\TourHotelController;
@@ -250,6 +252,11 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::get('audit-logs', AuditLogController::class)->name('audit.index');
 
         Route::get('agency', [AgencySettingsController::class, 'edit'])->name('agency.edit');
+
+        // Paketim: paket kartları, durum, havale bilgileri; seçim talep olarak platforma düşer
+        Route::get('agency/plan', [SubscriptionController::class, 'show'])->name('agency.plan');
+        Route::post('agency/plan-request', [SubscriptionController::class, 'request'])->middleware('throttle:10,1')->name('agency.plan-request.store');
+        Route::delete('agency/plan-request', [SubscriptionController::class, 'cancel'])->name('agency.plan-request.destroy');
         Route::post('agency', [AgencySettingsController::class, 'update'])->name('agency.update');
     });
     Route::get('agency/logo', [AgencySettingsController::class, 'logo'])->name('agency.logo');
@@ -268,6 +275,8 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::get('tenants/{tenant}', [TenantController::class, 'show'])->name('tenants.show');
         Route::put('tenants/{tenant}', [TenantController::class, 'update'])->name('tenants.update');
         Route::put('tenants/{tenant}/features', [TenantController::class, 'updateFeature'])->name('tenants.features.update');
+        Route::post('tenants/{tenant}/payments', [TenantSubscriptionController::class, 'payment'])->name('tenants.payments.store');
+        Route::post('tenants/{tenant}/extend', [TenantSubscriptionController::class, 'extend'])->name('tenants.extend');
         Route::post('tenants/{tenant}/users/{user}/reset-password', [TenantController::class, 'resetUserPassword'])
             ->middleware('throttle:10,1')
             ->name('tenants.users.reset-password');

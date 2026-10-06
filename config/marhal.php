@@ -30,4 +30,15 @@ return [
 
     'currencies' => ['TRY', 'USD', 'EUR', 'SAR'],
 
+    /*
+    | Abonelik ödemesi için havale / EFT bilgileri ("Paketim"de acenteye gösterilir).
+    | Gerçek değerler sunucu ortam değişkenlerinde; boşsa "bizimle iletişime geçin" yazılır.
+    */
+
+    'billing' => [
+        'bank' => env('BILLING_BANK'),
+        'iban' => env('BILLING_IBAN'),
+        'holder' => env('BILLING_ACCOUNT_HOLDER'),
+    ],
+
 ];
