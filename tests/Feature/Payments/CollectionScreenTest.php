@@ -59,6 +59,9 @@ class CollectionScreenTest extends TestCase
                 ->where('summary.collected.USD.last', '400.00')
                 ->where('summary.due_this_month.USD', '1500.00')
                 ->where('canPay', true)
+                // Ödenen 1000 < ilk taksit 1100: sonraki taksit ayın başındaki, o günden beri gecikmede.
+                ->where('rows.items.data.0.next_due', now()->startOfMonth()->toDateString())
+                ->where('rows.items.data.0.late_days', (int) now()->startOfMonth()->startOfDay()->diffInDays(today()))
                 ->missing('debtors')
                 ->loadDeferredProps(fn (Assert $reload) => $reload
                     ->has('debtors', 1)

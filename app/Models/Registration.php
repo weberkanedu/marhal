@@ -219,6 +219,26 @@ class Registration extends Model
      *
      * @return numeric-string
      */
+    /**
+     * Ödenmemiş ilk taksit: taksitler vade sırasıyla toplanır, ödenen tutarı ilk aşan taksit
+     * (Tahsilat ekranındaki "Sonraki taksit"). Taksit yoksa null.
+     */
+    public function nextUnpaidInstallment(): ?Installment
+    {
+        $sum = '0.00';
+        $paid = $this->paidTotal();
+
+        foreach ($this->installments as $installment) {
+            $sum = Money::add($sum, (string) $installment->amount);
+
+            if (bccomp($sum, $paid, 2) > 0) {
+                return $installment;
+            }
+        }
+
+        return null;
+    }
+
     public function overdue(): string
     {
         $overdue = Money::sub($this->dueTotal(), $this->paidTotal());

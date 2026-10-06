@@ -47,7 +47,7 @@ class CollectionQuery
             ->orderByRaw(self::OVERDUE.' DESC')
             ->orderByRaw(self::BALANCE.' DESC')
             ->orderBy('registrations.id')
-            ->with(['person:id,first_name,last_name,phone', 'tour:id,name,start_date', 'group:id,name']);
+            ->with(['person:id,first_name,last_name,phone,gender,birth_date', 'tour:id,name,start_date', 'group:id,name', 'installments']);
 
         $map = fn (Registration $r) => [
             'id' => $r->id,
@@ -59,6 +59,11 @@ class CollectionQuery
             'paid' => $r->paidTotal(),
             'balance' => $r->balance(),
             'overdue' => $r->overdue(),
+            // Sonraki taksit ve gecikme günü (tasarımdaki "Sonraki taksit" sütunu).
+            'next_due' => ($next = $r->nextUnpaidInstallment())?->due_date->toDateString(),
+            'late_days' => $next && $next->due_date->lt(today()) ? (int) $next->due_date->diffInDays(today()) : 0,
+            'gender' => $r->person->gender->value,
+            'age' => $r->person->birth_date?->age,
         ];
 
         $items = $perPage

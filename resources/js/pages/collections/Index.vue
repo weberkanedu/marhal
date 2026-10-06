@@ -1,19 +1,10 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import {
-    AlertTriangle,
-    CalendarClock,
-    HandCoins,
-    Search,
-    TrendingDown,
-    TrendingUp,
-    Wallet,
-} from '@lucide/vue';
+import { Search } from '@lucide/vue';
 import { computed, ref } from 'vue';
-import ExportMenu from '@/components/ExportMenu.vue';
+import MockIcon from '@/components/mock/MockIcon.vue';
+import MockTop from '@/components/mock/MockTop.vue';
 import PaymentDialog from '@/components/payments/PaymentDialog.vue';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -22,9 +13,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { formatDate, formatMoney } from '@/lib/format';
-import { selectClass } from '@/lib/formClasses';
 import { index } from '@/routes/collections';
 import { show as showRegistration } from '@/routes/registrations';
 import { collections as collectionsReport } from '@/routes/reports';
@@ -43,6 +32,10 @@ type RegistrationItem = {
     paid: string;
     balance: string;
     overdue: string;
+    next_due: string | null;
+    late_days: number;
+    gender: string;
+    age: number | null;
 };
 
 type PaymentItem = {
@@ -212,6 +205,47 @@ const pickList = computed(() => {
         .slice(0, 50);
 });
 
+// Tasarımdaki özet kartları: ilk para birimi büyük, diğerleri alt satırda.
+const mainCurrency = computed(() => collectedCurrencies.value[0] ?? null);
+const monthPct = computed(() => {
+    const m = mainCurrency.value
+        ? props.summary.collected[mainCurrency.value]
+        : null;
+
+    if (!m) {
+        return 0;
+    }
+
+    const top = Math.max(Number(m.this), Number(m.last));
+
+    return top > 0 ? Math.round((Number(m.this) / top) * 100) : 0;
+});
+const firstMoney = (amounts: Record<string, string>) => {
+    const [currency, amount] = Object.entries(amounts)[0] ?? [];
+
+    return currency ? formatMoney(amount, currency) : '—';
+};
+const paidPct = (row: RegistrationItem) =>
+    Number(row.net_price) > 0
+        ? Math.min(
+              100,
+              Math.round((Number(row.paid) / Number(row.net_price)) * 100),
+          )
+        : 100;
+const shortDate = (date: string) =>
+    new Date(`${date}T00:00:00`).toLocaleDateString('tr-TR', {
+        day: '2-digit',
+        month: 'short',
+    });
+const ini = (name: string) =>
+    name
+        .trim()
+        .split(/\s+/)
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toLocaleUpperCase('tr');
+
 const asRegistrations = (items: unknown) => items as RegistrationItem[];
 const asPayments = (items: unknown) => items as PaymentItem[];
 </script>
@@ -219,461 +253,459 @@ const asPayments = (items: unknown) => items as PaymentItem[];
 <template>
     <Head title="Tahsilat" />
 
-    <div class="flex h-full flex-1 flex-col gap-4 p-4">
-        <div class="flex flex-wrap items-end justify-between gap-3">
-            <div>
-                <h1 class="text-2xl font-semibold tracking-tight">Tahsilat</h1>
-                <p class="text-sm text-muted-foreground">
-                    Borçlar, gecikmeler ve alınan ödemeler. Para birimleri ayrı
-                    tutulur.
-                </p>
-            </div>
-            <div class="flex flex-wrap gap-2">
-                <ExportMenu :items="exportItems" />
-                <Button v-if="canPay" @click="pickOpen = true">
-                    <HandCoins /> Ödeme al
-                </Button>
-            </div>
-        </div>
-
-        <!-- Özet: bu ay tahsilat, bu ay vadesi gelen, gecikmiş, kalan -->
-        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div class="kpi-tile items-start">
-                <span
-                    class="grid size-10 shrink-0 place-items-center rounded-xl bg-success-soft text-success"
+    <div class="mx">
+        <div class="main">
+            <MockTop
+                :crumbs="[{ label: 'Tahsilat' }]"
+                title="Tahsilat"
+                :exports="exportItems"
+            >
+                <button
+                    v-if="canPay"
+                    class="btn"
+                    type="button"
+                    @click="pickOpen = true"
                 >
-                    <Wallet class="size-5" />
-                </span>
-                <div class="min-w-0">
-                    <small>Bu ay tahsil edilen</small>
-                    <span
-                        v-if="collectedCurrencies.length === 0"
-                        class="kpi-value num"
-                        >—</span
-                    >
-                    <span
-                        v-for="currency in collectedCurrencies"
-                        :key="currency"
-                        class="kpi-value num"
-                    >
+                    <MockIcon name="wallet" />Ödeme al
+                </button>
+            </MockTop>
+
+            <div class="g3">
+                <div class="card glow">
+                    <span class="lbl">Bu ay tahsil edilen</span>
+                    <div class="big">
                         {{
-                            formatMoney(
-                                summary.collected[currency]?.this ?? '0',
-                                currency,
-                            )
+                            mainCurrency
+                                ? formatMoney(
+                                      summary.collected[mainCurrency]?.this ??
+                                          '0',
+                                      mainCurrency,
+                                  )
+                                : '—'
                         }}
-                        <span
-                            v-if="change(currency) !== null"
-                            class="ml-1 inline-flex items-center gap-0.5 text-xs font-semibold"
-                            :class="
-                                (change(currency) ?? 0) >= 0
-                                    ? 'text-success'
-                                    : 'text-danger'
-                            "
-                            :title="`Geçen ay: ${formatMoney(summary.collected[currency]?.last ?? '0', currency)}`"
+                    </div>
+                    <div class="bar">
+                        <i
+                            :class="{ full: monthPct >= 100 }"
+                            :style="{ width: `${monthPct}%` }"
+                        />
+                    </div>
+                    <span class="lbl"
+                        >Geçen ay
+                        {{
+                            mainCurrency
+                                ? formatMoney(
+                                      summary.collected[mainCurrency]?.last ??
+                                          '0',
+                                      mainCurrency,
+                                  )
+                                : '—'
+                        }}<template
+                            v-if="mainCurrency && change(mainCurrency) !== null"
                         >
-                            <component
-                                :is="
-                                    (change(currency) ?? 0) >= 0
-                                        ? TrendingUp
-                                        : TrendingDown
-                                "
-                                class="size-3"
-                            />
-                            %{{ Math.abs(change(currency) ?? 0) }}
-                        </span>
-                    </span>
+                            ·
+                            {{ (change(mainCurrency) ?? 0) >= 0 ? '▲' : '▼' }}
+                            %{{ Math.abs(change(mainCurrency) ?? 0) }}</template
+                        ><template
+                            v-for="c in collectedCurrencies.slice(1)"
+                            :key="c"
+                        >
+                            ·
+                            {{
+                                formatMoney(
+                                    summary.collected[c]?.this ?? '0',
+                                    c,
+                                )
+                            }}</template
+                        ></span
+                    >
+                </div>
+                <div class="card">
+                    <span class="lbl">Toplam kalan alacak</span>
+                    <div class="big">
+                        {{ firstMoney(summary.outstanding) }}
+                    </div>
+                    <span class="lbl"
+                        ><template
+                            v-for="(amount, c, i) in summary.outstanding"
+                            :key="c"
+                            ><template v-if="i > 0"
+                                >{{ formatMoney(amount, String(c)) }} ·
+                            </template></template
+                        >Bu ay vadesi gelen
+                        {{ firstMoney(summary.due_this_month) }}</span
+                    >
+                </div>
+                <div
+                    class="card"
+                    role="button"
+                    tabindex="0"
+                    style="cursor: pointer"
+                    @click="go('borclu')"
+                >
+                    <span class="lbl">Vadesi geçmiş</span>
+                    <div
+                        class="big"
+                        :style="
+                            summary.overdue.count
+                                ? 'color: var(--m-danger)'
+                                : undefined
+                        "
+                    >
+                        {{ summary.overdue.count }} yolcu
+                    </div>
+                    <span class="lbl">{{
+                        summary.overdue.count
+                            ? Object.entries(summary.overdue.amounts)
+                                  .map(([c, a]) => formatMoney(a, c))
+                                  .join(' · ')
+                            : 'Gecikme yok'
+                    }}</span>
                 </div>
             </div>
-            <div class="kpi-tile items-start">
-                <span
-                    class="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-accent-foreground"
-                >
-                    <CalendarClock class="size-5" />
-                </span>
-                <div class="min-w-0">
-                    <small>Bu ay vadesi gelen taksit</small>
-                    <span
-                        v-if="Object.keys(summary.due_this_month).length === 0"
-                        class="kpi-value num"
-                        >—</span
-                    >
-                    <span
-                        v-for="(amount, currency) in summary.due_this_month"
-                        :key="currency"
-                        class="kpi-value num"
-                    >
-                        {{ formatMoney(amount, String(currency)) }}
-                    </span>
-                </div>
-            </div>
-            <button
-                type="button"
-                class="kpi-tile items-start"
-                @click="go('borclu')"
-            >
-                <span
-                    class="grid size-10 shrink-0 place-items-center rounded-xl bg-danger-soft text-danger"
-                >
-                    <AlertTriangle class="size-5" />
-                </span>
-                <div class="min-w-0">
-                    <small>Gecikmiş · {{ summary.overdue.count }} yolcu</small>
-                    <span
-                        v-if="summary.overdue.count === 0"
-                        class="kpi-value num text-success"
-                        >Gecikme yok</span
-                    >
-                    <span
-                        v-for="(amount, currency) in summary.overdue.amounts"
-                        :key="currency"
-                        class="kpi-value num text-danger"
-                    >
-                        {{ formatMoney(amount, String(currency)) }}
-                    </span>
-                </div>
-            </button>
-            <div class="kpi-tile items-start">
-                <span
-                    class="grid size-10 shrink-0 place-items-center rounded-xl bg-warning-soft text-warning"
-                >
-                    <HandCoins class="size-5" />
-                </span>
-                <div class="min-w-0">
-                    <small>Toplam kalan alacak</small>
-                    <span
-                        v-if="Object.keys(summary.outstanding).length === 0"
-                        class="kpi-value num"
-                        >—</span
-                    >
-                    <span
-                        v-for="(amount, currency) in summary.outstanding"
-                        :key="currency"
-                        class="kpi-value num text-warning"
-                    >
-                        {{ formatMoney(amount, String(currency)) }}
-                    </span>
-                </div>
-            </div>
-        </div>
 
-        <nav
-            class="flex gap-1 overflow-x-auto border-b"
-            role="tablist"
-            aria-label="Tahsilat listeleri"
-        >
-            <button
-                v-for="item in tabs"
-                :key="item.value"
-                type="button"
-                role="tab"
-                :aria-selected="tab === item.value"
-                class="shrink-0 border-b-2 px-3 py-2 text-sm whitespace-nowrap transition-colors"
-                :class="
-                    tab === item.value
-                        ? 'border-primary font-medium text-foreground'
-                        : 'border-transparent text-muted-foreground hover:text-foreground'
-                "
-                @click="go(item.value)"
-            >
-                {{ item.label }}
-            </button>
-        </nav>
-
-        <div class="flex flex-wrap items-end gap-3">
-            <div class="grid gap-1">
-                <Label for="tour" class="text-xs">Tur</Label>
-                <select
-                    id="tour"
-                    v-model="tour"
-                    :class="selectClass"
-                    class="w-64"
-                    @change="go()"
-                >
-                    <option value="">Tüm turlar</option>
-                    <option v-for="t in tours" :key="t.id" :value="t.id">
-                        {{ t.name }}
-                    </option>
-                </select>
-            </div>
-            <template v-if="tab === 'tahsilatlar'">
-                <div class="grid gap-1">
-                    <Label for="from" class="text-xs">Başlangıç</Label>
-                    <Input id="from" v-model="from" type="date" class="w-40" />
+            <div class="card">
+                <div class="tabs" role="tablist">
+                    <a
+                        v-for="item in tabs"
+                        :key="item.value"
+                        role="tab"
+                        :class="{ on: tab === item.value }"
+                        :aria-selected="tab === item.value"
+                        @click="go(item.value)"
+                        >{{ item.label }}</a
+                    >
                 </div>
-                <div class="grid gap-1">
-                    <Label for="to" class="text-xs">Bitiş</Label>
-                    <Input id="to" v-model="to" type="date" class="w-40" />
-                </div>
-                <Button size="sm" variant="outline" @click="go()"
-                    >Uygula</Button
-                >
-            </template>
-        </div>
-
-        <!-- Bu listenin toplamları (tur seçilmemiş borçlu listesi üstteki özetle aynı olduğundan gösterilmez) -->
-        <div
-            v-if="
-                Object.keys(rows.totals).length > 0 &&
-                (tab !== 'borclu' || filters.tour)
-            "
-            class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-        >
-            <Card v-for="(total, currency) in rows.totals" :key="currency">
-                <CardHeader>
+                <div class="row">
+                    <select
+                        v-model="tour"
+                        class="mini-in"
+                        aria-label="Tur"
+                        @change="go()"
+                    >
+                        <option value="">Tüm turlar</option>
+                        <option v-for="t in tours" :key="t.id" :value="t.id">
+                            {{ t.name }}
+                        </option>
+                    </select>
                     <template v-if="tab === 'tahsilatlar'">
-                        <p class="text-sm text-muted-foreground">
-                            Net tahsilat ({{ total.count }} işlem)
-                        </p>
-                        <CardTitle class="num text-2xl text-success">
-                            {{ formatMoney(total.net, String(currency)) }}
-                        </CardTitle>
-                    </template>
-                    <template v-else-if="tab === 'borclu'">
-                        <p class="text-sm text-muted-foreground">
-                            Kalan alacak ({{ currency }})
-                        </p>
-                        <CardTitle class="num text-2xl text-warning">
-                            {{ formatMoney(total.balance, String(currency)) }}
-                        </CardTitle>
-                        <p
-                            v-if="Number(total.overdue) > 0"
-                            class="text-xs text-destructive"
+                        <input
+                            v-model="from"
+                            class="mini-in"
+                            type="date"
+                            aria-label="Başlangıç"
+                        />
+                        <input
+                            v-model="to"
+                            class="mini-in"
+                            type="date"
+                            aria-label="Bitiş"
+                        />
+                        <button
+                            class="btn ghost sm"
+                            type="button"
+                            @click="go()"
                         >
-                            Gecikmiş:
-                            {{ formatMoney(total.overdue, String(currency)) }}
-                        </p>
+                            Uygula
+                        </button>
                     </template>
-                    <template v-else>
-                        <p class="text-sm text-muted-foreground">
-                            Tahsil edilen ({{ currency }})
-                        </p>
-                        <CardTitle class="num text-2xl text-success">
-                            {{ formatMoney(total.paid, String(currency)) }}
-                        </CardTitle>
-                    </template>
-                </CardHeader>
-            </Card>
-        </div>
+                    <span
+                        v-for="(total, currency) in rows.totals"
+                        :key="currency"
+                        class="lbl"
+                        >{{
+                            tab === 'tahsilatlar'
+                                ? `Net ${formatMoney(total.net, String(currency))} · ${total.count} işlem`
+                                : tab === 'borclu'
+                                  ? `Kalan ${formatMoney(total.balance, String(currency))}`
+                                  : `Tahsil edilen ${formatMoney(total.paid, String(currency))}`
+                        }}</span
+                    >
+                </div>
 
-        <Card class="py-0">
-            <CardContent class="overflow-x-auto p-0">
-                <p
-                    v-if="rows.items.data.length === 0"
-                    class="p-8 text-center text-sm text-muted-foreground"
-                >
-                    Bu listede kayıt yok.
-                </p>
+                <div class="tbl">
+                    <table v-if="tab === 'borclu'">
+                        <thead>
+                            <tr>
+                                <th>Yolcu</th>
+                                <th class="hide-sm">Tur / grup</th>
+                                <th class="num">Toplam</th>
+                                <th class="num">Ödenen</th>
+                                <th class="num">Kalan</th>
+                                <th>İlerleme</th>
+                                <th>Sonraki taksit</th>
+                                <th v-if="canPay" />
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="row in asRegistrations(rows.items.data)"
+                                :key="row.id"
+                                style="cursor: pointer"
+                                @click="router.visit(showRegistration(row.id))"
+                            >
+                                <td>
+                                    <div class="person">
+                                        <span
+                                            class="av"
+                                            :class="
+                                                row.gender === 'kadin'
+                                                    ? 'k'
+                                                    : 'e'
+                                            "
+                                            >{{
+                                                ini(row.person.full_name)
+                                            }}</span
+                                        >
+                                        <div>
+                                            {{ row.person.full_name
+                                            }}<small>{{
+                                                [
+                                                    row.gender === 'kadin'
+                                                        ? 'Kadın'
+                                                        : 'Erkek',
+                                                    row.age !== null
+                                                        ? `${row.age} yaş`
+                                                        : null,
+                                                ]
+                                                    .filter(Boolean)
+                                                    .join(' · ')
+                                            }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="hide-sm">
+                                    {{ row.tour.name
+                                    }}<template v-if="row.group">
+                                        · {{ row.group }}</template
+                                    >
+                                </td>
+                                <td class="num">
+                                    {{
+                                        formatMoney(row.net_price, row.currency)
+                                    }}
+                                </td>
+                                <td class="num">
+                                    {{ formatMoney(row.paid, row.currency) }}
+                                </td>
+                                <td class="num">
+                                    <b>{{
+                                        formatMoney(row.balance, row.currency)
+                                    }}</b>
+                                </td>
+                                <td>
+                                    <div class="bar" style="width: 70px">
+                                        <i
+                                            :style="{
+                                                width: `${paidPct(row)}%`,
+                                            }"
+                                        />
+                                    </div>
+                                </td>
+                                <td>
+                                    <span
+                                        v-if="row.next_due"
+                                        class="chip"
+                                        :class="{ danger: row.late_days > 0 }"
+                                        >{{ shortDate(row.next_due)
+                                        }}<template v-if="row.late_days > 0">
+                                            · {{ row.late_days }} gün
+                                            gecikti</template
+                                        ></span
+                                    >
+                                    <span v-else class="lbl">—</span>
+                                </td>
+                                <td v-if="canPay">
+                                    <button
+                                        class="btn ghost sm"
+                                        type="button"
+                                        @click.stop="
+                                            pay({
+                                                id: row.id,
+                                                currency: row.currency,
+                                                balance: row.balance,
+                                                person: row.person.full_name,
+                                            })
+                                        "
+                                    >
+                                        Ödeme al
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr
+                                v-if="!rows.items.data.length"
+                                class="empty-row"
+                            >
+                                <td colspan="8">Borçlu yolcu kalmadı</td>
+                            </tr>
+                        </tbody>
+                    </table>
 
-                <!-- Borçlu / tamamlanan -->
-                <table
-                    v-else-if="tab !== 'tahsilatlar'"
-                    class="w-full text-sm whitespace-nowrap"
-                >
-                    <thead class="text-left text-xs text-muted-foreground">
-                        <tr>
-                            <th class="px-4 py-2.5 font-medium">Yolcu</th>
-                            <th class="px-4 py-2.5 font-medium">Tur / grup</th>
-                            <th class="px-4 py-2.5 text-right font-medium">
-                                Net
-                            </th>
-                            <th class="px-4 py-2.5 text-right font-medium">
-                                Ödenen
-                            </th>
-                            <th
-                                v-if="tab === 'borclu'"
-                                class="px-4 py-2.5 text-right font-medium"
+                    <table v-else-if="tab === 'tamamlanan'">
+                        <thead>
+                            <tr>
+                                <th>Yolcu</th>
+                                <th class="hide-sm">Tur / grup</th>
+                                <th class="num">Toplam</th>
+                                <th>Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="row in asRegistrations(rows.items.data)"
+                                :key="row.id"
+                                style="cursor: pointer"
+                                @click="router.visit(showRegistration(row.id))"
                             >
-                                Kalan
-                            </th>
-                            <th
-                                v-if="tab === 'borclu'"
-                                class="px-4 py-2.5 text-right font-medium"
+                                <td>
+                                    <div class="person">
+                                        <span
+                                            class="av"
+                                            :class="
+                                                row.gender === 'kadin'
+                                                    ? 'k'
+                                                    : 'e'
+                                            "
+                                            >{{
+                                                ini(row.person.full_name)
+                                            }}</span
+                                        >
+                                        <div>
+                                            {{ row.person.full_name
+                                            }}<small>{{
+                                                row.gender === 'kadin'
+                                                    ? 'Kadın'
+                                                    : 'Erkek'
+                                            }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="hide-sm">
+                                    {{ row.tour.name
+                                    }}<template v-if="row.group">
+                                        · {{ row.group }}</template
+                                    >
+                                </td>
+                                <td class="num">
+                                    {{
+                                        formatMoney(row.net_price, row.currency)
+                                    }}
+                                </td>
+                                <td><span class="chip ok">Tamamlandı</span></td>
+                            </tr>
+                            <tr
+                                v-if="!rows.items.data.length"
+                                class="empty-row"
                             >
-                                Gecikmiş
-                            </th>
-                            <th
-                                v-if="tab === 'borclu' && canPay"
-                                class="px-4 py-2.5"
-                            >
-                                <span class="sr-only">İşlem</span>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="row in asRegistrations(rows.items.data)"
-                            :key="row.id"
-                            class="cursor-pointer border-t hover:bg-muted"
-                            @click="router.visit(showRegistration(row.id))"
-                        >
-                            <td class="px-4 py-2">
-                                <Link
-                                    :href="showRegistration(row.id)"
-                                    class="font-medium"
-                                    @click.stop
-                                >
-                                    {{ row.person.full_name }}
-                                </Link>
-                                <div class="text-xs text-muted-foreground">
-                                    {{ row.person.phone }}
-                                </div>
-                            </td>
-                            <td class="px-4 py-2">
-                                {{ row.tour.name }}
-                                <span
-                                    v-if="row.group"
-                                    class="text-muted-foreground"
-                                >
-                                    · {{ row.group }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-2 text-right tabular-nums">
-                                {{ formatMoney(row.net_price, row.currency) }}
-                            </td>
-                            <td class="px-4 py-2 text-right tabular-nums">
-                                {{ formatMoney(row.paid, row.currency) }}
-                            </td>
-                            <td
-                                v-if="tab === 'borclu'"
-                                class="px-4 py-2 text-right font-medium text-warning tabular-nums"
-                            >
-                                {{ formatMoney(row.balance, row.currency) }}
-                            </td>
-                            <td
-                                v-if="tab === 'borclu'"
-                                class="px-4 py-2 text-right tabular-nums"
-                                :class="
-                                    Number(row.overdue) > 0
-                                        ? 'font-medium text-destructive'
-                                        : 'text-muted-foreground'
+                                <td colspan="4">Bu listede kayıt yok</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <table v-else>
+                        <thead>
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Yolcu</th>
+                                <th>Yöntem</th>
+                                <th>Makbuz</th>
+                                <th class="num">Tutar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="row in asPayments(rows.items.data)"
+                                :key="row.id"
+                                style="cursor: pointer"
+                                @click="
+                                    router.visit(
+                                        showRegistration(row.registration_id),
+                                    )
                                 "
                             >
-                                {{
-                                    Number(row.overdue) > 0
-                                        ? formatMoney(row.overdue, row.currency)
-                                        : '—'
-                                }}
-                            </td>
-                            <td
-                                v-if="tab === 'borclu' && canPay"
-                                class="px-4 py-2 text-right"
-                            >
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    @click.stop="
-                                        pay({
-                                            id: row.id,
-                                            currency: row.currency,
-                                            balance: row.balance,
-                                            person: row.person.full_name,
-                                        })
+                                <td class="num" style="text-align: left">
+                                    {{ shortDate(row.paid_at) }}
+                                </td>
+                                <td>
+                                    <div class="person">
+                                        <span class="av">{{
+                                            ini(row.person)
+                                        }}</span>
+                                        <div>
+                                            {{ row.person
+                                            }}<small>{{ row.tour }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {{ row.method
+                                    }}<template v-if="row.received_by">
+                                        · {{ row.received_by }}</template
+                                    >
+                                </td>
+                                <td>{{ row.reference ?? '—' }}</td>
+                                <td
+                                    class="num"
+                                    :style="
+                                        row.type === 'iade'
+                                            ? 'color: var(--m-danger)'
+                                            : undefined
                                     "
                                 >
-                                    Ödeme al
-                                </Button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <!-- Tahsilatlar -->
-                <table v-else class="w-full text-sm whitespace-nowrap">
-                    <thead class="text-left text-xs text-muted-foreground">
-                        <tr>
-                            <th class="px-4 py-2.5 font-medium">Tarih</th>
-                            <th class="px-4 py-2.5 font-medium">Yolcu</th>
-                            <th class="px-4 py-2.5 font-medium">Tur</th>
-                            <th class="px-4 py-2.5 font-medium">Yöntem</th>
-                            <th class="px-4 py-2.5 font-medium">Makbuz no</th>
-                            <th class="px-4 py-2.5 text-right font-medium">
-                                Tutar
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="row in asPayments(rows.items.data)"
-                            :key="row.id"
-                            class="cursor-pointer border-t hover:bg-muted"
-                            @click="
-                                router.visit(
-                                    showRegistration(row.registration_id),
-                                )
-                            "
-                        >
-                            <td class="px-4 py-2">
-                                {{ formatDate(row.paid_at) }}
-                            </td>
-                            <td class="px-4 py-2 font-medium">
-                                {{ row.person }}
-                            </td>
-                            <td class="px-4 py-2">{{ row.tour }}</td>
-                            <td class="px-4 py-2">
-                                {{ row.method }}
-                                <span
-                                    v-if="row.received_by"
-                                    class="text-xs text-muted-foreground"
-                                >
-                                    · {{ row.received_by }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-2 font-mono text-xs">
-                                {{ row.reference ?? '—' }}
-                            </td>
-                            <td
-                                class="px-4 py-2 text-right font-medium tabular-nums"
-                                :class="
-                                    row.type === 'iade'
-                                        ? 'text-destructive'
-                                        : ''
-                                "
+                                    <b
+                                        >{{ row.type === 'iade' ? '− ' : ''
+                                        }}{{
+                                            formatMoney(
+                                                row.amount,
+                                                row.currency,
+                                            )
+                                        }}</b
+                                    >
+                                </td>
+                            </tr>
+                            <tr
+                                v-if="!rows.items.data.length"
+                                class="empty-row"
                             >
-                                {{ row.type === 'iade' ? '− ' : '' }}
-                                {{ formatMoney(row.amount, row.currency) }}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </CardContent>
-        </Card>
+                                <td colspan="5">Bu aralıkta tahsilat yok</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-        <div
-            v-if="rows.items.last_page > 1"
-            class="flex items-center justify-between text-sm"
-        >
-            <span class="text-muted-foreground">
-                {{ rows.items.from }}–{{ rows.items.to }} /
-                {{ rows.items.total }}
-            </span>
-            <div class="flex gap-2">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    :disabled="!rows.items.prev_page_url"
-                    @click="
-                        rows.items.prev_page_url &&
-                        router.visit(rows.items.prev_page_url, {
-                            preserveScroll: true,
-                        })
-                    "
-                >
-                    Önceki
-                </Button>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    :disabled="!rows.items.next_page_url"
-                    @click="
-                        rows.items.next_page_url &&
-                        router.visit(rows.items.next_page_url, {
-                            preserveScroll: true,
-                        })
-                    "
-                >
-                    Sonraki
-                </Button>
+                <div v-if="rows.items.last_page > 1" class="row">
+                    <span class="lbl"
+                        >{{ rows.items.from }}–{{ rows.items.to }} /
+                        {{ rows.items.total }}</span
+                    >
+                    <span style="flex: 1" />
+                    <button
+                        class="btn ghost sm"
+                        type="button"
+                        :disabled="!rows.items.prev_page_url"
+                        @click="
+                            rows.items.prev_page_url &&
+                            router.visit(rows.items.prev_page_url, {
+                                preserveScroll: true,
+                            })
+                        "
+                    >
+                        Önceki
+                    </button>
+                    <button
+                        class="btn ghost sm"
+                        type="button"
+                        :disabled="!rows.items.next_page_url"
+                        @click="
+                            rows.items.next_page_url &&
+                            router.visit(rows.items.next_page_url, {
+                                preserveScroll: true,
+                            })
+                        "
+                    >
+                        Sonraki
+                    </button>
+                </div>
             </div>
         </div>
     </div>
