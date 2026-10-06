@@ -7,9 +7,11 @@
 
 **Şu an:** dal `tasarim-yenileme`, son commit "Tasarım yenileme 7b: telefonla ön kayıt"; staging ile aynı (hepsi gönderildi).
 Tasarım yenilemenin 1–7. adımları ve "tasarıma birebir uyum" turu bitti (aşağıda "Tasarım yenileme" bölümü).
-**Sıradaki:** 9. adım — Faz 4 entegrasyonlar + NFC (`tenant_integrations`, acente ayarından aç / kapa). Kod yazmadan önce
-hangi entegrasyonların (Nusuk / Masar, Diyanet, vize, NFC pasaport okuma uygulaması) gerektiği, seçenekleri ve **maliyetleri**
-kullanıcıya sunulacak; kullanıcı seçince plan + migration listesi sunulup onay beklenecek.
+**Sıradaki (kullanıcı kararı 2026-10-07):** paketler, abonelik, hesap paylaşımı koruması ve platform paneli — ayrı plan,
+kaynak: paketler tasarım sayfası (claude.ai artifact 5Mxqaa5YmxceQ3qi7xzPCq; artifact okuma aracıyla açılır). Kod yazmadan önce
+bu sayfa okunup kullanıcıya adım adım plan + migration listesi sunulacak; abonelik ödemesi (iyzico vb. sanal POS) dış servis
+olduğundan önce seçenekler ve **maliyetleri** sorulacak.
+**9. adım (Faz 4 entegrasyonlar: Nusuk / Masar, Diyanet, vize, NFC) en sona bırakıldı** — paketlerden sonra, yine önce seçenek + maliyet.
 **8. adım (WhatsApp tahsilat asistanı) kullanıcı kararıyla plandan çıkarıldı (2026-10-07).**
 **Bekleyen:** kullanıcı "küçük kusurlar var, sonra birlikte bakacağız" dedi (2026-10-07) — liste kullanıcıdan alınacak.
 
@@ -296,7 +298,7 @@ Yerleşim bilgisi (otel / oda / koltuk) yaka kartı, tur tablosu ve aile ekranı
       Demo paketi `tasarim-7b-on-kayit` (uydurma iki başvuru; link çıktıda). NFC çip okuma telefona uygulama ister, sonraya.
 8. ✖ WhatsApp tahsilat asistanı — kullanıcı kararıyla plandan çıkarıldı (2026-10-07), yapılmayacak.
 9. ⏳ Faz 4 entegrasyonlar + NFC (`tenant_integrations`, acente ayarından aç/kapa; önce seçenek / maliyet).
-   Son: paketler, hesap paylaşımı koruması, iyzico abonelik, platform paneli (ayrı plan).
+   **Sıradaki (öne alındı):** paketler, hesap paylaşımı koruması, abonelik (iyzico vb.), platform paneli (ayrı plan). 9. adım bundan sonra.
 
 ## Sıradaki iş (önerilen sıra)
 
