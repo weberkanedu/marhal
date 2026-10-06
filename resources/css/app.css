@@ -711,3 +711,7 @@
 .mx.fam-page .sched {
     overflow: visible;
 }
+/* Tur → Yolcular: ön kayıt kutusu (tasarımdaki "aitem" satırı). */
+.mx .aitem.signup-box p b {
+    font-weight: 600;
+}

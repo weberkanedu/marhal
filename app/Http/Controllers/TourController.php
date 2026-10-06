@@ -11,6 +11,11 @@ use App\Enums\TourStatus;
 use App\Enums\TourType;
 use App\Enums\UserRole;
 use App\Actions\Rooms\StayOccupancy;
+use App\Actions\Signup\SignupLinks;
+use App\Enums\SignupStatus;
+use App\Models\NeedType;
+use App\Models\SignupLink;
+use App\Models\SignupRequest;
 use App\Http\Requests\TourRequest;
 use App\Models\Bus;
 use App\Models\FamilyLink;
@@ -107,7 +112,7 @@ class TourController extends Controller
         return to_route('tours.show', $tour);
     }
 
-    public function show(Request $request, Tour $tour, CurrentTenant $currentTenant, TourJourney $journey, TourReadiness $readiness, NeedProfiles $profiles, StayOccupancy $occupancy, ReadinessBoard $board): Response
+    public function show(Request $request, Tour $tour, CurrentTenant $currentTenant, TourJourney $journey, TourReadiness $readiness, NeedProfiles $profiles, StayOccupancy $occupancy, ReadinessBoard $board, SignupLinks $signupLinks): Response
     {
         Gate::authorize('view', $tour);
 
@@ -207,6 +212,10 @@ class TourController extends Controller
             // Rehber tur genelini değil kendi grubunu görür; halkalar personele.
             'readiness' => fn () => $guideOf === null ? $this->readiness($readiness->for($tour, $currentTenant->get()), $finance) : null,
             // Hazırlık sekmesi (modül açıksa): sekme açılınca yüklenir; rehber yalnız kendi grupları.
+            // Telefonla ön kayıt (personel; modül açıksa): link, açılma / tamamlanma ve bekleyen başvurular.
+            'signup' => fn () => $guideOf === null && ($user?->can('update', $tour) ?? false) && ($currentTenant->get()?->hasFeature(Feature::OnlineSignup) ?? false)
+                ? $this->signupSummary($tour, $signupLinks)
+                : null,
             // Gün gün program (aile ekranı ve "Tur programı" çıktısı).
             'program' => fn () => $tour->programItems()->get()->map(fn (TourProgramItem $i) => [
                 'id' => $i->id,
@@ -297,6 +306,33 @@ class TourController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => "{$tour->name} silindi."]);
 
         return to_route('tours.index');
+    }
+
+    /**
+     * Ön kayıt özeti: etkin link, kaç kişi açtı, kaç başvuru geldi; bekleyen başvurular (şifreli alanlar burada çözülür).
+     *
+     * @return array<string, mixed>
+     */
+    private function signupSummary(Tour $tour, SignupLinks $links): array
+    {
+        $link = $links->current($tour);
+        $requests = SignupRequest::query()->where('tour_id', $tour->id)->latest()->get();
+        $needNames = NeedType::query()->pluck('name', 'id');
+
+        return [
+            'link' => $link ? ['url' => route('signup.show', $link->token), 'opened' => $link->opened_count] : null,
+            'opened' => (int) SignupLink::query()->where('tour_id', $tour->id)->sum('opened_count'),
+            'completed' => $requests->count(),
+            'pending' => array_values($requests->where('status', SignupStatus::Pending)->map(fn (SignupRequest $r) => [
+                'id' => $r->id,
+                ...$r->data,
+                'needs' => array_values(array_filter(array_map(fn (string $id) => $needNames[$id] ?? null, $r->needs ?? []))),
+                'read_from_passport' => $r->read_from_passport,
+                'created_at' => $r->created_at->toIso8601String(),
+                // Pasaport numarasıyla zaten kayıtlı bir kişi var mı (onayda o kişi kullanılır).
+                'existing' => filled($r->data['passport_no'] ?? null) && Person::query()->wherePassportNo((string) $r->data['passport_no'])->exists(),
+            ])->all()),
+        ];
     }
 
     /**

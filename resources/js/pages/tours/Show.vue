@@ -15,6 +15,7 @@ import RegistrationDialog from '@/components/tours/RegistrationDialog.vue';
 import FamilyLinkDialog from '@/components/tours/FamilyLinkDialog.vue';
 import ProgramTab from '@/components/tours/ProgramTab.vue';
 import ReadinessTab from '@/components/tours/ReadinessTab.vue';
+import SignupPanel from '@/components/tours/SignupPanel.vue';
 import StaysCard from '@/components/tours/StaysCard.vue';
 import { index as collectionsIndex } from '@/routes/collections';
 import { show as showPerson } from '@/routes/persons';
@@ -36,6 +37,7 @@ import type {
     JourneyStep,
     ProgramItem,
     ReadinessBoardData,
+    SignupSummary,
     RegistrationRow,
     TourGroup,
     TourReadinessSummary,
@@ -63,6 +65,8 @@ const props = defineProps<{
     // Hazırlık modülü kapalıysa null; açıksa sekme açılınca (ertelenmiş) gelir.
     readinessBoard?: ReadinessBoardData | null;
     program: ProgramItem[];
+    // Telefonla ön kayıt (personel, modül açıksa); değilse null.
+    signup: SignupSummary | null;
     options: TourShowOptions & {
         flightDirections: Option[];
         hotels: HotelOption[];
@@ -577,6 +581,12 @@ const badgeUrl = (id: string) =>
                 </div>
 
                 <template v-if="tab === 'yolcular'">
+                    <SignupPanel
+                        v-if="signup"
+                        :tour-id="tour.id"
+                        :tour-name="tour.name"
+                        :signup="signup"
+                    />
                     <div class="row">
                         <div class="search">
                             <MockIcon name="search" /><input

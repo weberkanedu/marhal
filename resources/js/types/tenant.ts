@@ -16,5 +16,6 @@ export type FeatureKey =
     | 'badge_generation'
     | 'readiness'
     | 'family_screen'
+    | 'online_signup'
     | 'advanced_reporting'
     | 'api_access';

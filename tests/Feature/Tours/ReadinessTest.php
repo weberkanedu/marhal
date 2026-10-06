@@ -125,7 +125,7 @@ class ReadinessTest extends TestCase
         $guide = User::factory()->forTenant($this->tenant)->role(UserRole::Guide)->create();
         $this->group->update(['guide_user_id' => $guide->id]);
         $mine = $this->registration();
-        $otherGroup = Group::factory()->create(['tour_id' => $this->tour->id]);
+        $otherGroup = Group::factory()->create(['tour_id' => $this->tour->id, 'name' => 'Z Grubu']);
         $theirs = $this->registration([], $otherGroup);
         $item = $this->item('Aşı');
 

@@ -233,7 +233,7 @@ Yerleşim bilgisi (otel / oda / koltuk) yaka kartı, tur tablosu ve aile ekranı
       SetRavzaAppointments). Ekran tasarımdaki kartın aynısı (madde hapları, `.tbl.mx` tablo, `.slots2` Ravza); hücre tıklaması
       anında görünür (async + iyimser güncelleme).
     - Acente ayarları → **Hazırlık maddeleri** (ekle, adını / türünü değiştir, kapat, yeni turlarda seçili). Demo paketi `tasarim-6-hazirlik`.
-7. 🔄 Aile ekranı + telefonla ön kayıt. Kararlar (2026-10-07): pasaport okuma **tarayıcıda, ücretsiz** (açık kaynak OCR; foto telefondan
+7. ✅ Aile ekranı + telefonla ön kayıt. Kararlar (2026-10-07): pasaport okuma **tarayıcıda, ücretsiz** (açık kaynak OCR; foto telefondan
    çıkmaz; Azure ≈ $10 / 1000 belge ve ticari SDK'lar seçenek olarak duruyor); tura **gün gün program** eklendi; aile linki için
    **personel yolcunun iznini işaretler**; ön kayıt başvurusunu **personel onaylar**.
     - ✅ 7a Program + aile ekranı. Migration `create_tour_program_and_family_links`: `tour_program_items` (gün, saat, etkinlik, yer),
@@ -244,7 +244,16 @@ Yerleşim bilgisi (otel / oda / koltuk) yaka kartı, tur tablosu ve aile ekranı
       oda arkadaşı), gün gün program (geçenler soluk ✓), rehber ve acentenin acil telefonu; kimlik / pasaport / sağlık / ödeme yok;
       `noindex`, `no-referrer`, dakikada 60 istek. Demo paketi `tasarim-7-aile-program` (çıktıda aile linki yazar).
     - Tur sayfası hızlandı: bütün parçalar istenince hesaplanıyor (kısmi yenileme ~2 sn → ~0,7 sn yerelde).
-    - ⏳ 7b Telefonla ön kayıt (tur linki, pasaport fotoğrafı → MRZ, onay listesi).
+    - ✅ 7b Telefonla ön kayıt. Migration `create_signup_links_and_requests`: `signup_links` (turda tek etkin link; token şifreli +
+      `token_hash`; açılma sayısı), `signup_requests` (kimlik alanları ve ihtiyaçlar **şifreli**; KVKK ve sağlık rızası tarihleri;
+      bekliyor / onaylandı / reddedildi), `Feature::OnlineSignup` bütün paketlerde. Herkese açık `/kayit/{token}` (4 adım, tasarımdaki
+      gibi): pasaport fotoğrafı **tarayıcıda** okunur (`lib/passportReader.ts`: tesseract.js + mrz; dosyalar kendi sunucumuzdan,
+      `vite.config.ts` → `public/vendor/tesseract`, git'e girmez; 60 sn'de okunamazsa elle doldurma), yolcu kontrol eder + telefon,
+      ihtiyaçlar (ayrı sağlık rızası), KVKK onayı. Kurallar `App\Actions\Signup` (SubmitSignupRequest: rıza / geçerli ihtiyaç /
+      aynı pasaportla tekrar başvuru yok; ReviewSignupRequest: onayda kayıtlı kişi pasaporttan bulunur ya da oluşturulur, tura
+      "Ön kayıt", ihtiyaçlar rızayla; onay / redden sonra başvuruda yalnız ad soyad kalır). Tur → Yolcular üstünde ön kayıt kutusu
+      (kopyala / WhatsApp / yenile / kapat, "N kişi açtı, M'i tamamladı") ve bekleyen başvurular (Onayla / Reddet).
+      Demo paketi `tasarim-7b-on-kayit` (uydurma iki başvuru; link çıktıda). NFC çip okuma telefona uygulama ister, sonraya.
 8. ⏳ WhatsApp tahsilat asistanı (önce sağlayıcı + sanal POS seçenekleri / maliyet).
 9. ⏳ Faz 4 entegrasyonlar + NFC (`tenant_integrations`, acente ayarından aç/kapa; önce seçenek / maliyet).
    Son: paketler, hesap paylaşımı koruması, iyzico abonelik, platform paneli (ayrı plan).

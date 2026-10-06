@@ -4,7 +4,43 @@ import tailwindcss from '@tailwindcss/vite';
 import vue from '@vitejs/plugin-vue';
 import laravel from 'laravel-vite-plugin';
 import { bunny } from 'laravel-vite-plugin/fonts';
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { defineConfig, lazyPlugins } from 'vite-plus';
+
+/**
+ * Telefonla ön kayıtta pasaportu okuyan açık kaynak yazı tanıma (tesseract.js) dosyaları kendi
+ * sunucumuzdan verilir (yolcunun telefonu başka bir siteye bağlanmasın): public/vendor/tesseract.
+ */
+function tesseractAssets() {
+    const copy = () => {
+        const dir = 'public/vendor/tesseract';
+        mkdirSync(`${dir}/lang`, { recursive: true });
+        const files: [string, string][] = [
+            [
+                'node_modules/tesseract.js/dist/worker.min.js',
+                `${dir}/worker.min.js`,
+            ],
+            [
+                'node_modules/@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz',
+                `${dir}/lang/eng.traineddata.gz`,
+            ],
+            ...['lstm', 'simd-lstm', 'relaxedsimd-lstm'].map(
+                (v): [string, string] => [
+                    `node_modules/tesseract.js-core/tesseract-core-${v}.wasm.js`,
+                    `${dir}/tesseract-core-${v}.wasm.js`,
+                ],
+            ),
+        ];
+
+        for (const [from, to] of files) {
+            if (existsSync(from)) {
+                copyFileSync(from, to);
+            }
+        }
+    };
+
+    return { name: 'marhal-tesseract-assets', buildStart: copy };
+}
 
 export default defineConfig({
     plugins: lazyPlugins(() => [
@@ -31,6 +67,7 @@ export default defineConfig({
         wayfinder({
             formVariants: true,
         }),
+        tesseractAssets(),
     ]),
     server: {
         ...(process.env.VITE_IN_DOCKER

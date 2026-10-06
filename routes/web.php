@@ -29,9 +29,11 @@ use App\Http\Controllers\RoomController;
 use App\Http\Controllers\RoomPlanController;
 use App\Http\Controllers\SeatAssignmentController;
 use App\Http\Controllers\PublicFamilyController;
+use App\Http\Controllers\PublicSignupController;
 use App\Http\Controllers\ReadinessItemController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SeatPlanController;
+use App\Http\Controllers\SignupController;
 use App\Http\Controllers\TourBadgeController;
 use App\Http\Controllers\TourProgramController;
 use App\Http\Controllers\TourReadinessController;
@@ -46,6 +48,9 @@ Route::get('/', fn () => auth()->check() ? to_route('dashboard') : to_route('log
 
 // Aile ekranı (giriş gerektirmez; link yolcunun izniyle personel tarafından verilir)
 Route::get('aile/{token}', PublicFamilyController::class)->middleware('throttle:60,1')->where('token', '[A-Za-z0-9]{16,64}')->name('family.show');
+// Telefonla ön kayıt (giriş gerektirmez; acentenin gönderdiği tur linki)
+Route::get('kayit/{token}', [PublicSignupController::class, 'show'])->middleware('throttle:60,1')->where('token', '[A-Za-z0-9]{16,64}')->name('signup.show');
+Route::post('kayit/{token}', [PublicSignupController::class, 'store'])->middleware('throttle:10,1')->where('token', '[A-Za-z0-9]{16,64}')->name('signup.store');
 
 // Acente ekranları
 Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
@@ -99,6 +104,12 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::middleware('feature:family_screen')->group(function () {
             Route::post('registrations/{registration}/family-link', [FamilyLinkController::class, 'store'])->name('registrations.family-link.store');
             Route::delete('family-links/{link}', [FamilyLinkController::class, 'destroy'])->name('family-links.destroy');
+        });
+        Route::middleware('feature:online_signup')->group(function () {
+            Route::post('tours/{tour}/signup-link', [SignupController::class, 'link'])->name('tours.signup-link');
+            Route::delete('tours/{tour}/signup-link', [SignupController::class, 'close'])->name('tours.signup-link.close');
+            Route::post('signup-requests/{signupRequest}/approve', [SignupController::class, 'approve'])->name('signup-requests.approve');
+            Route::post('signup-requests/{signupRequest}/reject', [SignupController::class, 'reject'])->name('signup-requests.reject');
         });
 
         // Turlar, gruplar ve kayıtlar

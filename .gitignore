@@ -46,3 +46,4 @@ yarn-error.log
 .env.staging
 .env.production
 public/_tasarim.html
+/public/vendor/tesseract

@@ -214,6 +214,7 @@ class TenantController extends Controller
             Feature::BadgeGeneration => 'Yaka kartı',
             Feature::Readiness => 'Hazırlık takibi',
             Feature::FamilyScreen => 'Aile ekranı',
+            Feature::OnlineSignup => 'Telefonla ön kayıt',
             Feature::AdvancedReporting => 'Gelişmiş raporlar',
             Feature::ApiAccess => 'API erişimi',
         };

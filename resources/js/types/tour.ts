@@ -178,3 +178,26 @@ export type ProgramItem = {
     title: string;
     place: string | null;
 };
+
+/** Tur → telefonla ön kayıt özeti (personel). */
+export type SignupSummary = {
+    link: { url: string; opened: number } | null;
+    opened: number;
+    completed: number;
+    pending: {
+        id: string;
+        first_name: string;
+        last_name: string;
+        gender: string;
+        birth_date: string | null;
+        nationality: string;
+        passport_no: string | null;
+        passport_expiry_date: string | null;
+        phone: string;
+        email?: string | null;
+        needs: string[];
+        read_from_passport: boolean;
+        created_at: string;
+        existing: boolean;
+    }[];
+};

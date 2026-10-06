@@ -11,6 +11,7 @@ use Database\Seeders\Demo\FamilyProgramDemo;
 use Database\Seeders\Demo\FixParentAgesDemo;
 use Database\Seeders\Demo\FlightDemo;
 use Database\Seeders\Demo\NeedsFloorsDemo;
+use Database\Seeders\Demo\OnlineSignupDemo;
 use Database\Seeders\Demo\ReadinessDemo;
 use Database\Seeders\Demo\RoomPlanDemo;
 use Database\Seeders\Demo\ScreensDemo;
@@ -43,6 +44,7 @@ class UpdateDemoData extends Command
         'tasarim-5-yaka-karti' => BadgeRenewalDemo::class,
         'tasarim-6-hazirlik' => ReadinessDemo::class,
         'tasarim-7-aile-program' => FamilyProgramDemo::class,
+        'tasarim-7b-on-kayit' => OnlineSignupDemo::class,
     ];
 
     public function handle(CurrentTenant $currentTenant): int
