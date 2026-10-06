@@ -1,20 +1,19 @@
 <script setup lang="ts">
-import { Form, Head, Link } from '@inertiajs/vue3';
+import { Form, Head, Link, router } from '@inertiajs/vue3';
 import { Building2 } from '@lucide/vue';
 import { ref } from 'vue';
 import TenantController from '@/actions/App/Http/Controllers/Platform/TenantController';
+import TenantSubscriptionController from '@/actions/App/Http/Controllers/Platform/TenantSubscriptionController';
 import InputError from '@/components/InputError.vue';
+import MockTop from '@/components/mock/MockTop.vue';
+import PaymentReceivedDialog from '@/components/platform/PaymentReceivedDialog.vue';
+import type {
+    PaymentOptions,
+    PaymentTarget,
+} from '@/components/platform/PaymentReceivedDialog.vue';
 import TenantFields from '@/components/platform/TenantFields.vue';
 import type { TenantOptions } from '@/components/platform/TenantFields.vue';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -25,26 +24,31 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { formatDate } from '@/lib/format';
 import { index as tenantsIndex, show } from '@/routes/platform/tenants';
+
+type Usage = { used: number; limit: number | null };
 
 type TenantRow = {
     id: string;
     name: string;
-    plan: string;
-    status: string;
-    state: { label: string; tone: string };
-    requested_plan: string | null;
-    users_count: number;
-    accessible: boolean;
-    trial_ends_at: string | null;
-    subscription_ends_at: string | null;
-    created_at: string | null;
+    city: string | null;
+    plan: { id: string; name: string };
+    state: { value: string; label: string; tone: string };
+    renewal: string;
+    usage: { passengers: Usage; staff: Usage };
+    request: {
+        plan_id: string;
+        plan: string;
+        billing_cycle: string | null;
+        billing_cycle_label: string | null;
+    } | null;
+    billing_cycle: string | null;
 };
 
 defineProps<{
     tenants: TenantRow[];
     options: TenantOptions;
+    paymentOptions: PaymentOptions;
 }>();
 
 defineOptions({
@@ -53,96 +57,153 @@ defineOptions({
     },
 });
 
+const pct = (u: Usage) =>
+    u.limit ? Math.min(100, Math.round((u.used / u.limit) * 100)) : 0;
+const limitText = (u: Usage) =>
+    u.limit === null ? '∞' : u.limit.toLocaleString('tr-TR');
+
+// "Ödeme geldi" talep, gecikme ya da salt okunur durumda gösterilir (tasarımdaki gibi).
+const needsPayment = (t: TenantRow) =>
+    t.request !== null || ['gecikmede', 'salt_okunur'].includes(t.state.value);
+
+const paying = ref<PaymentTarget | null>(null);
+
+function openPayment(t: TenantRow): void {
+    paying.value = {
+        id: t.id,
+        name: t.name,
+        planId: t.request?.plan_id ?? t.plan.id,
+        cycle: t.request?.billing_cycle ?? t.billing_cycle,
+    };
+}
+
+function extend(t: TenantRow): void {
+    router.post(
+        TenantSubscriptionController.extend.url(t.id),
+        {},
+        { preserveScroll: true },
+    );
+}
+
 const createOpen = ref(false);
 </script>
 
 <template>
     <Head title="Acenteler" />
 
-    <div class="flex h-full flex-1 flex-col gap-4 overflow-x-auto p-4">
-        <Card>
-            <CardHeader class="flex flex-row items-start justify-between">
-                <div>
-                    <CardTitle>Acenteler</CardTitle>
-                    <CardDescription>
-                        Sistemi kullanan tüm acenteler ve paketleri
-                    </CardDescription>
-                </div>
-                <Button @click="createOpen = true">
+    <div class="mx">
+        <div class="main">
+            <MockTop :crumbs="[{ label: 'Platform' }]" title="Acenteler">
+                <button class="btn" type="button" @click="createOpen = true">
                     <Building2 /> Yeni acente
-                </Button>
-            </CardHeader>
-            <CardContent class="overflow-x-auto">
-                <p
-                    v-if="tenants.length === 0"
-                    class="text-sm text-muted-foreground"
-                >
-                    Henüz acente yok.
-                </p>
-                <table v-else class="w-full text-sm whitespace-nowrap">
-                    <thead class="text-left text-muted-foreground">
-                        <tr class="border-b">
-                            <th class="py-2 font-medium">Acente</th>
-                            <th class="py-2 font-medium">Paket</th>
-                            <th class="py-2 font-medium">Durum</th>
-                            <th class="py-2 font-medium">Bitiş</th>
-                            <th class="py-2 text-right font-medium">
-                                Aktif kullanıcı
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="tenant in tenants"
-                            :key="tenant.id"
-                            class="border-b last:border-0"
-                        >
-                            <td class="py-2 font-medium">
-                                <Link
-                                    :href="show(tenant.id)"
-                                    class="hover:underline"
-                                >
-                                    {{ tenant.name }}
-                                </Link>
-                            </td>
-                            <td class="py-2">{{ tenant.plan }}</td>
-                            <td class="py-2">
-                                <Badge
-                                    :variant="
-                                        tenant.state.tone === 'danger'
-                                            ? 'destructive'
-                                            : tenant.state.tone === 'ok'
-                                              ? 'secondary'
-                                              : 'outline'
-                                    "
-                                >
-                                    {{ tenant.state.label }}
-                                </Badge>
-                                <Badge
-                                    v-if="tenant.requested_plan"
-                                    variant="outline"
-                                    class="ml-1"
-                                    >Talep: {{ tenant.requested_plan }}</Badge
-                                >
-                            </td>
-                            <td class="py-2 text-muted-foreground">
-                                {{
-                                    tenant.status === 'trial'
-                                        ? formatDate(tenant.trial_ends_at)
-                                        : formatDate(
-                                              tenant.subscription_ends_at,
-                                          )
-                                }}
-                            </td>
-                            <td class="py-2 text-right tabular-nums">
-                                {{ tenant.users_count }}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </CardContent>
-        </Card>
+                </button>
+            </MockTop>
+
+            <div class="card">
+                <p v-if="tenants.length === 0" class="lbl">Henüz acente yok.</p>
+                <div v-else class="tbl">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Acente</th>
+                                <th>Paket</th>
+                                <th>Durum</th>
+                                <th>Yenileme</th>
+                                <th>Kullanım</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="t in tenants" :key="t.id">
+                                <td>
+                                    <Link :href="show(t.id)"
+                                        ><b>{{ t.name }}</b></Link
+                                    ><br /><span class="lbl">{{
+                                        t.city ?? '—'
+                                    }}</span>
+                                    <span v-if="t.request" class="chip acc"
+                                        >Talep: {{ t.request.plan }} ·
+                                        {{
+                                            t.request.billing_cycle_label
+                                        }}</span
+                                    >
+                                </td>
+                                <td>{{ t.plan.name }}</td>
+                                <td>
+                                    <span class="chip" :class="t.state.tone">{{
+                                        t.state.label
+                                    }}</span>
+                                </td>
+                                <td class="lbl">{{ t.renewal }}</td>
+                                <td>
+                                    <div class="usage">
+                                        Yolcu
+                                        {{
+                                            t.usage.passengers.used.toLocaleString(
+                                                'tr-TR',
+                                            )
+                                        }}
+                                        / {{ limitText(t.usage.passengers) }}
+                                        <div class="bar">
+                                            <i
+                                                :class="{
+                                                    hi:
+                                                        pct(
+                                                            t.usage.passengers,
+                                                        ) > 85,
+                                                }"
+                                                :style="{
+                                                    width: `${pct(t.usage.passengers)}%`,
+                                                }"
+                                            />
+                                        </div>
+                                        Personel {{ t.usage.staff.used }} /
+                                        {{ limitText(t.usage.staff) }}
+                                        <div class="bar">
+                                            <i
+                                                :class="{
+                                                    hi: pct(t.usage.staff) > 85,
+                                                }"
+                                                :style="{
+                                                    width: `${pct(t.usage.staff)}%`,
+                                                }"
+                                            />
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="row-acts">
+                                        <button
+                                            v-if="needsPayment(t)"
+                                            class="btn ghost sm"
+                                            type="button"
+                                            @click="openPayment(t)"
+                                        >
+                                            Ödeme geldi
+                                        </button>
+                                        <button
+                                            v-if="t.state.value !== 'askida'"
+                                            class="btn ghost sm"
+                                            type="button"
+                                            @click="extend(t)"
+                                        >
+                                            +7 gün
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <PaymentReceivedDialog
+        :target="paying"
+        :options="paymentOptions"
+        @close="paying = null"
+    />
 
     <Dialog v-model:open="createOpen">
         <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-2xl">

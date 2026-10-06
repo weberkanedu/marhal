@@ -60,6 +60,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
 
     // "Görüşünü paylaş" (her kullanıcı)
     Route::post('feedback', [FeedbackController::class, 'store'])->middleware('throttle:10,1')->name('feedback.store');
+    Route::get('feedback/mine', [FeedbackController::class, 'mine'])->middleware('throttle:30,1')->name('feedback.mine');
 
     // Yan menüdeki "Ara" (Ctrl K): yolcu ve tur
     Route::get('search', SearchController::class)->middleware('throttle:60,1')->name('search');
@@ -268,6 +269,7 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
     ->name('platform.')
     ->group(function () {
         Route::get('feedback', [FeedbackController::class, 'index'])->name('feedback.index');
+        Route::post('feedback/{feedback}/reply', [FeedbackController::class, 'reply'])->name('feedback.reply');
         Route::get('plans', [PlanController::class, 'index'])->name('plans.index');
         Route::put('plans/{plan}', [PlanController::class, 'update'])->name('plans.update');
         Route::get('tenants', [TenantController::class, 'index'])->name('tenants.index');

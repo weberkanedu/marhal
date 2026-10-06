@@ -122,9 +122,19 @@ const actions = computed(() => {
 const mainNavItems = computed<NavItem[]>(() => {
     if (isSuperAdmin.value) {
         return [
-            { title: 'Acenteler', href: tenantsIndex(), icon: Building2 },
+            {
+                title: 'Acenteler',
+                href: tenantsIndex(),
+                icon: Building2,
+                count: page.props.platformCounts?.tenants,
+            },
             { title: 'Paketler', href: plansIndex(), icon: Package },
-            { title: 'Geri bildirimler', href: feedbackIndex(), icon: Inbox },
+            {
+                title: 'Geri bildirimler',
+                href: feedbackIndex(),
+                icon: Inbox,
+                count: page.props.platformCounts?.feedback,
+            },
         ];
     }
 
@@ -224,7 +234,10 @@ const mainNavItems = computed<NavItem[]>(() => {
                     :class="{ on: item.isActive ?? isCurrentUrl(item.href) }"
                     @click="isMobile && setOpenMobile(false)"
                 >
-                    <MockIcon :name="iconFor(item.title)" />{{ item.title }}
+                    <MockIcon :name="iconFor(item.title)" />{{ item.title
+                    }}<span v-if="item.count" class="cnt">{{
+                        item.count
+                    }}</span>
                 </Link>
             </nav>
             <DropdownMenu>

@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { router, usePage } from '@inertiajs/vue3';
 import { computed, nextTick, ref } from 'vue';
-import { store } from '@/routes/feedback';
+import { mine as mineRoute, store } from '@/routes/feedback';
 
 /**
  * "Görüşünü paylaş" — tasarımdaki sağ alttaki yuvarlak düğme ve açılan panel: konu, memnuniyet
  * yıldızı, mesaj, "bulunduğum ekranı ekle", "bana dönüş yapılsın"; gönderince takip numaralı
  * teşekkür ekranı. Ekran bilgisi yalnız adres yolu olarak gider (sorgu parametresi gönderilmez).
+ * "Gönderdiklerim": kullanıcının kendi gönderdikleri, durumu ve platformun yanıtı; yeni yanıt gelince
+ * düğmede nokta yanar, liste açılınca söner (kullanıcı kararı 2026-10-07).
  */
 const page = usePage();
 
@@ -36,12 +38,55 @@ const error = ref<string | null>(null);
 const trackingNo = ref<number | null>(null);
 const textarea = ref<HTMLTextAreaElement | null>(null);
 
+type SentItem = {
+    id: number;
+    tracking: string;
+    type_label: string;
+    message: string;
+    status: string;
+    status_label: string;
+    reply: string | null;
+    replied_at: string | null;
+    unseen: boolean;
+    created_at: string;
+};
+
+const view = ref<'form' | 'mine'>('form');
+const sent = ref<SentItem[] | null>(null);
+const unread = computed(() => page.props.feedbackUnread ?? 0);
+
+async function showMine(): Promise<void> {
+    view.value = 'mine';
+    sent.value = null;
+
+    try {
+        const res = await fetch(mineRoute.url(), {
+            headers: { Accept: 'application/json' },
+        });
+        sent.value = res.ok ? ((await res.json()).items as SentItem[]) : [];
+    } catch {
+        sent.value = [];
+    }
+
+    // Yanıtlar görüldü: düğmedeki nokta sönsün.
+    if (unread.value > 0) {
+        router.reload({ only: ['feedbackUnread'] });
+    }
+}
+
+const day = (iso: string) =>
+    new Date(iso).toLocaleDateString('tr-TR', {
+        day: 'numeric',
+        month: 'short',
+    });
+
 const user = computed(() => page.props.auth.user);
 const firstName = computed(() => (user.value?.name ?? '').split(' ')[0]);
 const screenName = computed(() => document.title.split(' - ')[0] || 'Bu ekran');
 
 function reset(): void {
     step.value = 'form';
+    view.value = 'form';
     type.value = 'oneri';
     rate.value = 0;
     text.value = '';
@@ -144,9 +189,24 @@ const tracking = computed(() =>
                     >Takip no · {{ tracking }}</span
                 >
                 <p style="font-size: 12px">
-                    Fikirleriniz Marhal'ı birlikte büyütüyor.
+                    Fikirleriniz Marhal'ı birlikte büyütüyor. Durumunu
+                    "Gönderdiklerim" bölümünden takip edebilirsiniz.
                 </p>
-                <button class="btn" type="button" @click="close">Kapat</button>
+                <div class="btns">
+                    <button
+                        class="btn ghost"
+                        type="button"
+                        @click="
+                            step = 'form';
+                            showMine();
+                        "
+                    >
+                        Gönderdiklerim
+                    </button>
+                    <button class="btn" type="button" @click="close">
+                        Kapat
+                    </button>
+                </div>
             </div>
             <template v-else>
                 <div class="fbhead">
@@ -155,8 +215,56 @@ const tracking = computed(() =>
                         Marhal'ı her gün kullanan sizsiniz. Ne düşündüğünüzü
                         doğrudan ürün ekibine iletin.
                     </p>
+                    <div class="seg fbswitch" role="group" aria-label="Bölüm">
+                        <button
+                            type="button"
+                            :aria-pressed="view === 'form'"
+                            @click="view = 'form'"
+                        >
+                            Yeni görüş
+                        </button>
+                        <button
+                            type="button"
+                            :aria-pressed="view === 'mine'"
+                            @click="showMine"
+                        >
+                            Gönderdiklerim<em v-if="unread"
+                                >{{ unread }} yanıt</em
+                            >
+                        </button>
+                    </div>
                 </div>
-                <form class="fbbody" @submit.prevent="send">
+                <div v-if="view === 'mine'" class="fbbody fbmine">
+                    <p v-if="sent === null" class="lbl">Yükleniyor…</p>
+                    <p v-else-if="sent.length === 0" class="lbl">
+                        Henüz bir şey göndermediniz.
+                    </p>
+                    <div v-for="item in sent ?? []" :key="item.id" class="sent">
+                        <div class="sent-head">
+                            <span class="chip">{{ item.type_label }}</span>
+                            <span class="lbl"
+                                >{{ item.tracking }} ·
+                                {{ day(item.created_at) }}</span
+                            >
+                            <span
+                                class="chip"
+                                :class="
+                                    item.status === 'yanitlandi' ? 'ok' : 'acc'
+                                "
+                                >{{ item.status_label }}</span
+                            >
+                        </div>
+                        <p>{{ item.message }}</p>
+                        <div
+                            v-if="item.reply"
+                            class="sent-reply"
+                            :class="{ fresh: item.unseen }"
+                        >
+                            <b>Marhal ekibi:</b> {{ item.reply }}
+                        </div>
+                    </div>
+                </div>
+                <form v-else class="fbbody" @submit.prevent="send">
                     <div class="fbtypes" role="group" aria-label="Konu">
                         <button
                             v-for="t in TYPES"
@@ -279,7 +387,8 @@ const tracking = computed(() =>
                     fill="currentColor"
                     stroke="none"
                 /></svg
-            ><span>Görüşünü paylaş</span>
+            ><span>Görüşünü paylaş</span
+            ><i v-if="unread" class="fbdot" aria-label="Yeni yanıt var" />
         </button>
     </div>
 </template>

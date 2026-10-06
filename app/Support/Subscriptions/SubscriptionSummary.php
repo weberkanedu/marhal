@@ -83,6 +83,44 @@ class SubscriptionSummary
         ];
     }
 
+    /**
+     * Platform → Acenteler tablosunun satırı (tasarımdaki "Yenileme" metni ve kullanım çubukları).
+     *
+     * @return array<string, mixed>
+     */
+    public function row(Tenant $tenant): array
+    {
+        $state = $tenant->subscriptionState();
+        $now = CarbonImmutable::now();
+        $since = fn (?CarbonImmutable $from) => $from === null ? 0 : max(1, (int) ceil($from->diffInHours($now) / 24));
+
+        $renewal = match ($state) {
+            SubscriptionState::Trial => $tenant->trial_ends_at === null ? 'Deneme · süresiz'
+                : 'Deneme · '.self::daysLeft($tenant->trial_ends_at).' gün kaldı',
+            SubscriptionState::Active => $tenant->subscription_ends_at?->translatedFormat('j M Y') ?? 'Süresiz',
+            SubscriptionState::PastDue => 'Ödeme bekleniyor · '.$since($tenant->subscription_ends_at).'. gün',
+            SubscriptionState::ReadOnly => 'Salt okunur · '.$since($tenant->status === TenantStatus::Trial
+                ? $tenant->trial_ends_at : $tenant->graceEndsAt()).' gündür',
+            SubscriptionState::Suspended => 'Elle askıya alındı',
+        };
+
+        return [
+            'state' => ['value' => $state->value, 'label' => $state->label(), 'tone' => $state->tone()],
+            'renewal' => $renewal,
+            'usage' => [
+                'passengers' => ['used' => $this->quota->used($tenant), 'limit' => $tenant->plan->passenger_limit],
+                'staff' => ['used' => $tenant->staffCount(), 'limit' => $tenant->plan->user_limit],
+            ],
+            'request' => $tenant->requestedPlan ? [
+                'plan_id' => $tenant->requestedPlan->id,
+                'plan' => $tenant->requestedPlan->name,
+                'billing_cycle' => $tenant->requested_billing_cycle?->value,
+                'billing_cycle_label' => $tenant->requested_billing_cycle?->label(),
+            ] : null,
+            'billing_cycle' => $tenant->billing_cycle?->value,
+        ];
+    }
+
     private static function daysLeft(CarbonImmutable $end): int
     {
         return max(0, (int) ceil(CarbonImmutable::now()->diffInHours($end, false) / 24));

@@ -27,7 +27,7 @@ class AgencySettingsController extends Controller
 
         return Inertia::render('agency/Edit', [
             'agency' => [
-                ...$tenant->only(['name', 'phone', 'email', 'website', 'address', 'tursab_no', 'default_currency']),
+                ...$tenant->only(['name', 'phone', 'email', 'website', 'address', 'city', 'tursab_no', 'default_currency']),
                 'logo_url' => $tenant->logo_path ? route('agency.logo').'?v='.$tenant->updated_at?->timestamp : null,
                 'plan' => $tenant->plan->name,
             ],
@@ -46,6 +46,7 @@ class AgencySettingsController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'website' => ['nullable', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:1000'],
+            'city' => ['nullable', 'string', 'max:80'],
             'tursab_no' => ['nullable', 'string', 'max:30'],
             'default_currency' => ['required', Rule::in(config('marhal.currencies'))],
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],

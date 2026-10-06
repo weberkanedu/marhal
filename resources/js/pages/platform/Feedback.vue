@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
-import { Star } from '@lucide/vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import FeedbackController from '@/actions/App/Http/Controllers/FeedbackController';
+import MockTop from '@/components/mock/MockTop.vue';
 import { index } from '@/routes/platform/feedback';
 import type { Paginated } from '@/types/person';
 
 type FeedbackRow = {
     id: number;
+    tracking: string;
     tenant: string;
     user: string | null;
     type: 'oneri' | 'hata' | 'soru' | 'begeni';
@@ -16,11 +16,14 @@ type FeedbackRow = {
     rating: number | null;
     message: string;
     screen: string | null;
-    status: string;
+    wants_reply: boolean;
+    status: 'yeni' | 'yanitlandi';
+    reply: string | null;
+    replied_at: string | null;
     created_at: string;
 };
 
-defineProps<{ items: Paginated<FeedbackRow> }>();
+defineProps<{ items: Paginated<FeedbackRow>; newCount: number }>();
 
 defineOptions({
     layout: {
@@ -28,12 +31,13 @@ defineOptions({
     },
 });
 
-const variant = {
-    oneri: 'secondary',
-    hata: 'destructive',
-    soru: 'outline',
-    begeni: 'default',
-} as const;
+/** Tasarımdaki rozet renkleri: Sorun turuncu, Teşekkür yeşil, öneri / soru altın. */
+const tone: Record<FeedbackRow['type'], string> = {
+    hata: 'warning',
+    begeni: 'ok',
+    oneri: 'acc',
+    soru: 'acc',
+};
 
 const when = (iso: string) =>
     new Date(iso).toLocaleString('tr-TR', {
@@ -42,104 +46,146 @@ const when = (iso: string) =>
         hour: '2-digit',
         minute: '2-digit',
     });
+
+const editing = ref<number | null>(null);
+const draft = ref('');
+const sending = ref(false);
+
+function startReply(item: FeedbackRow): void {
+    editing.value = item.id;
+    draft.value = item.reply ?? '';
+}
+
+function send(item: FeedbackRow): void {
+    sending.value = true;
+    router.post(
+        FeedbackController.reply.url(item.id),
+        { reply: draft.value },
+        {
+            preserveScroll: true,
+            onSuccess: () => (editing.value = null),
+            onFinish: () => (sending.value = false),
+        },
+    );
+}
 </script>
 
 <template>
     <Head title="Geri bildirimler" />
 
-    <div class="flex flex-col gap-4 p-4">
-        <div>
-            <h1 class="text-2xl font-semibold tracking-tight">
-                Geri bildirimler
-            </h1>
-            <p class="text-sm text-muted-foreground">
-                Acentelerin "Görüşünü paylaş" ile gönderdikleri. Yanıtlama ve
-                durum takibi platform paneli aşamasında eklenecek.
+    <div class="mx">
+        <div class="main">
+            <MockTop
+                :crumbs="[{ label: 'Platform' }]"
+                title="Geri bildirimler"
+            />
+            <p class="lbl">
+                Uygulamadaki "Görüşünü paylaş" düğmesinden gelenler; yanıt
+                bekleyenler üstte ({{ newCount }}). Yanıtınız kullanıcının
+                "Gönderdiklerim" bölümünde görünür; e-posta servisi bağlanınca
+                e-postayla da gidecek.
             </p>
-        </div>
 
-        <Card class="py-0">
-            <CardContent class="p-0">
-                <p
-                    v-if="items.data.length === 0"
-                    class="p-8 text-center text-sm text-muted-foreground"
-                >
-                    Henüz geri bildirim yok.
-                </p>
-                <ul v-else class="divide-y">
-                    <li
-                        v-for="item in items.data"
-                        :key="item.id"
-                        class="grid gap-1.5 px-4 py-3"
-                    >
-                        <div class="flex flex-wrap items-center gap-2 text-sm">
-                            <span
-                                class="font-mono text-xs text-muted-foreground"
-                                >#{{ item.id }}</span
-                            >
-                            <Badge :variant="variant[item.type]">
-                                {{ item.type_label }}
-                            </Badge>
-                            <span class="font-medium">{{ item.tenant }}</span>
-                            <span class="text-muted-foreground">
-                                {{ item.user ?? '—' }} ·
-                                {{ when(item.created_at) }}
-                            </span>
+            <p v-if="items.data.length === 0" class="card lbl">
+                Henüz geri bildirim yok.
+            </p>
+            <div v-else class="inbox">
+                <div v-for="item in items.data" :key="item.id" class="msg">
+                    <div>
+                        <div class="meta">
+                            <span class="chip" :class="tone[item.type]">{{
+                                item.type_label
+                            }}</span>
                             <span
                                 v-if="item.rating"
-                                class="ml-auto flex items-center gap-0.5"
+                                class="stars"
                                 :aria-label="`${item.rating} yıldız`"
+                                >{{ '★'.repeat(item.rating)
+                                }}{{ '☆'.repeat(5 - item.rating) }}</span
                             >
-                                <Star
-                                    v-for="n in 5"
-                                    :key="n"
-                                    class="size-3.5"
-                                    :class="
-                                        n <= item.rating
-                                            ? 'fill-primary text-primary'
-                                            : 'text-muted-foreground'
-                                    "
-                                />
-                            </span>
+                            <span
+                                >{{ item.tenant }} ·
+                                {{ item.user ?? 'silinmiş kullanıcı' }}</span
+                            >
+                            <span v-if="item.screen"
+                                >Ekran: {{ item.screen }}</span
+                            >
+                            <span>{{ item.tracking }}</span>
+                            <span>{{ when(item.created_at) }}</span>
+                            <span v-if="item.wants_reply" class="chip"
+                                >Dönüş bekliyor</span
+                            >
                         </div>
-                        <p class="text-sm whitespace-pre-line">
-                            {{ item.message }}
-                        </p>
-                        <p
-                            v-if="item.screen"
-                            class="font-mono text-xs text-muted-foreground"
+                        <p class="text">{{ item.message }}</p>
+                    </div>
+                    <div class="act">
+                        <button
+                            v-if="item.status === 'yeni' && editing !== item.id"
+                            class="btn"
+                            type="button"
+                            @click="startReply(item)"
                         >
-                            Ekran: {{ item.screen }}
-                        </p>
-                    </li>
-                </ul>
-            </CardContent>
-        </Card>
+                            Yanıtla
+                        </button>
+                        <span
+                            v-else-if="item.status === 'yanitlandi'"
+                            class="chip ok"
+                            >Yanıtlandı</span
+                        >
+                    </div>
+                    <form
+                        v-if="editing === item.id"
+                        class="reply-form"
+                        @submit.prevent="send(item)"
+                    >
+                        <textarea
+                            v-model="draft"
+                            rows="3"
+                            maxlength="3000"
+                            aria-label="Yanıtınız"
+                            placeholder="Yanıtınız"
+                            required
+                        />
+                        <div class="btns">
+                            <button
+                                class="btn ghost sm"
+                                type="button"
+                                @click="editing = null"
+                            >
+                                Vazgeç
+                            </button>
+                            <button
+                                class="btn sm"
+                                type="submit"
+                                :disabled="sending || draft.trim().length < 2"
+                            >
+                                Yanıtı gönder
+                            </button>
+                        </div>
+                    </form>
+                    <div v-else-if="item.reply" class="reply">
+                        <b>Yanıtın:</b> {{ item.reply }}
+                        <a role="button" tabindex="0" @click="startReply(item)"
+                            >Düzelt</a
+                        >
+                    </div>
+                </div>
+            </div>
 
-        <div
-            v-if="items.last_page > 1"
-            class="flex items-center justify-end gap-2"
-        >
-            <Button
-                variant="outline"
-                size="sm"
-                :disabled="!items.prev_page_url"
-                @click="
-                    items.prev_page_url && router.visit(items.prev_page_url)
-                "
-            >
-                Önceki
-            </Button>
-            <Button
-                variant="outline"
-                size="sm"
-                :disabled="!items.next_page_url"
-                @click="
-                    items.next_page_url && router.visit(items.next_page_url)
-                "
-            >
-                Sonraki
-            </Button>
+            <div v-if="items.last_page > 1" class="btns">
+                <Link
+                    v-if="items.prev_page_url"
+                    class="btn ghost sm"
+                    :href="items.prev_page_url"
+                    >← Yeniler</Link
+                >
+                <Link
+                    v-if="items.next_page_url"
+                    class="btn ghost sm"
+                    :href="items.next_page_url"
+                    >Eskiler →</Link
+                >
+            </div>
         </div>
     </div>
 </template>

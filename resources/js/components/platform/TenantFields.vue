@@ -25,6 +25,7 @@ export type TenantValues = {
     phone?: string | null;
     email?: string | null;
     tursab_no?: string | null;
+    city?: string | null;
 };
 
 defineProps<{
@@ -113,6 +114,15 @@ const limitText = (n: number | null) => (n === null ? 'sınırsız' : String(n))
                     {{ currency }}
                 </option>
             </select>
+        </div>
+        <div class="grid gap-2">
+            <Label for="t-city">Şehir</Label>
+            <Input
+                id="t-city"
+                name="city"
+                :default-value="values.city ?? undefined"
+            />
+            <InputError :message="errors.city" />
         </div>
         <div class="grid gap-2">
             <Label for="t-tursab">TÜRSAB no</Label>

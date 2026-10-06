@@ -23,6 +23,8 @@ declare module '@inertiajs/core' {
             sidebarOpen: boolean;
             tenant: Tenant | null;
             features: FeatureKey[];
+            feedbackUnread: number;
+            platformCounts: { tenants: number; feedback: number } | null;
             subscription: {
                 state: string;
                 label: string;

@@ -34,6 +34,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $email
  * @property string|null $website
  * @property string|null $address
+ * @property string|null $city
  * @property string|null $logo_path
  * @property BillingCycle|null $billing_cycle
  * @property Carbon|null $subscription_started_at

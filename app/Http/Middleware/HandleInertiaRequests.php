@@ -2,6 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\FeedbackStatus;
+use App\Enums\SubscriptionState;
+use App\Models\Feedback;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\Subscriptions\SubscriptionSummary;
@@ -51,6 +54,17 @@ class HandleInertiaRequests extends Middleware
             'tenant' => fn () => $this->tenant($request)?->only(['id', 'name', 'default_currency']),
             'features' => fn () => $this->tenant($request)?->enabledFeatures() ?? [],
             // Deneme / gecikmede / salt okunur uyarı şeridi (SubscriptionSummary).
+            // "Görüşünü paylaş" düğmesindeki yeni yanıt noktası.
+            'feedbackUnread' => fn () => $this->tenant($request) && $request->user()
+                ? Feedback::query()->where('user_id', $request->user()->id)
+                    ->where('status', FeedbackStatus::Replied)->whereNull('reply_seen_at')->count()
+                : 0,
+            // Platform menüsündeki sayılar: ilgilenilecek acente (talep, gecikmede, salt okunur), yanıtlanmamış geri bildirim.
+            'platformCounts' => fn () => $request->user()?->isSuperAdmin() ? [
+                'tenants' => Tenant::query()->with('plan')->get()->filter(fn (Tenant $t) => $t->requested_plan_id !== null
+                    || in_array($t->subscriptionState(), [SubscriptionState::PastDue, SubscriptionState::ReadOnly], true))->count(),
+                'feedback' => Feedback::query()->where('status', FeedbackStatus::New)->count(),
+            ] : null,
             'subscription' => fn () => ($tenant = $this->tenant($request)) ? app(SubscriptionSummary::class)->banner($tenant) : null,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

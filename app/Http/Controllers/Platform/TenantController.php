@@ -28,30 +28,24 @@ use Inertia\Response;
  */
 class TenantController extends Controller
 {
-    public function index(): Response
+    public function index(SubscriptionSummary $summary): Response
     {
         $tenants = Tenant::query()
-            ->with(['plan:id,name', 'requestedPlan:id,name'])
-            ->withCount(['users' => fn ($q) => $q->where('is_active', true)])
+            ->with(['plan', 'requestedPlan:id,name'])
             ->orderBy('name')
             ->get()
             ->map(fn (Tenant $tenant) => [
                 'id' => $tenant->id,
                 'name' => $tenant->name,
-                'plan' => $tenant->plan->name,
-                'status' => $tenant->status->value,
-                'state' => ['label' => $tenant->subscriptionState()->label(), 'tone' => $tenant->subscriptionState()->tone()],
-                'requested_plan' => $tenant->requestedPlan?->name,
-                'users_count' => $tenant->users_count,
-                'accessible' => $tenant->isAccessible(),
-                'trial_ends_at' => $tenant->trial_ends_at?->toDateString(),
-                'subscription_ends_at' => $tenant->subscription_ends_at?->toDateString(),
-                'created_at' => $tenant->created_at?->toDateString(),
+                'city' => $tenant->city,
+                'plan' => ['id' => $tenant->plan->id, 'name' => $tenant->plan->name],
+                ...$summary->row($tenant),
             ]);
 
         return Inertia::render('platform/Tenants', [
             'tenants' => $tenants,
             'options' => $this->options(),
+            'paymentOptions' => $this->paymentOptions(),
         ]);
     }
 
@@ -82,8 +76,9 @@ class TenantController extends Controller
         $overrides = $tenant->featureOverrides->pluck('enabled', 'feature_key');
 
         return Inertia::render('platform/TenantShow', [
-            'tenant' => [
-                ...$tenant->only(['id', 'name', 'plan_id', 'default_currency', 'phone', 'email', 'tursab_no']),
+            // "tenant" adı paylaşılan veriyle (menüdeki acente adı) çakışmasın.
+            'agency' => [
+                ...$tenant->only(['id', 'name', 'plan_id', 'default_currency', 'phone', 'email', 'tursab_no', 'city']),
                 'status' => $tenant->status->value,
                 'trial_ends_at' => $tenant->trial_ends_at?->toDateString(),
                 'subscription_ends_at' => $tenant->subscription_ends_at?->toDateString(),
@@ -93,11 +88,7 @@ class TenantController extends Controller
                 'passenger_limit' => $tenant->plan->passenger_limit,
             ],
             'subscriptionDetail' => $summary->detail($tenant->loadMissing(['plan', 'requestedPlan'])),
-            'paymentOptions' => [
-                'plans' => Plan::query()->orderBy('sort')->orderBy('price_monthly')->get(['id', 'name', 'price_monthly', 'price_yearly']),
-                'cycles' => BillingCycle::options(),
-                'methods' => SubscriptionPaymentMethod::options(),
-            ],
+            'paymentOptions' => $this->paymentOptions(),
             'features' => collect(Feature::cases())->map(fn (Feature $f) => [
                 'key' => $f->value,
                 'label' => $f->label(),
@@ -181,6 +172,21 @@ class TenantController extends Controller
             'phone' => ['nullable', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:255'],
             'tursab_no' => ['nullable', 'string', 'max:30'],
+            'city' => ['nullable', 'string', 'max:80'],
+        ];
+    }
+
+    /**
+     * "Ödeme geldi" penceresinin seçenekleri (liste ve acente sayfası).
+     *
+     * @return array<string, mixed>
+     */
+    private function paymentOptions(): array
+    {
+        return [
+            'plans' => Plan::query()->orderBy('sort')->orderBy('price_monthly')->get(['id', 'name', 'price_monthly', 'price_yearly']),
+            'cycles' => BillingCycle::options(),
+            'methods' => SubscriptionPaymentMethod::options(),
         ];
     }
 

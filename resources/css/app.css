@@ -943,3 +943,164 @@
         grid-template-columns: 1fr;
     }
 }
+/* Platform menüsündeki sayı (paketler tasarım sayfasındaki sekme sayısı, .cnt). */
+.mx .nav a .cnt {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--m-danger);
+    color: #fff;
+}
+/* Platform → Acenteler: kullanım çubukları (paketler tasarım sayfası .usage) ve satır düğmeleri. */
+.mx .usage {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 120px;
+    font-size: 11.5px;
+    color: var(--m-muted);
+}
+.mx .usage .bar i.hi {
+    background: var(--m-warn);
+}
+.mx .row-acts {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+.mx td .chip + .chip,
+.mx td .lbl + .chip {
+    margin-left: 6px;
+}
+/* Platform → Geri bildirimler: paketler tasarım sayfasındaki gelen kutusu (.inbox / .msg). */
+.mx .inbox {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.mx .msg {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 14px;
+    padding: 14px;
+    border: 1px solid var(--m-line);
+    border-radius: 14px;
+    background: var(--m-panel);
+}
+.mx .msg .text {
+    margin: 6px 0 0;
+    font-size: 13.5px;
+    white-space: pre-line;
+}
+.mx .msg .meta {
+    font-size: 12px;
+    color: var(--m-muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    align-items: center;
+}
+.mx .msg .stars {
+    color: var(--m-accent);
+    letter-spacing: 1px;
+}
+.mx .msg .act {
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+}
+.mx .msg .reply {
+    grid-column: 1 / -1;
+    font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--m-ok) 10%, transparent);
+    white-space: pre-line;
+}
+.mx .msg .reply a {
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--m-accent);
+    cursor: pointer;
+}
+.mx .msg .reply-form {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.mx .msg .reply-form textarea {
+    font: 500 13px var(--m-body);
+    color: var(--m-ink);
+    background: var(--m-panel2);
+    border: 1px solid var(--m-line);
+    border-radius: 10px;
+    padding: 9px 11px;
+    resize: vertical;
+}
+.mx .msg .reply-form .btns {
+    justify-content: flex-end;
+}
+/* "Görüşünü paylaş" → Gönderdiklerim (kullanıcı kararı 2026-10-07): bölüm geçişi, gönderilenler, yeni yanıt noktası. */
+.mx .fbswitch {
+    margin-top: 12px;
+}
+.mx .fbswitch button {
+    padding: 5px 11px;
+    font-size: 12px;
+}
+.mx .fbmine {
+    max-height: min(420px, 60vh);
+    overflow-y: auto;
+}
+.mx .fbmine .sent {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed var(--m-line);
+}
+.mx .fbmine .sent:last-child {
+    border-bottom: 0;
+}
+.mx .fbmine .sent-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.mx .fbmine .sent-head .chip:last-child {
+    margin-left: auto;
+}
+.mx .fbmine .sent p {
+    margin: 0;
+    font-size: 12.5px;
+    white-space: pre-line;
+}
+.mx .fbmine .sent-reply {
+    font-size: 12.5px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--m-ok) 10%, transparent);
+    white-space: pre-line;
+}
+.mx .fbmine .sent-reply.fresh {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--m-ok) 60%, transparent);
+}
+.mx .fbdone .btns {
+    justify-content: center;
+}
+.mx .fbbtn .fbdot {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--m-danger);
+    box-shadow: 0 0 0 2px var(--m-bg);
+}

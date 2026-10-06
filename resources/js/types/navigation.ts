@@ -11,4 +11,6 @@ export type NavItem = {
     href: NonNullable<InertiaLinkProps['href']>;
     icon?: LucideIcon;
     isActive?: boolean;
+    /** Tasarımdaki kırmızı sayı (platform: ilgilenilecek acente, yanıtlanmamış geri bildirim). */
+    count?: number;
 };

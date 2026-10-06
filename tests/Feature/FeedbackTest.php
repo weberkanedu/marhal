@@ -45,7 +45,7 @@ class FeedbackTest extends TestCase
 
         $feedback = Feedback::sole();
         $this->assertSame([$this->tenant->id, $guide->id, '/tours/abc', 4, 'yeni', true], [
-            $feedback->tenant_id, $feedback->user_id, $feedback->screen, $feedback->rating, $feedback->status, $feedback->wants_reply,
+            $feedback->tenant_id, $feedback->user_id, $feedback->screen, $feedback->rating, $feedback->status->value, $feedback->wants_reply,
         ]);
 
         // "Soru" türü ve ekran eklenmeden gönderim
@@ -66,7 +66,7 @@ class FeedbackTest extends TestCase
         ]);
 
         $feedback = Feedback::sole();
-        $this->assertSame(['yeni', null, $this->tenant->id], [$feedback->status, $feedback->reply, $feedback->tenant_id]);
+        $this->assertSame(['yeni', null, $this->tenant->id], [$feedback->status->value, $feedback->reply, $feedback->tenant_id]);
     }
 
     public function test_only_platform_admin_lists_feedback_from_all_agencies(): void

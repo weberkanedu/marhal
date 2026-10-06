@@ -8,6 +8,7 @@ use Database\Seeders\Demo\BadgeDemo;
 use Database\Seeders\Demo\BadgeRenewalDemo;
 use Database\Seeders\Demo\BusPlanDemo;
 use Database\Seeders\Demo\FamilyProgramDemo;
+use Database\Seeders\Demo\FeedbackReplyDemo;
 use Database\Seeders\Demo\FixParentAgesDemo;
 use Database\Seeders\Demo\FlightDemo;
 use Database\Seeders\Demo\NeedsFloorsDemo;
@@ -47,6 +48,7 @@ class UpdateDemoData extends Command
         'tasarim-7-aile-program' => FamilyProgramDemo::class,
         'tasarim-7b-on-kayit' => OnlineSignupDemo::class,
         'paketler-10b-abonelik' => SubscriptionDemo::class,
+        'paketler-10c-geri-bildirim' => FeedbackReplyDemo::class,
     ];
 
     public function handle(CurrentTenant $currentTenant): int

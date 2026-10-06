@@ -5,12 +5,12 @@
 
 ## Yeni oturum için başlangıç notu (2026-10-07)
 
-**Şu an:** dal `tasarim-yenileme`, son commit "Paketler 10b: abonelik durumu, Paketim, ödeme kaydı"; **10a ve 10b staging'e henüz gönderilmedi**.
+**Şu an:** dal `tasarim-yenileme`, son commit "Paketler 10c: Platform → Acenteler, geri bildirim yanıtı"; **10a, 10b ve 10c staging'e henüz gönderilmedi**.
 Tasarım yenilemenin 1–7. adımları ve "tasarıma birebir uyum" turu bitti (aşağıda "Tasarım yenileme" bölümü).
 **Paketler planı (kullanıcı onayladı, 2026-10-07)** — kaynak: paketler tasarım sayfası (claude.ai artifact 5Mxqaa5YmxceQ3qi7xzPCq;
 artifact okuma aracıyla açılır): ✅ 10a paket yapısı + yolcu kotası + Platform → Paketler ·
 ✅ 10b abonelik durumu (deneme / aktif / gecikmede / salt okunur), "Paketim" sekmesi, havale-EFT elle onay ·
-**sıradaki 10c** Platform → Acenteler (tasarımdaki tablo, kullanım çubukları, şüpheli rozeti) + Geri bildirim yanıtı · 10d hesap paylaşımı koruması (oturum, cihaz, şüpheli giriş, acente kimliği) ·
+✅ 10c Platform → Acenteler + Geri bildirim yanıtı · **sıradaki 10d** hesap paylaşımı koruması (oturum, cihaz, şüpheli giriş, acente kimliği) ·
 10e iyzico + e-fatura (dış servis: önce seçenek / **maliyet** sor). **Kararlar:** paket adları Mikat · Kafile · Kervan; Aile ekranı
 ve Ön kayıt Kafile ve üstünde (Hazırlık her pakette); yolcu kotası = abonelik yılı içindeki tur kayıtları (iptal geri döner);
 aktif tur sınırı kaldırıldı, yalnız yolcu kotası. WhatsApp mesaj kotası (8. adım iptal) paketlere girmedi.
@@ -48,6 +48,23 @@ aktif tur sınırı kaldırıldı, yalnız yolcu kotası. WhatsApp mesaj kotası
   kullanıcı girecek). Açıklama = acente kodu (slug).
 - Dikkat: sayfa verisine `features` / `subscription` adı verme — paylaşılan verinin üstüne yazar (menü boşalır).
 - Demo paketi `paketler-10b-abonelik`: kullanıcısız üç örnek acente (deneme + talep, gecikmede, salt okunur).
+
+**10c (2026-10-07). Kararlar:** "Gönderdiklerim" Görüşünü paylaş panelinde; acenteye Şehir alanı; platform acente sayfası yeni görünümde.
+
+- Platform → **Acenteler** tasarımdaki tablo: şehir, paket, durum rozeti, yenileme metni, yolcu / personel çubukları (%85 üstü
+  turuncu), "Talep" rozeti, "Ödeme geldi" (talep / gecikmede / salt okunur) ve "+7 gün". Satır verisi `SubscriptionSummary::row`.
+  "Ödeme geldi" ortak pencere `components/platform/PaymentReceivedDialog` (liste ve acente sayfası).
+- Platform acente sayfası (`TenantShow`) `.mx` görünümünde: özet kartlar, talep satırı, Abonelik (ödemeler), Kullanıcılar,
+  Acente bilgileri, Modüller. Sayfa verisi `agency` (eskiden `tenant`; paylaşılan `tenant` ile çakışıyordu).
+- Platform → **Geri bildirimler** tasarımdaki gelen kutusu (`.inbox/.msg`): yanıtlanmamış üstte, Yanıtla / Düzelt.
+  Kural `Actions/Feedback/ReplyToFeedback`; durum enum `FeedbackStatus` (yeni / yanitlandi); takip no `Feedback::trackingNo()`.
+  E-posta servisi yok → yanıt yalnız uygulamada.
+- Menüde kırmızı sayılar (`NavItem.count`, paylaşılan `platformCounts`): Acenteler = talep + gecikmede + salt okunur,
+  Geri bildirimler = yanıtlanmamış. 10d'de şüpheli giriş de eklenecek.
+- Acente tarafı: Görüşünü paylaş → "Yeni görüş / Gönderdiklerim" (`GET feedback/mine`, yalnız kullanıcının kendi kayıtları;
+  açılınca yanıtlar görülmüş sayılır). Yeni yanıt varsa düğmede kırmızı nokta (paylaşılan `feedbackUnread`).
+- Migration `add_city_to_tenants`, `add_reply_tracking_to_feedback` (`replied_by`, `reply_seen_at`).
+- Demo paketi `paketler-10c-geri-bildirim`: acentelere şehir, demo yöneticiye iki geri bildirim (biri yanıtlanmış).
   **9. adım (Faz 4 entegrasyonlar: Nusuk / Masar, Diyanet, vize, NFC) en sona bırakıldı** — paketlerden sonra, yine önce seçenek + maliyet.
   **8. adım (WhatsApp tahsilat asistanı) kullanıcı kararıyla plandan çıkarıldı (2026-10-07).**
   **Bekleyen:** kullanıcı "küçük kusurlar var, sonra birlikte bakacağız" dedi (2026-10-07) — liste kullanıcıdan alınacak.

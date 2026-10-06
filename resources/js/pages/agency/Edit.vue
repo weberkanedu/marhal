@@ -25,6 +25,7 @@ const props = defineProps<{
         email: string | null;
         website: string | null;
         address: string | null;
+        city: string | null;
         tursab_no: string | null;
         default_currency: string;
         logo_url: string | null;
@@ -166,6 +167,14 @@ function onLogo(event: Event): void {
                             id="website"
                             name="website"
                             :default-value="agency.website ?? undefined"
+                        />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="city">Şehir</Label>
+                        <Input
+                            id="city"
+                            name="city"
+                            :default-value="agency.city ?? undefined"
                         />
                     </div>
                     <div class="grid gap-2">
