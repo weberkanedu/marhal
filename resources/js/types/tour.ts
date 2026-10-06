@@ -132,3 +132,33 @@ export type TourReadinessSummary = Pick<
     | 'passport_issues'
     | 'checks'
 >;
+
+/** Tur → "Hazırlık" sekmesi (App\Support\Readiness\ReadinessBoard). */
+export type ReadinessCell = {
+    status: 'tamam' | 'sorun' | null;
+    // Pasaport / fotoğraf: yolcu bilgisinden kendiliğinden dolar, tıklanmaz.
+    auto: boolean;
+    title: string | null;
+};
+
+export type ReadinessBoardData = {
+    items: { id: string; name: string; kind: string; automatic: boolean }[];
+    rows: {
+        registration_id: string;
+        name: string;
+        gender: string;
+        age: number | null;
+        group_id: string | null;
+        group_name: string | null;
+        cells: Record<string, ReadinessCell>;
+        done: number;
+    }[];
+    ready: number;
+    total: number;
+    ravza: {
+        men: { at: string | null; done: number; waiting: number };
+        women: { at: string | null; done: number; waiting: number };
+    } | null;
+    // Personel için acentenin bütün açık maddeleri (madde hapları); rehberde boş.
+    all_items: { id: string; name: string }[];
+};

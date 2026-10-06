@@ -14,5 +14,6 @@ export type FeatureKey =
     | 'bus_planning'
     | 'flight_lists'
     | 'badge_generation'
+    | 'readiness'
     | 'advanced_reporting'
     | 'api_access';

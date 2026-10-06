@@ -12,6 +12,7 @@ import BusesCard from '@/components/tours/BusesCard.vue';
 import FlightsCard from '@/components/tours/FlightsCard.vue';
 import GroupDialog from '@/components/tours/GroupDialog.vue';
 import RegistrationDialog from '@/components/tours/RegistrationDialog.vue';
+import ReadinessTab from '@/components/tours/ReadinessTab.vue';
 import StaysCard from '@/components/tours/StaysCard.vue';
 import { index as collectionsIndex } from '@/routes/collections';
 import { show as showPerson } from '@/routes/persons';
@@ -21,6 +22,7 @@ import {
     passengers as passengerReport,
     payments as paymentReport,
     program as programReport,
+    readiness as readinessReport,
 } from '@/routes/reports/tours';
 import { badgeCards, edit, index } from '@/routes/tours';
 import type { TourBus, VehicleTypeOption } from '@/types/bus';
@@ -30,6 +32,7 @@ import type { HotelOption, TourStay } from '@/types/hotel';
 import type { Option } from '@/types/person';
 import type {
     JourneyStep,
+    ReadinessBoardData,
     RegistrationRow,
     TourGroup,
     TourReadinessSummary,
@@ -54,6 +57,8 @@ const props = defineProps<{
     stays: TourStay[] | null;
     buses: TourBus[] | null;
     flights: TourFlight[] | null;
+    // Hazırlık modülü kapalıysa null; açıksa sekme açılınca (ertelenmiş) gelir.
+    readinessBoard?: ReadinessBoardData | null;
     options: TourShowOptions & {
         flightDirections: Option[];
         hotels: HotelOption[];
@@ -138,6 +143,14 @@ const exportItems = computed<ExportItem[]>(() => {
             description: 'Fotoğraflı, toplu ya da tek tek',
             url: badgeReport.url(props.tour.id),
             pdfOnly: true,
+        });
+    }
+
+    if (props.readinessBoard !== null) {
+        items.push({
+            title: 'Hazırlık listesi',
+            description: 'Yolcu × madde, kim hazır',
+            url: readinessReport.url(props.tour.id),
         });
     }
 
@@ -259,7 +272,7 @@ async function copyWhatsappLink(): Promise<void> {
 }
 
 // Sekmeler (adres ?tab= ile açılır; plan ekranlarından geri gelince doğru sekme).
-type TabKey = 'yolcular' | 'konaklama' | 'ulasim';
+type TabKey = 'yolcular' | 'konaklama' | 'ulasim' | 'hazirlik';
 const tabs = computed(() => [
     { key: 'yolcular' as TabKey, label: 'Yolcular' },
     ...(props.stays !== null
@@ -267,6 +280,9 @@ const tabs = computed(() => [
         : []),
     ...(props.flights !== null || props.buses !== null
         ? [{ key: 'ulasim' as TabKey, label: 'Ulaşım' }]
+        : []),
+    ...(props.readinessBoard !== null
+        ? [{ key: 'hazirlik' as TabKey, label: 'Hazırlık' }]
         : []),
 ]);
 const query = new URL(page.url, 'http://x').searchParams;
@@ -862,6 +878,14 @@ const badgeUrl = (id: string) =>
                         <b>Notlar:</b> {{ tour.notes }}
                     </p>
                 </template>
+
+                <ReadinessTab
+                    v-if="tab === 'hazirlik' && readinessBoard !== null"
+                    :tour-id="tour.id"
+                    :board="readinessBoard"
+                    :groups="groups"
+                    :can-update="can.update"
+                />
 
                 <StaysCard
                     v-if="tab === 'konaklama' && stays !== null"

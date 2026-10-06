@@ -212,6 +212,7 @@ class TenantController extends Controller
             Feature::BusPlanning => 'Otobüs yerleşimi',
             Feature::FlightLists => 'Uçuş listeleri',
             Feature::BadgeGeneration => 'Yaka kartı',
+            Feature::Readiness => 'Hazırlık takibi',
             Feature::AdvancedReporting => 'Gelişmiş raporlar',
             Feature::ApiAccess => 'API erişimi',
         };

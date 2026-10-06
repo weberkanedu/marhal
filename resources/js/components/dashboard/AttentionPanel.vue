@@ -102,7 +102,26 @@ const items = computed<Item[]>(() => {
             rooms: ['yolcunun odası yok', 'Oda planına git'],
             seats: ['yolcunun otobüs koltuğu yok', 'Otobüslere git'],
             flights: ['yolcunun uçuş kaydı yok', 'Uçuşlara git'],
+            readiness: ['yolcunun hazırlığı eksik', 'Hazırlığı aç'],
         };
+
+        // Ravza: randevu bekleyenler (tasarımdaki "Ravza randevusu: kadın grubunda 6 kişi bekliyor").
+        const ravza = tour.ravza_waiting;
+
+        if (ravza && ravza.men + ravza.women > 0) {
+            const parts = [
+                ravza.women ? `kadınlarda ${ravza.women} kişi` : null,
+                ravza.men ? `erkeklerde ${ravza.men} kişi` : null,
+            ].filter(Boolean);
+            list.push({
+                key: `ravza-${tour.id}`,
+                tone: 'warning',
+                chip: 'Hazırlık',
+                text: `${tour.name}: Ravza randevusu ${parts.join(', ')} bekliyor`,
+                action: 'Hazırlığı aç',
+                href: showTour(tour.id, { query: { tab: 'hazirlik' } }),
+            });
+        }
 
         for (const check of tour.checks) {
             const missing = check.total - check.done;

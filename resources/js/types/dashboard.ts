@@ -22,6 +22,8 @@ export type DashboardTour = {
     ungrouped: number;
     passport_issues: number;
     checks: ReadinessCheck[];
+    // Ravza maddesi takip ediliyorsa randevu bekleyenler (cinsiyete göre).
+    ravza_waiting?: { men: number; women: number } | null;
 };
 
 export type DashboardPayments = {

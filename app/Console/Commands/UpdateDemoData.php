@@ -10,6 +10,7 @@ use Database\Seeders\Demo\BusPlanDemo;
 use Database\Seeders\Demo\FixParentAgesDemo;
 use Database\Seeders\Demo\FlightDemo;
 use Database\Seeders\Demo\NeedsFloorsDemo;
+use Database\Seeders\Demo\ReadinessDemo;
 use Database\Seeders\Demo\RoomPlanDemo;
 use Database\Seeders\Demo\ScreensDemo;
 use Database\Seeders\Demo\VehicleAircraftDemo;
@@ -39,6 +40,7 @@ class UpdateDemoData extends Command
         'tasarim-3-arac-ucak' => VehicleAircraftDemo::class,
         'tasarim-4-ihtiyac-kat' => NeedsFloorsDemo::class,
         'tasarim-5-yaka-karti' => BadgeRenewalDemo::class,
+        'tasarim-6-hazirlik' => ReadinessDemo::class,
     ];
 
     public function handle(CurrentTenant $currentTenant): int

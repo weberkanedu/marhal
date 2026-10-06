@@ -14,7 +14,7 @@ class PlanSeeder extends Seeder
 {
     public function run(): void
     {
-        $base = [Feature::Passengers, Feature::Payments, Feature::BasicReports];
+        $base = [Feature::Passengers, Feature::Payments, Feature::BasicReports, Feature::Readiness];
         $pro = [...$base, Feature::RoomPlanning, Feature::BusPlanning, Feature::FlightLists];
         $enterprise = [...$pro, Feature::BadgeGeneration, Feature::AdvancedReporting, Feature::ApiAccess];
 

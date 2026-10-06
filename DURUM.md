@@ -220,7 +220,19 @@ Yerleşim bilgisi (otel / oda / koltuk) yaka kartı, tur tablosu ve aile ekranı
       Migration: `add_wants_reply_to_feedback`. Arama kuralı tek yerde: `Person::scopeSearch` (liste + Ctrl K).
     - Not: tasarım CSS'i `scratchpad/mockcss.py` ile üretildi; yeniden üretmek gerekirse aynı SKIP listesiyle
       (.mock .fx .side .toast .demo .overlay) çalıştırılmalı.
-6. ⏳ Hazırlık takibi (`readiness_items`, `readiness_checks`).
+6. ✅ Hazırlık takibi (2026-10-07). Kararlar: turda yeni **Hazırlık** sekmesi; rehber kendi grubunu işaretler (madde / Ravza
+   değiştiremez); Ravza randevu kutusu bu adımda; modül (`Feature::Readiness`) bütün paketlerde açık.
+    - Veri: `readiness_items` (acentenin maddeleri; tür: elle / pasaport / fotoğraf / ravza / vize / nusuk; "yeni turlarda seçili"),
+      `tour_readiness_items` (turda seçilenler; boşsa varsayılanlar), `readiness_checks` (kayıt × madde: tamam / sorun, kim, ne zaman),
+      `tours.ravza_men_at / ravza_women_at`. Migration: `create_readiness_tables` (mevcut acentelere 8 varsayılan madde, bütün
+      paketlerde modül açık). Yeni acente `CreateTenant` → `DefaultReadinessItems::seed`.
+    - **Tek kaynak** `App\Support\Readiness\ReadinessBoard`: sekme, tur halkası ("Hazırlık"), ana panel (eksik hazırlık + "Ravza
+      randevusu … kişi bekliyor"), "Hazırlık listesi" çıktısı (`TourReadinessList`). Pasaport (6 ay kuralı) ve fotoğraf
+      kendiliğinden dolar, elle işaretlenmez. Vize / Nusuk şimdilik elle; Faz 4'te Nusuk entegrasyonu açılınca dolacak (anahtar kapalı).
+    - Kurallar `App\Actions\Readiness` (MarkReadiness: hücre + sütunu toplu, SetTourReadinessItems: en az bir madde,
+      SetRavzaAppointments). Ekran tasarımdaki kartın aynısı (madde hapları, `.tbl.mx` tablo, `.slots2` Ravza); hücre tıklaması
+      anında görünür (async + iyimser güncelleme).
+    - Acente ayarları → **Hazırlık maddeleri** (ekle, adını / türünü değiştir, kapat, yeni turlarda seçili). Demo paketi `tasarim-6-hazirlik`.
 7. ⏳ Aile ekranı + fotoğrafla ön kayıt (MRZ okuma servisi için önce seçenek / maliyet).
 8. ⏳ WhatsApp tahsilat asistanı (önce sağlayıcı + sanal POS seçenekleri / maliyet).
 9. ⏳ Faz 4 entegrasyonlar + NFC (`tenant_integrations`, acente ayarından aç/kapa; önce seçenek / maliyet).

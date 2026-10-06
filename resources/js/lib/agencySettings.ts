@@ -2,6 +2,7 @@ import {
     Building2,
     BusFront,
     HeartPulse,
+    ListChecks,
     Hotel,
     Plane,
     ScrollText,
@@ -12,6 +13,7 @@ import { edit as agencyEdit } from '@/routes/agency';
 import { index as auditIndex } from '@/routes/audit';
 import { index as hotelsIndex } from '@/routes/hotels';
 import { index as needTypesIndex } from '@/routes/need-types';
+import { index as readinessItemsIndex } from '@/routes/readiness-items';
 import { index as usersIndex } from '@/routes/users';
 import { index as vehicleTypesIndex } from '@/routes/vehicle-types';
 import type { NavItem } from '@/types';
@@ -42,6 +44,14 @@ export function agencySettingsTabs(
             title: 'İhtiyaç türleri',
             href: needTypesIndex(),
             icon: HeartPulse,
+        });
+    }
+
+    if (staff && features.includes('readiness')) {
+        tabs.push({
+            title: 'Hazırlık maddeleri',
+            href: readinessItemsIndex(),
+            icon: ListChecks,
         });
     }
 
@@ -86,5 +96,6 @@ export const agencySettingsPages = [
     'vehicle-types/',
     'aircraft-types/',
     'need-types/',
+    'readiness-items/',
     'audit/',
 ];

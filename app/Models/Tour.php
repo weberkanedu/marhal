@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -29,6 +30,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null $default_price
  * @property string $currency
  * @property string|null $whatsapp_link
+ * @property Carbon|null $ravza_men_at
+ * @property Carbon|null $ravza_women_at
  */
 class Tour extends Model
 {
@@ -46,7 +49,19 @@ class Tour extends Model
             'end_date' => 'date',
             'capacity' => 'integer',
             'default_price' => 'decimal:2',
+            'ravza_men_at' => 'datetime',
+            'ravza_women_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Turda takip edilen hazırlık maddeleri (boşsa acentenin "yeni turlarda seçili" maddeleri).
+     *
+     * @return BelongsToMany<ReadinessItem, $this>
+     */
+    public function readinessItems(): BelongsToMany
+    {
+        return $this->belongsToMany(ReadinessItem::class, 'tour_readiness_items');
     }
 
     /**

@@ -42,6 +42,7 @@ const labels: Record<string, string> = {
     rooms: 'Oda',
     seats: 'Koltuk',
     flights: 'Uçuş',
+    readiness: 'Hazırlık',
 };
 
 // "23 Eki – 6 Kas"

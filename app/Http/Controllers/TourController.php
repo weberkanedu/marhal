@@ -17,6 +17,7 @@ use App\Models\Flight;
 use App\Models\Group;
 use App\Models\Hotel;
 use App\Models\Person;
+use App\Models\ReadinessItem;
 use App\Models\Registration;
 use App\Models\Tour;
 use App\Models\TourHotel;
@@ -27,6 +28,7 @@ use App\Support\GroupColors;
 use App\Support\Money;
 use App\Support\Needs\NeedProfiles;
 use App\Support\Placements;
+use App\Support\Readiness\ReadinessBoard;
 use App\Support\Tenancy\CurrentTenant;
 use App\Support\Tours\TourJourney;
 use App\Support\TurkishText;
@@ -103,7 +105,7 @@ class TourController extends Controller
         return to_route('tours.show', $tour);
     }
 
-    public function show(Request $request, Tour $tour, CurrentTenant $currentTenant, TourJourney $journey, TourReadiness $readiness, NeedProfiles $profiles, StayOccupancy $occupancy): Response
+    public function show(Request $request, Tour $tour, CurrentTenant $currentTenant, TourJourney $journey, TourReadiness $readiness, NeedProfiles $profiles, StayOccupancy $occupancy, ReadinessBoard $board): Response
     {
         Gate::authorize('view', $tour);
 
@@ -231,6 +233,15 @@ class TourController extends Controller
             // Hazırlık halkaları (oda / koltuk / uçuş / tahsilat): ana paneldeki "Turların durumu" ile aynı hesap.
             // Rehber tur genelini değil kendi grubunu görür; halkalar personele.
             'readiness' => $guideOf === null ? $this->readiness($readiness->for($tour, $currentTenant->get()), $finance) : null,
+            // Hazırlık sekmesi (modül açıksa): sekme açılınca yüklenir; rehber yalnız kendi grupları.
+            'readinessBoard' => ($currentTenant->get()?->hasFeature(Feature::Readiness) ?? false)
+                ? Inertia::defer(fn () => [
+                    ...$board->build($tour, $guideOf === null ? null : array_values(array_map('strval', $guideOf))),
+                    'all_items' => $user?->can('update', $tour)
+                        ? ReadinessItem::query()->where('is_active', true)->ordered()->get(['id', 'name'])
+                        : [],
+                ], 'readiness')
+                : null,
             'groups' => $groups,
             'registrations' => $registrations,
             'stays' => $stays,

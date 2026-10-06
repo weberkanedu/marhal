@@ -25,6 +25,7 @@ use App\Reports\Definitions\TourBadges;
 use App\Reports\Definitions\TourPassengerList;
 use App\Reports\Definitions\TourPaymentStatus;
 use App\Reports\Definitions\TourProgram;
+use App\Reports\Definitions\TourReadinessList;
 use App\Reports\ReportResponder;
 use App\Support\Collections\CollectionFilters;
 use App\Support\GroupColors;
@@ -80,6 +81,22 @@ class ReportController extends Controller
         Gate::authorize('update', $tour);
 
         return $this->responder->download($definition->build($tour), $this->format($request));
+    }
+
+    /**
+     * Turun hazırlık listesi; rehber yalnız kendi gruplarınınkini alır.
+     */
+    public function tourReadiness(Request $request, Tour $tour, TourReadinessList $definition): Response
+    {
+        Gate::authorize('view', $tour);
+
+        $user = $request->user();
+        /** @var list<string>|null $groups */
+        $groups = $user?->hasRole(UserRole::Guide)
+            ? array_values(array_map('strval', $tour->groups()->where('guide_user_id', $user->getKey())->pluck('id')->all()))
+            : null;
+
+        return $this->responder->download($definition->build($tour, $groups), $this->format($request));
     }
 
     /**

@@ -27,9 +27,11 @@ use App\Http\Controllers\RoomAssignmentController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\RoomPlanController;
 use App\Http\Controllers\SeatAssignmentController;
+use App\Http\Controllers\ReadinessItemController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SeatPlanController;
 use App\Http\Controllers\TourBadgeController;
+use App\Http\Controllers\TourReadinessController;
 use App\Http\Controllers\TourController;
 use App\Http\Controllers\TourHotelController;
 use App\Http\Controllers\UserController;
@@ -70,6 +72,15 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::get('need-types', [NeedTypeController::class, 'index'])->name('need-types.index');
         Route::post('need-types', [NeedTypeController::class, 'store'])->name('need-types.store');
         Route::put('need-types/{needType}', [NeedTypeController::class, 'update'])->name('need-types.update');
+        Route::middleware('feature:readiness')->group(function () {
+            Route::get('readiness-items', [ReadinessItemController::class, 'index'])->name('readiness-items.index');
+            Route::post('readiness-items', [ReadinessItemController::class, 'store'])->name('readiness-items.store');
+            Route::put('readiness-items/{readinessItem}', [ReadinessItemController::class, 'update'])->name('readiness-items.update');
+            Route::put('tours/{tour}/readiness/items', [TourReadinessController::class, 'items'])->name('tours.readiness.items');
+            Route::post('tours/{tour}/readiness', [TourReadinessController::class, 'mark'])->name('tours.readiness.mark');
+            Route::post('tours/{tour}/readiness/column', [TourReadinessController::class, 'column'])->name('tours.readiness.column');
+            Route::put('tours/{tour}/ravza', [TourReadinessController::class, 'ravza'])->name('tours.ravza');
+        });
         Route::middleware('feature:badge_generation')->group(function () {
             Route::put('badge-settings', [BadgeSettingController::class, 'update'])->name('badge-settings.update');
             Route::get('tours/{tour}/badge-cards', [TourBadgeController::class, 'show'])->name('tours.badge-cards');
@@ -169,6 +180,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::get('tours/{tour}/passengers', [ReportController::class, 'tourPassengers'])->name('tours.passengers');
         Route::get('tours/{tour}/payments', [ReportController::class, 'tourPayments'])->name('tours.payments');
         Route::get('tours/{tour}/program', [ReportController::class, 'tourProgram'])->name('tours.program');
+        Route::get('tours/{tour}/readiness', [ReportController::class, 'tourReadiness'])->middleware('feature:readiness')->name('tours.readiness');
         Route::get('collections', [ReportController::class, 'collections'])->name('collections');
         Route::get('persons', [ReportController::class, 'persons'])->name('persons.list');
         Route::get('persons/passports', [ReportController::class, 'passports'])->name('persons.passports');

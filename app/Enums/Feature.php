@@ -14,6 +14,7 @@ enum Feature: string
     case BusPlanning = 'bus_planning';
     case FlightLists = 'flight_lists';
     case BadgeGeneration = 'badge_generation';
+    case Readiness = 'readiness';
     case AdvancedReporting = 'advanced_reporting';
     case ApiAccess = 'api_access';
 }

@@ -11,6 +11,7 @@ use App\Models\Tenant;
 use App\Models\Tour;
 use App\Models\TourHotel;
 use App\Support\Money;
+use App\Support\Readiness\ReadinessBoard;
 
 /**
  * Ana paneldeki "tur ne kadar hazır?" özeti: oda, koltuk, uçuş, pasaport, ön kayıt, grupsuz yolcu.
@@ -21,6 +22,7 @@ class TourReadiness
     public function __construct(
         private readonly StayOccupancy $occupancy,
         private readonly FlightPassengers $flights,
+        private readonly ReadinessBoard $board,
     ) {}
 
     /**
@@ -68,6 +70,14 @@ class TourReadiness
             ];
         }
 
+        // Hazırlık: bütün maddeleri tamam olan yolcular (ReadinessBoard; Ravza bekleyenler ana panel uyarısında).
+        $ravza = null;
+        if ($tenant?->hasFeature(Feature::Readiness) && $active->isNotEmpty()) {
+            $summary = $this->board->summary($tour);
+            $checks[] = ['key' => 'readiness', 'label' => 'Hazırlık', 'done' => $summary['ready'], 'total' => $summary['total'], 'tab' => 'hazirlik'];
+            $ravza = $summary['ravza_waiting'];
+        }
+
         // Tahsilat oranı: turun para birimindeki kayıtlar (farklı para birimleri toplanmaz).
         $collection = null;
         if ($tenant?->hasFeature(Feature::Payments)) {
@@ -86,6 +96,7 @@ class TourReadiness
             'ungrouped' => $active->whereNull('group_id')->count(),
             'passport_issues' => $active->filter(fn (Registration $r) => $this->flights->warnings($r->person, $tour) !== [])->count(),
             'checks' => $checks,
+            'ravza_waiting' => $ravza,
         ];
     }
 }
