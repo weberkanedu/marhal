@@ -3,6 +3,45 @@
 > Yeni bir oturumda (Claude Code veya başka bir geliştirici) işe başlarken önce bu dosyayı,
 > sonra [PROJECT.md](PROJECT.md) ve [SPEC.md](SPEC.md)'yi okuyun.
 
+## Yeni oturum için başlangıç notu (2026-10-07)
+
+**Şu an:** dal `tasarim-yenileme`, son commit "Tasarım yenileme 7b: telefonla ön kayıt"; staging ile aynı (hepsi gönderildi).
+Tasarım yenilemenin 1–7. adımları ve "tasarıma birebir uyum" turu bitti (aşağıda "Tasarım yenileme" bölümü).
+**Sıradaki:** 8. adım — WhatsApp tahsilat asistanı. Kod yazmadan önce: sağlayıcı seçenekleri (WhatsApp Business API:
+Meta Cloud API doğrudan / BSP'ler) ve sanal POS seçenekleri (iyzico, PayTR vb.) **maliyetleriyle** kullanıcıya sunulacak,
+kullanıcı seçince plan + migration listesi sunulup onay beklenecek.
+**Bekleyen:** kullanıcı "küçük kusurlar var, sonra birlikte bakacağız" dedi (2026-10-07) — liste kullanıcıdan alınacak.
+
+**Kullanıcının kalıcı kuralları (hepsi geçerli):**
+- Türkçe, teknik olmayan dille; adım adım. Her adımda **önce** neyin değişeceğini ve hangi migration'ların ekleneceğini sun,
+  karar gerektiren yerleri sor (AskUserQuestion), **onay gelmeden kod yazma**. Sonraki adıma onaysız geçme.
+- Onaylanan her adımda: kodu yaz → testler (SQLite + pgsql) → PHPStan, `npm run check`, `npm run types:check` → ekranı
+  tarayıcıda kontrol et → kullanıcıya göster → DURUM.md'yi güncelle → yerel commit. **Staging'e push etmeden önce sor.**
+- Push'u kullanıcı kendisi yapar (asistanın `git push`'u engelleniyor). Verilecek komutlar (önce dal kontrolü):
+  `git checkout staging` → `git merge --ff-only tasarim-yenileme` → `git push origin staging tasarim-yenileme` → `git checkout tasarim-yenileme`.
+- **Ekranlar tasarım sayfasındakiyle birebir aynı olmalı** (kullanıcı 2026-10-06: "bana gösterilenin birebir çalışanı olsun").
+  Tasarım sayfası: claude.ai artifact UuhFHJG8dJ3nmbiUuDS1AS; yerel kopyası `public/_tasarim.html` (git'e girmez,
+  tarayıcıda `http://localhost:8000/_tasarim.html`, tema düğmesinden Şafak / Gece Zümrüdü). Yalnız bu iki tema kullanılır.
+  Tasarım CSS'i `resources/css/marhal-mock.css` (`scripts/mockcss.py` ile üretilir, elle düzenlenmez; uyarlamalar `app.css` → `.mx`).
+  Ekranlar `<div class="mx"><div class="main">` + tasarımın HTML sınıfları; ortak parçalar `resources/js/components/mock/`.
+- Bütün özellikler birbiriyle uyumlu, **tek kaynaktan** (yerleşim: `App\Support\Placements`; hazırlık: `ReadinessBoard`;
+  çizelge: `TourJourney`; aile ekranı: `FamilyView`).
+- Dış servis gerektirenler (WhatsApp Business API, sanal POS, pasaport okuma, NFC, Nusuk / Diyanet) için **önce seçenek ve
+  maliyet sor**. Entegrasyonlar Faz 4'te, acente ayarından açılıp kapatılabilir.
+- Paketler / abonelik / platform paneli en son, ayrı plan (artifact 5Mxqaa5YmxceQ3qi7xzPCq).
+- Güvenlik: gerçek şifre / sır yazılmaz; demo giriş (admin@marhal.test / password) yalnız localhost'ta. Staging'de gerçek
+  yolcu verisi yok (KVKK). Sağlık verisi: ayrı açık rıza, şifreli, yalnız yetkili personel.
+- Token / süre: kullanıcı bir adımın çok token harcadığını fark etti → her büyük adıma **yeni oturumla** başlanıyor;
+  ekran görüntüsünü yalnız bitmiş ekran için al, pgsql testlerini adım sonunda bir kez çalıştır, adımları küçük tut (7a / 7b gibi).
+
+**Teknik tuzaklar (bu oturumlarda öğrenildi):**
+- Bash'te uzun heredoc'lar yarıda kesilebiliyor ve Python'a giden ters bölüler yarıya iniyor → PHP / TS dosyalarını Write / Edit
+  aracıyla yaz; betik gerekiyorsa scratchpad'e dosya olarak yaz. Namespace'li kodda `chr(92)` kullan.
+- Yeni Inertia sayfası testinden önce `npm run build`; yeni rota sonrası `php artisan wayfinder:generate --with-form`.
+- SQLite tırnaklı bilinmeyen sütunu metin sayar → sütun adlı testleri pgsql'de de çalıştır.
+- Grup factory'si bazen "A Grubu" üretir; testte ikinci gruba sabit, farklı ad ver.
+- Tarayıcı paneli gizliyken `img.decode()` takılabiliyor → resimler `createImageBitmap` ile açılıyor.
+
 ## Nerede kaldık
 
 **Faz 1 (MVP) adımları**
