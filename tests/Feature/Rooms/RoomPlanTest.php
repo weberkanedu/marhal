@@ -276,6 +276,33 @@ class RoomPlanTest extends TestCase
 
     // --- Yetki, izolasyon, raporlar ---
 
+    public function test_plan_lists_the_tours_hotels_and_unplaced_families_and_can_be_cleared(): void
+    {
+        $medina = TourHotel::factory()->create(['tour_id' => $this->tour->id, 'check_in' => '2026-11-08', 'check_out' => '2026-11-15']);
+        $husband = $this->registration(Gender::Male);
+        $wife = $this->registration(Gender::Female);
+        $husband->person->update(['birth_date' => '1960-06-01']);
+        $this->relate($husband->person, $wife->person, Relation::Spouse);
+        $single = $this->registration(Gender::Male);
+        $this->assign($this->room(), $single);
+
+        $this->actingAs($this->staff)->get(route('stays.room-plan', $this->stay))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('rooms/Plan')
+                ->where('stays.0.id', $this->stay->id)
+                ->where('stays.0.has_rooms', true)
+                ->where('stays.0.placed', 1)
+                ->where('stays.1.id', $medina->id)
+                ->where('stays.1.has_rooms', false)
+                ->has('units', 1)
+                ->where('units.0.ids', fn ($ids) => collect($ids)->sort()->values()->all() === collect([$husband->id, $wife->id])->sort()->values()->all())
+                ->where('unassigned', fn ($list) => collect($list)->firstWhere('registration_id', $husband->id)['age'] === 66));
+
+        $this->actingAs($this->staff)->delete(route('stays.assignments.clear', $this->stay))->assertRedirect();
+        $this->assertSame(0, RoomAssignment::query()->where('tour_hotel_id', $this->stay->id)->count());
+        $this->assertSame(1, $this->stay->rooms()->count(), 'Odalar kalır');
+    }
+
     public function test_guide_sees_only_own_group_and_cannot_change_the_plan(): void
     {
         $guide = User::factory()->forTenant($this->tenant)->role(UserRole::Guide)->create();
@@ -295,6 +322,7 @@ class RoomPlanTest extends TestCase
 
         $this->actingAs($guide)->post(route('rooms.assignments.store', $room), ['registration_id' => $mine->id])->assertForbidden();
         $this->actingAs($guide)->get(route('reports.stays.rooming-list', $this->stay))->assertForbidden();
+        $this->actingAs($guide)->delete(route('stays.assignments.clear', $this->stay))->assertForbidden();
     }
 
     public function test_other_agencies_stays_rooms_and_registrations_return_404(): void
@@ -310,6 +338,8 @@ class RoomPlanTest extends TestCase
         $this->actingAs($this->staff)->put(route('rooms.update', $foreignRoom), ['room_no' => '1', 'capacity' => 2, 'kind' => 'erkek'])->assertNotFound();
         $this->actingAs($this->staff)->delete(route('room-assignments.destroy', $foreignAssignment))->assertNotFound();
         $this->actingAs($this->staff)->get(route('reports.stays.rooming-list', $foreignRoom->tour_hotel_id))->assertNotFound();
+        $this->actingAs($this->staff)->delete(route('stays.assignments.clear', $foreignRoom->tour_hotel_id))->assertNotFound();
+        $this->assertSame(1, RoomAssignment::query()->withoutGlobalScopes()->whereKey($foreignAssignment->id)->count());
 
         // Kendi odasına başka acentenin yolcusu yerleştirilemez
         $this->assign($this->room(), $foreignRegistration)->assertNotFound();

@@ -11,6 +11,19 @@ export type RoomPassenger = {
     room_type_label: string | null;
     // İhtiyaç adları (tekerlekli sandalye, diyabet …).
     needs?: string[];
+    // Hareket güçlüğü (asansöre yakın oda kuralı) ve tur başındaki yaşı.
+    mobility?: boolean;
+    age?: number | null;
+};
+
+export type PlanStayLink = {
+    id: string;
+    city: string;
+    hotel_name: string;
+    check_in: string;
+    check_out: string;
+    has_rooms: boolean;
+    placed: number;
 };
 
 export type RoomOccupant = Omit<RoomPassenger, 'registration_id' | 'gender'> & {
@@ -65,19 +78,4 @@ export type PlanStats = {
 export type PlanOptions = {
     kinds: Option<RoomKind>[];
     roomTypes: Option[];
-};
-
-export type AutoAssignPreview = {
-    placements: { room_no: string; kind: string; names: string[] }[];
-    placed: number;
-    unplaced: { name: string; reason: string }[];
-};
-
-export const roomKindVariant: Record<
-    RoomKind,
-    'default' | 'secondary' | 'outline'
-> = {
-    erkek: 'secondary',
-    kadin: 'outline',
-    aile: 'default',
 };

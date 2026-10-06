@@ -1,72 +1,49 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import {
-    ArrowLeft,
-    BedDouble,
-    Building,
-    Copy,
-    Plus,
-    Search,
-    Users,
-    Wand2,
-    X,
-} from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import { Copy, Pencil, Plus } from '@lucide/vue';
+import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import RoomAssignmentController from '@/actions/App/Http/Controllers/RoomAssignmentController';
+import RoomController from '@/actions/App/Http/Controllers/RoomController';
 import RoomPlanController from '@/actions/App/Http/Controllers/RoomPlanController';
-import ExportMenu from '@/components/ExportMenu.vue';
-import CopyPlanDialog from '@/components/rooms/CopyPlanDialog.vue';
-import HotelTower from '@/components/rooms/HotelTower.vue';
-import RoomCard from '@/components/rooms/RoomCard.vue';
-import RoomDialogs from '@/components/rooms/RoomDialogs.vue';
-import StayFloorsDialog from '@/components/rooms/StayFloorsDialog.vue';
-import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { formatDate } from '@/lib/format';
+import MockPool from '@/components/mock/MockPool.vue';
+import type { PoolPerson } from '@/components/mock/MockPool.vue';
+import MockTop from '@/components/mock/MockTop.vue';
+import { usePointerDrag } from '@/composables/usePointerDrag';
 import {
     floorPlan,
     needs as needsReport,
     roomOccupancy,
     roomingList,
 } from '@/routes/reports/stays';
-import type { ExportItem } from '@/types/export';
 import { index as toursIndex, show as showTour } from '@/routes/tours';
+import type { ExportItem } from '@/types/export';
 import type {
-    AutoAssignPreview,
     OtherPassenger,
     PlanOptions,
     PlanRoom,
     PlanStats,
     PlanStay,
+    PlanStayLink,
+    RoomKind,
     RoomOccupant,
     UnassignedPassenger,
 } from '@/types/room';
 
+/**
+ * Otel planı — tasarım sayfasındaki "Otel planı" ekranının birebir hâli (gerçek veriyle): solda
+ * yerleşmemişler (aileler bir arada), üstte turun otelleri, solda otel kulesi (bizim katlar ve
+ * doluluk), sağda seçili kattaki odalar. Sürükle-bırak ya da yolcuya sonra boş yatağa tıklama.
+ */
 const props = defineProps<{
     stay: PlanStay;
     rooms: PlanRoom[];
     unassigned: UnassignedPassenger[];
+    units: { label: string | null; ids: string[] }[];
     others: OtherPassenger[];
+    stays: PlanStayLink[];
     stats: PlanStats;
     options: PlanOptions;
-    // Oda düzeni kopyalanabilecek diğer oteller (ör. Mekke → Medine).
-    copySources: { id: string; label: string }[];
     can: { update: boolean; reports: boolean };
 }>();
 
@@ -76,51 +53,471 @@ defineOptions({
     },
 });
 
-// Kat planı: kuledeki seçili kat odaları süzer.
-const floorsOpen = ref(false);
-const selectedFloor = ref<number | null>(null);
-const roomFloors = computed(() => [
-    ...new Set(
-        props.rooms
-            .map((r) => Number(r.floor))
-            .filter((f) => Number.isInteger(f) && f > 0),
-    ),
-]);
-const floorOccupancy = computed(() =>
-    props.rooms.reduce<Record<string, { occupied: number; beds: number }>>(
-        (acc, room) => {
-            const key = String(room.floor ?? '');
-            acc[key] ??= { occupied: 0, beds: 0 };
-            acc[key].occupied += room.occupants.length;
-            acc[key].beds += room.capacity;
+const root = ref<HTMLElement | null>(null);
+const selected = ref<string | null>(null);
+const editing = ref(false);
+const showOthers = ref(false);
 
-            return acc;
-        },
-        {},
+const ini = (name: string) =>
+    name
+        .trim()
+        .split(/\s+/)
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toLocaleUpperCase('tr');
+const surname = (name: string) => name.trim().split(/\s+/).slice(-1)[0];
+const g = (gender: string | null): 'E' | 'K' =>
+    gender === 'kadin' ? 'K' : 'E';
+
+function showError(errors: Record<string, string>): void {
+    toast.error(Object.values(errors)[0] ?? 'İşlem yapılamadı.');
+}
+
+// Katlar: binanın kat sayısı ve bize verilen katlar; tanımlı değilse odaların katlarından.
+const floorOf = (room: PlanRoom): number | null =>
+    room.floor !== null && /^\d+$/.test(room.floor.trim())
+        ? Number(room.floor)
+        : null;
+const roomFloors = computed(() => [
+    ...new Set(props.rooms.map(floorOf).filter((f): f is number => f !== null)),
+]);
+const ours = computed(() =>
+    [...new Set([...props.stay.used_floors, ...roomFloors.value])].sort(
+        (a, b) => a - b,
     ),
 );
-const visibleRooms = computed(() =>
-    selectedFloor.value === null
-        ? props.rooms
-        : props.rooms.filter((r) => Number(r.floor) === selectedFloor.value),
+const total = computed(() =>
+    Math.max(props.stay.floors_count ?? 0, ...ours.value, 0),
 );
+const floorsDesc = computed(() =>
+    Array.from({ length: total.value }, (_, i) => total.value - i),
+);
+// Katı yazılmamış odalar (eski kayıtlar) ayrı bir "kat" gibi gösterilir.
+const NO_FLOOR = -1;
+const hasNoFloor = computed(() => props.rooms.some((r) => floorOf(r) === null));
+
+const floorSel = ref<number>(
+    ours.value.find((f) => roomFloors.value.includes(f)) ??
+        ours.value[0] ??
+        NO_FLOOR,
+);
+watch(ours, (list) => {
+    if (
+        !list.includes(floorSel.value) &&
+        !(floorSel.value === NO_FLOOR && hasNoFloor.value)
+    ) {
+        floorSel.value = list[0] ?? NO_FLOOR;
+    }
+});
+
+const roomsOn = (floor: number) =>
+    props.rooms.filter((r) =>
+        floor === NO_FLOOR ? floorOf(r) === null : floorOf(r) === floor,
+    );
+const floorRooms = computed(() => roomsOn(floorSel.value));
+const pct = (n: number, d: number) => (d ? Math.round((n / d) * 100) : 0);
+const occFloor = (floor: number) => {
+    const rs = roomsOn(floor);
+
+    return pct(
+        rs.reduce((s, r) => s + r.occupants.length, 0),
+        rs.reduce((s, r) => s + r.capacity, 0),
+    );
+};
+const capFloor = computed(() =>
+    floorRooms.value.reduce((s, r) => s + r.capacity, 0),
+);
+
+// Oda kartı: etiket ve uyarılar (tasarımdaki gibi kısa).
+const kindLabel = (kind: RoomKind) =>
+    props.options.kinds.find((k) => k.value === kind)?.label ?? kind;
+function roomLabel(room: PlanRoom): string {
+    const people = room.occupants.filter((o) => o.registration_id !== null);
+
+    if (!room.occupants.length) {
+        return `Boş · ${kindLabel(room.kind)} odası`;
+    }
+
+    if (!people.length) {
+        return 'Başka grup';
+    }
+
+    const names = [...new Set(people.map((o) => surname(o.full_name)))];
+
+    if (room.kind === 'aile' || names.length === 1) {
+        return `${names.join(' / ')} ailesi`;
+    }
+
+    return people.every((o) => o.gender === 'kadin')
+        ? 'Kadın odası'
+        : people.every((o) => o.gender === 'erkek')
+          ? 'Erkek odası'
+          : 'Karışık';
+}
+const shortWarning = (w: string) =>
+    /asansör/i.test(w)
+        ? 'Asansöre uzak'
+        : /Ödediği oda/.test(w)
+          ? 'Oda tipi farkı'
+          : /Grubu bu otelde/.test(w)
+            ? 'Grup dışı'
+            : w;
+const roomIssues = (room: PlanRoom) => [
+    ...new Set(room.occupants.flatMap((o) => o.warnings.map(shortWarning))),
+];
+const issuesAll = computed(
+    () => props.rooms.filter((r) => roomIssues(r).length).length,
+);
+const slots = (room: PlanRoom) =>
+    Array.from(
+        { length: Math.max(room.capacity, room.occupants.length) },
+        (_, i) => room.occupants[i] ?? null,
+    );
+
+// Havuz: yerleşmemişler aile kümeleriyle (+ istenirse grubu bu otelde olmayanlar).
+const people = computed(
+    () =>
+        new Map(
+            [...props.unassigned, ...props.others].map((p) => [
+                p.registration_id,
+                p,
+            ]),
+        ),
+);
+const toPool = (p: UnassignedPassenger | OtherPassenger): PoolPerson => ({
+    id: p.registration_id,
+    name: p.full_name,
+    g: g(p.gender),
+    age: p.age ?? null,
+    tag: p.mobility ? 'Asansör' : null,
+    group: p.group_name,
+});
+const units = computed(() => [
+    ...props.units
+        .map((u) => ({
+            label: u.label,
+            people: u.ids
+                .map((id) => people.value.get(id))
+                .filter((p) => !!p)
+                .map(toPool),
+        }))
+        .filter((u) => u.people.length),
+    ...(showOthers.value
+        ? [
+              {
+                  label: 'Grubu bu otelde olmayanlar',
+                  people: props.others
+                      .filter((p) => p.elsewhere === null)
+                      .map(toPool),
+              },
+          ].filter((u) => u.people.length)
+        : []),
+]);
+const placeableOthers = computed(
+    () => props.others.filter((p) => p.elsewhere === null).length,
+);
+
+// Yerleşmiş yolcular: kayıt → oda sakini (sürüklenince ve havuza bırakılınca).
+const occupants = computed(
+    () =>
+        new Map(
+            props.rooms.flatMap((r) =>
+                r.occupants
+                    .filter((o) => o.registration_id !== null)
+                    .map((o) => [o.registration_id as string, o] as const),
+            ),
+        ),
+);
+const nameOf = (id: string) =>
+    people.value.get(id)?.full_name ?? occupants.value.get(id)?.full_name;
+
+function place(pid: string, from: string | null, to: string): void {
+    if (!props.can.update) {
+        return;
+    }
+
+    if (to === 'list') {
+        const occupant: RoomOccupant | undefined = occupants.value.get(pid);
+
+        if (occupant) {
+            router.delete(
+                RoomAssignmentController.destroy.url(occupant.assignment_id),
+                {
+                    preserveScroll: true,
+                    onSuccess: () =>
+                        toast(`${occupant.full_name} listeye döndü`),
+                    onError: showError,
+                },
+            );
+        }
+
+        return;
+    }
+
+    const room = props.rooms.find((r) => r.id === to);
+
+    if (!room) {
+        return;
+    }
+
+    router.post(
+        RoomAssignmentController.store.url(room.id),
+        { registration_id: pid },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                selected.value = null;
+                const p =
+                    people.value.get(pid) ?? occupants.value.get(pid) ?? null;
+                toast(
+                    `${nameOf(pid)} → oda ${room.room_no}${room.near_elevator && p?.mobility ? ' · asansöre yakın ✓' : ''}`,
+                );
+            },
+            onError: showError,
+        },
+    );
+}
+
+usePointerDrag(root, {
+    label: (pid) => {
+        const name = nameOf(pid);
+
+        return name ? { initials: ini(name), name } : null;
+    },
+    onDrop: place,
+    onClick: (pid, from) => {
+        if (from === null && props.can.update) {
+            selected.value = selected.value === pid ? null : pid;
+
+            if (selected.value) {
+                toast(`${nameOf(pid)} seçildi. Şimdi boş bir yatağa tıkla`);
+            }
+        }
+    },
+    // Sürüklerken bir katın üstünde durunca o kata geçilir.
+    onHover: (el) => {
+        const floor = Number(el.dataset.floor);
+
+        if (!Number.isNaN(floor) && floor !== floorSel.value) {
+            floorSel.value = floor;
+        }
+    },
+});
+
+function clickBed(room: PlanRoom): void {
+    if (selected.value) {
+        place(selected.value, null, room.id);
+    }
+}
+
+// Düğmeler
+function auto(): void {
+    router.post(
+        RoomPlanController.apply.url(props.stay.id),
+        {},
+        { preserveScroll: true, onError: showError },
+    );
+}
+
+function clear(): void {
+    if (
+        confirm('Bu oteldeki bütün yerleşimler kaldırılsın mı? Odalar kalır.')
+    ) {
+        router.delete(RoomPlanController.clear.url(props.stay.id), {
+            preserveScroll: true,
+            onError: showError,
+        });
+    }
+}
+
+// "Medine'ye kopyala" / "Mekke'den kopyala": sıradaki otele (yoksa öncekinden bu otele).
+const VOWELS = 'aeıioöuü';
+const lastVowel = (w: string) =>
+    [...w.toLocaleLowerCase('tr')].reverse().find((c) => VOWELS.includes(c)) ??
+    'e';
+const front = (w: string) => 'eiöü'.includes(lastVowel(w));
+const dative = (w: string) =>
+    `${w}'${VOWELS.includes(w.slice(-1).toLocaleLowerCase('tr')) ? 'y' : ''}${front(w) ? 'e' : 'a'}`;
+const ablative = (w: string) =>
+    `${w}'${'fstkçşhp'.includes(w.slice(-1).toLocaleLowerCase('tr')) ? 't' : 'd'}${front(w) ? 'en' : 'an'}`;
+
+// Sonraki konaklama: bu otelden çıkış günü ya da sonra giriş (aynı anda başka grubun oteli değil).
+const nextStay = computed(() =>
+    props.stays.find(
+        (s) => s.id !== props.stay.id && s.check_in >= props.stay.check_out,
+    ),
+);
+const prevStay = computed(() =>
+    [...props.stays]
+        .reverse()
+        .find(
+            (s) => s.id !== props.stay.id && s.check_out <= props.stay.check_in,
+        ),
+);
+// Aynı şehirdeyse otelin adı, değilse şehir ("Medine'ye kopyala").
+const placeName = (s: PlanStayLink) =>
+    s.city === props.stay.city_label ? s.hotel_name : s.city;
+const copyPlan = computed(() => {
+    if (nextStay.value) {
+        return {
+            from: props.stay.id,
+            target: nextStay.value,
+            go: true,
+            label: `${dative(placeName(nextStay.value))} kopyala`,
+        };
+    }
+
+    if (prevStay.value) {
+        return {
+            from: prevStay.value.id,
+            target: props.stays.find((s) => s.id === props.stay.id)!,
+            go: false,
+            label: `${ablative(placeName(prevStay.value))} kopyala`,
+        };
+    }
+
+    return null;
+});
+
+function copy(): void {
+    const plan = copyPlan.value;
+
+    if (!plan) {
+        return;
+    }
+
+    const target = plan.target;
+
+    if (!target.has_rooms) {
+        toast.error(
+            `Önce ${target.city} · ${target.hotel_name} için "Oteli tanımla"dan oda ekleyin.`,
+        );
+
+        return;
+    }
+
+    router.post(
+        RoomPlanController.copy.url(target.id),
+        { from: plan.from },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                if (plan.go) {
+                    router.visit(RoomPlanController.show.url(target.id));
+                }
+            },
+            onError: showError,
+        },
+    );
+}
+
+// "Oteli tanımla": kat sayısı, bizim katlar, kattaki odalar (kişi, tür, asansöre yakın).
+const floorsInput = ref(String(total.value || 10));
+watch(total, (t) => (floorsInput.value = String(t || 10)));
+
+function saveFloors(count: number, used: number[]): void {
+    router.put(
+        RoomPlanController.floors.url(props.stay.id),
+        { floors_count: count, used_floors: used },
+        { preserveScroll: true, preserveState: true, onError: showError },
+    );
+}
+
+function setTotal(): void {
+    const count = Math.min(150, Math.max(1, Number(floorsInput.value) || 1));
+    saveFloors(
+        count,
+        ours.value.filter((f) => f <= count),
+    );
+}
+
+function toggleFloor(floor: number): void {
+    const count = Math.max(1, Number(floorsInput.value) || total.value || 1);
+
+    if (ours.value.includes(floor)) {
+        saveFloors(
+            count,
+            ours.value.filter((f) => f !== floor),
+        );
+    } else {
+        saveFloors(count, [...ours.value, floor]);
+        floorSel.value = floor;
+    }
+}
+
+function updateRoom(room: PlanRoom, changes: Partial<PlanRoom>): void {
+    router.put(
+        RoomController.update.url(room.id),
+        {
+            room_no: room.room_no,
+            floor: room.floor,
+            capacity: room.capacity,
+            kind: room.kind,
+            notes: room.notes,
+            near_elevator: room.near_elevator,
+            ...changes,
+        },
+        { preserveScroll: true, preserveState: true, onError: showError },
+    );
+}
+
+function deleteRoom(room: PlanRoom): void {
+    if (
+        room.occupants.length &&
+        !confirm(
+            `${room.room_no} numaralı odada ${room.occupants.length} yolcu var. Oda silinsin, yolcular listeye dönsün mü?`,
+        )
+    ) {
+        return;
+    }
+
+    router.delete(RoomController.destroy.url(room.id), {
+        preserveScroll: true,
+        preserveState: true,
+        onError: showError,
+    });
+}
+
+function addRoom(): void {
+    const floor = floorSel.value === NO_FLOOR ? null : floorSel.value;
+    const taken = new Set(props.rooms.map((r) => r.room_no));
+    let no = floor !== null ? floor * 100 + floorRooms.value.length + 1 : 1;
+
+    while (taken.has(String(no))) {
+        no++;
+    }
+
+    router.post(
+        RoomController.store.url(props.stay.id),
+        {
+            start_no: String(no),
+            count: 1,
+            floor: floor === null ? null : String(floor),
+            capacity: 4,
+            kind: 'aile',
+            near_elevator: 0,
+        },
+        { preserveScroll: true, preserveState: true, onError: showError },
+    );
+}
 
 const exportItems = computed<ExportItem[]>(() =>
     props.can.reports
         ? [
               {
                   title: 'Oda listesi',
-                  description: 'Otele verilecek (rooming list)',
+                  description: 'Otel resepsiyonu için, kat sırasıyla',
                   url: roomingList.url(props.stay.id),
               },
               {
                   title: 'Kat planı',
-                  description: 'Kat kat odalar ve kalanlar',
+                  description: 'Her katın çizimi, isimlerle',
                   url: floorPlan.url(props.stay.id),
               },
               {
                   title: 'İhtiyaç listesi',
-                  description: 'Özel ihtiyacı olanlar ve odaları',
+                  description: 'Asansör ve yardım gereken yolcular',
                   url: needsReport.url(props.stay.id),
               },
               {
@@ -132,526 +529,439 @@ const exportItems = computed<ExportItem[]>(() =>
         : [],
 );
 
-const kindLabel = (value: string) =>
-    props.options.kinds.find((k) => k.value === value)?.label ?? value;
+const crumbs = computed(() => [
+    { label: 'Turlar', href: toursIndex.url() },
+    { label: props.stay.tour.name, href: showTour.url(props.stay.tour.id) },
+    {
+        label: 'Konaklama',
+        href: showTour.url(props.stay.tour.id, {
+            query: { tab: 'konaklama' },
+        }),
+    },
+]);
 
-// Seçim: yerleşmemiş bir yolcu veya taşınacak bir oda sakini.
-const selected = ref<{ registration_id: string; full_name: string } | null>(
-    null,
+const goal = computed(() =>
+    Math.min(props.stats.beds, props.stats.occupied + props.stats.unassigned),
 );
-
-function select(passenger: {
-    registration_id: string | null;
-    full_name: string;
-}): void {
-    if (!props.can.update || passenger.registration_id === null) {
-        return;
-    }
-
-    selected.value =
-        selected.value?.registration_id === passenger.registration_id
-            ? null
-            : {
-                  registration_id: passenger.registration_id,
-                  full_name: passenger.full_name,
-              };
-}
-
-function showError(errors: Record<string, string>): void {
-    toast.error(Object.values(errors)[0] ?? 'İşlem yapılamadı.');
-}
-
-function place(room: PlanRoom): void {
-    if (!selected.value) {
-        return;
-    }
-
-    router.post(
-        RoomAssignmentController.store.url(room.id),
-        { registration_id: selected.value.registration_id },
-        {
-            preserveScroll: true,
-            onSuccess: () => (selected.value = null),
-            onError: showError,
-        },
-    );
-}
-
-function remove(occupant: RoomOccupant): void {
-    router.delete(
-        RoomAssignmentController.destroy.url(occupant.assignment_id),
-        {
-            preserveScroll: true,
-            onError: showError,
-        },
-    );
-}
-
-// Arama
-const search = ref('');
-const normalize = (value: string) => value.toLocaleLowerCase('tr');
-const filteredUnassigned = computed(() =>
-    props.unassigned.filter((p) =>
-        normalize(p.full_name).includes(normalize(search.value)),
-    ),
-);
-const filteredOthers = computed(() =>
-    props.others.filter((p) =>
-        normalize(p.full_name).includes(normalize(search.value)),
-    ),
-);
-const showOthers = ref(false);
-
-// Diyaloglar
-const addOpen = ref(false);
-const editOpen = ref(false);
-const editingRoom = ref<PlanRoom | null>(null);
-
-function editRoom(room: PlanRoom): void {
-    editingRoom.value = room;
-    editOpen.value = true;
-}
-
-const copyOpen = ref(false);
-
-// Otomatik dağıt: önce önizleme, onaylanınca kaydet.
-const autoOpen = ref(false);
-const preview = ref<AutoAssignPreview | null>(null);
-const loadingPreview = ref(false);
-const applying = ref(false);
-
-async function openAutoAssign(): Promise<void> {
-    autoOpen.value = true;
-    preview.value = null;
-    loadingPreview.value = true;
-
-    try {
-        const response = await fetch(
-            RoomPlanController.preview.url(props.stay.id),
-            { headers: { Accept: 'application/json' } },
-        );
-        preview.value = response.ok ? await response.json() : null;
-    } finally {
-        loadingPreview.value = false;
-    }
-}
-
-function applyAutoAssign(): void {
-    applying.value = true;
-    router.post(
-        RoomPlanController.apply.url(props.stay.id),
-        {},
-        {
-            preserveScroll: true,
-            onSuccess: () => (autoOpen.value = false),
-            onError: showError,
-            onFinish: () => (applying.value = false),
-        },
-    );
-}
-
-const free = computed(() => props.stats.beds - props.stats.occupied);
+const progress = computed(() => pct(props.stats.occupied, goal.value));
 </script>
 
 <template>
-    <Head :title="`Oda planı — ${stay.hotel_name}`" />
+    <Head :title="`Otel planı — ${stay.hotel_name}`" />
 
-    <div class="flex w-full flex-col gap-4 p-4">
-        <!-- Başlık -->
-        <div class="flex flex-wrap items-start justify-between gap-4">
-            <div>
-                <Link
-                    :href="
-                        showTour(stay.tour.id, { query: { tab: 'konaklama' } })
-                    "
-                    class="mb-1 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-                >
-                    <ArrowLeft class="size-4" /> {{ stay.tour.name }}
-                </Link>
-                <h1 class="text-2xl font-semibold tracking-tight">
-                    {{ stay.hotel_name }}
-                    <span class="text-muted-foreground">
-                        · {{ stay.city_label }}
-                    </span>
-                </h1>
-                <p class="mt-1 text-sm text-muted-foreground">
-                    {{ formatDate(stay.check_in) }} –
-                    {{ formatDate(stay.check_out) }} · {{ stay.nights }} gece
-                    <template v-if="stay.groups.length">
-                        · {{ stay.groups.join(', ') }}
-                    </template>
-                </p>
-            </div>
-            <div class="flex flex-wrap gap-2">
-                <ExportMenu :items="exportItems" />
+    <div ref="root" class="mx">
+        <div class="main">
+            <MockTop :crumbs="crumbs" title="Otel planı" :exports="exportItems">
                 <template v-if="can.update">
-                    <Button variant="outline" @click="floorsOpen = true">
-                        <Building /> Oteli tanımla
-                    </Button>
-                    <Button variant="outline" @click="addOpen = true">
-                        <Plus /> Oda ekle
-                    </Button>
-                    <Button
-                        v-if="copySources.length"
-                        variant="outline"
-                        :disabled="rooms.length === 0 || stats.unassigned === 0"
-                        @click="copyOpen = true"
+                    <button
+                        v-if="copyPlan"
+                        class="btn ghost"
+                        type="button"
+                        @click="copy"
                     >
-                        <Copy /> Başka otelden kopyala
-                    </Button>
-                    <Button
-                        :disabled="rooms.length === 0 || stats.unassigned === 0"
-                        @click="openAutoAssign"
-                    >
-                        <Wand2 /> Otomatik dağıt
-                    </Button>
+                        <Copy />{{ copyPlan.label }}
+                    </button>
+                    <button class="btn ghost" type="button" @click="clear">
+                        Temizle
+                    </button>
+                    <button class="btn" type="button" @click="auto">
+                        Otomatik dağıt
+                    </button>
                 </template>
-            </div>
-        </div>
+            </MockTop>
 
-        <!-- Özet -->
-        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Card>
-                <CardHeader>
-                    <CardDescription>Oda</CardDescription>
-                    <CardTitle class="text-2xl">{{ stats.rooms }}</CardTitle>
-                </CardHeader>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardDescription>Dolu / yatak</CardDescription>
-                    <CardTitle class="text-2xl">
-                        {{ stats.occupied }} / {{ stats.beds }}
-                    </CardTitle>
-                </CardHeader>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardDescription>Boş yatak</CardDescription>
-                    <CardTitle class="text-2xl text-success">
-                        {{ free }}
-                    </CardTitle>
-                </CardHeader>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardDescription>Yerleşmemiş yolcu</CardDescription>
-                    <CardTitle
-                        class="text-2xl"
-                        :class="{ 'text-warning': stats.unassigned > 0 }"
+            <div class="planner">
+                <MockPool
+                    :units="units"
+                    :selected="selected"
+                    :locked="!can.update"
+                    hint="Aileler aynı odaya yerleşir. Yürüme güçlüğü olanlar asansöre yakın odalara gider."
+                >
+                    <span
+                        v-if="can.update && placeableOthers"
+                        class="lbl"
+                        role="button"
+                        tabindex="0"
+                        style="cursor: pointer; text-decoration: underline"
+                        @click="showOthers = !showOthers"
+                        >{{ showOthers ? 'Gizle' : 'Göster' }}: grubu bu otelde
+                        olmayan yolcular ({{ placeableOthers }})</span
                     >
-                        {{ stats.unassigned }}
-                    </CardTitle>
-                </CardHeader>
-            </Card>
-        </div>
+                </MockPool>
 
-        <!-- Seçim bilgisi -->
-        <div
-            v-if="selected"
-            class="sticky top-2 z-10 flex items-center justify-between gap-3 rounded-md border border-primary/40 bg-background p-3 text-sm shadow-sm"
-        >
-            <span>
-                <strong>{{ selected.full_name }}</strong> seçildi — yerleştirmek
-                için çerçevesi vurgulanan bir odaya tıklayın.
-            </span>
-            <Button size="sm" variant="ghost" @click="selected = null">
-                <X /> Vazgeç
-            </Button>
-        </div>
-
-        <div class="grid min-w-0 gap-4 lg:grid-cols-[20rem_minmax(0,1fr)]">
-            <!-- Yerleşmemiş yolcular -->
-            <Card class="h-fit min-w-0 lg:sticky lg:top-2">
-                <CardHeader>
-                    <CardTitle class="flex items-center gap-2">
-                        <Users class="size-4" /> Yerleşmemiş yolcular
-                    </CardTitle>
-                    <CardDescription v-if="can.update">
-                        Yolcuya, sonra odaya tıklayın.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent class="flex flex-col gap-2 text-sm">
-                    <div class="relative">
-                        <Search
-                            class="absolute top-2.5 left-2.5 size-4 text-muted-foreground"
-                        />
-                        <Input
-                            v-model="search"
-                            placeholder="İsimle ara"
-                            class="pl-8"
-                        />
+                <div class="card">
+                    <div class="stagebar">
+                        <div class="pills">
+                            <span
+                                v-for="s in stays"
+                                :key="s.id"
+                                class="pill"
+                                :class="{ on: s.id === stay.id }"
+                                role="button"
+                                tabindex="0"
+                                @click="
+                                    s.id !== stay.id &&
+                                    router.visit(
+                                        RoomPlanController.show.url(s.id),
+                                    )
+                                "
+                                >{{ s.city }} · {{ s.hotel_name }}</span
+                            >
+                        </div>
+                        <div class="prog">
+                            <span>{{ stats.occupied }} / {{ goal }}</span>
+                            <div class="bar">
+                                <i
+                                    :class="{ full: progress >= 100 }"
+                                    :style="{ width: `${progress}%` }"
+                                />
+                            </div>
+                        </div>
                     </div>
-                    <p
-                        v-if="unassigned.length === 0"
-                        class="py-2 text-muted-foreground"
-                    >
-                        Herkes yerleşti.
-                    </p>
-                    <ul
-                        class="flex max-h-[35vh] flex-col gap-0.5 overflow-y-auto lg:max-h-[60vh]"
-                    >
-                        <li
-                            v-for="p in filteredUnassigned"
-                            :key="p.registration_id"
-                        >
-                            <button
-                                type="button"
-                                class="w-full rounded-md px-2 py-1.5 text-left hover:bg-muted"
-                                :class="{
-                                    'bg-primary/10 ring-1 ring-primary':
-                                        selected?.registration_id ===
-                                        p.registration_id,
-                                }"
-                                :disabled="!can.update"
-                                @click="select(p)"
-                            >
-                                <div
-                                    class="flex items-center justify-between gap-2"
-                                >
-                                    <span class="truncate font-medium">
-                                        {{ p.full_name }}
-                                    </span>
-                                    <span
-                                        class="shrink-0 text-xs text-muted-foreground"
-                                    >
-                                        {{
-                                            p.gender === 'erkek'
-                                                ? 'Erkek'
-                                                : 'Kadın'
-                                        }}
-                                    </span>
-                                </div>
-                                <div class="text-xs text-muted-foreground">
-                                    {{
-                                        [p.group_name, p.room_type_label]
-                                            .filter(Boolean)
-                                            .join(' · ')
-                                    }}
-                                </div>
-                                <div
-                                    v-if="p.needs?.length"
-                                    class="mt-0.5 flex flex-wrap gap-1"
-                                >
-                                    <span
-                                        v-for="need in p.needs"
-                                        :key="need"
-                                        class="rounded-full bg-accent px-1.5 text-[10.5px] font-semibold text-accent-foreground"
-                                        >{{ need }}</span
-                                    >
-                                </div>
-                                <div
-                                    v-for="f in p.family"
-                                    :key="f.name"
-                                    class="text-xs text-primary"
-                                >
-                                    {{ f.relation }}: {{ f.name }}
-                                    <template v-if="f.room_no">
-                                        (oda {{ f.room_no }})
-                                    </template>
-                                </div>
-                            </button>
-                        </li>
-                    </ul>
 
-                    <template v-if="can.update && others.length > 0">
-                        <button
-                            type="button"
-                            class="mt-2 text-left text-xs text-muted-foreground underline"
-                            @click="showOthers = !showOthers"
-                        >
-                            {{ showOthers ? 'Gizle' : 'Göster' }}: grubu bu
-                            otelde olmayan yolcular ({{ others.length }})
-                        </button>
-                        <ul v-if="showOthers" class="flex flex-col gap-0.5">
-                            <li
-                                v-for="p in filteredOthers"
-                                :key="p.registration_id"
-                            >
-                                <button
-                                    type="button"
-                                    class="w-full rounded-md px-2 py-1.5 text-left hover:bg-muted disabled:opacity-50"
-                                    :class="{
-                                        'bg-primary/10 ring-1 ring-primary':
-                                            selected?.registration_id ===
-                                            p.registration_id,
-                                    }"
-                                    :disabled="p.elsewhere !== null"
-                                    @click="select(p)"
+                    <div v-if="editing && can.update" class="editor">
+                        <h5>
+                            {{ stay.city_label }} · {{ stay.hotel_name }} tanımı
+                        </h5>
+                        <div class="row">
+                            <label class="fi" for="hName"
+                                >Otel adı<input
+                                    id="hName"
+                                    :value="stay.hotel_name"
+                                    readonly
+                                    title="Otel adı Oteller sayfasından değişir"
+                            /></label>
+                            <label class="fi" for="hTotal"
+                                >Kat sayısı<input
+                                    id="hTotal"
+                                    v-model="floorsInput"
+                                    type="number"
+                                    min="1"
+                                    max="150"
+                                    style="width: 90px"
+                                    @change="setTotal"
+                            /></label>
+                        </div>
+                        <div class="fi">
+                            Bizim kullandığımız katlar
+                            <div class="chips">
+                                <span
+                                    v-for="f in Number(floorsInput) || 0"
+                                    :key="f"
+                                    :class="{ on: ours.includes(f) }"
+                                    role="button"
+                                    tabindex="0"
+                                    @click="toggleFloor(f)"
+                                    >{{ f }}</span
                                 >
-                                    <div class="truncate">
-                                        {{ p.full_name }}
+                            </div>
+                        </div>
+                        <div class="fi">
+                            {{
+                                floorSel === NO_FLOOR
+                                    ? 'Katı yazılmamış odalar'
+                                    : `${floorSel}. kattaki odalar`
+                            }}
+                            <div class="tbl">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Oda</th>
+                                            <th>Kişi</th>
+                                            <th>Tür</th>
+                                            <th>Asansöre yakın</th>
+                                            <th />
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="r in floorRooms" :key="r.id">
+                                            <td>
+                                                <b>{{ r.room_no }}</b>
+                                            </td>
+                                            <td>
+                                                <select
+                                                    class="mini-in"
+                                                    aria-label="Kişi sayısı"
+                                                    :value="r.capacity"
+                                                    @change="
+                                                        updateRoom(r, {
+                                                            capacity: Number(
+                                                                (
+                                                                    $event.target as HTMLSelectElement
+                                                                ).value,
+                                                            ),
+                                                        })
+                                                    "
+                                                >
+                                                    <option
+                                                        v-for="n in Math.max(
+                                                            6,
+                                                            r.capacity,
+                                                        )"
+                                                        :key="n"
+                                                        :value="n"
+                                                    >
+                                                        {{ n }}
+                                                    </option>
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <select
+                                                    class="mini-in"
+                                                    aria-label="Oda türü"
+                                                    :value="r.kind"
+                                                    @change="
+                                                        updateRoom(r, {
+                                                            kind: (
+                                                                $event.target as HTMLSelectElement
+                                                            ).value as RoomKind,
+                                                        })
+                                                    "
+                                                >
+                                                    <option
+                                                        v-for="k in options.kinds"
+                                                        :key="k.value"
+                                                        :value="k.value"
+                                                    >
+                                                        {{ k.label }}
+                                                    </option>
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <span
+                                                    class="cb"
+                                                    :class="{
+                                                        on: r.near_elevator,
+                                                    }"
+                                                    role="checkbox"
+                                                    :aria-checked="
+                                                        r.near_elevator
+                                                    "
+                                                    tabindex="0"
+                                                    @click="
+                                                        updateRoom(r, {
+                                                            near_elevator:
+                                                                !r.near_elevator,
+                                                        })
+                                                    "
+                                                    >{{
+                                                        r.near_elevator
+                                                            ? '✓'
+                                                            : ''
+                                                    }}</span
+                                                >
+                                            </td>
+                                            <td>
+                                                <button
+                                                    class="xbtn"
+                                                    type="button"
+                                                    aria-label="Odayı sil"
+                                                    @click="deleteRoom(r)"
+                                                >
+                                                    ×
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <button
+                                class="btn ghost sm"
+                                type="button"
+                                :disabled="
+                                    floorSel === NO_FLOOR && ours.length > 0
+                                "
+                                @click="addRoom"
+                            >
+                                <Plus />Oda ekle
+                            </button>
+                            <button
+                                class="btn sm"
+                                type="button"
+                                @click="editing = false"
+                            >
+                                Tamam
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="hotel">
+                        <div v-if="total > 0 || hasNoFloor" class="tower">
+                            <div class="roof" />
+                            <div class="body">
+                                <template v-for="f in floorsDesc" :key="f">
+                                    <div
+                                        v-if="ours.includes(f)"
+                                        class="fl ours"
+                                        :class="{ on: floorSel === f }"
+                                        :data-floor="f"
+                                        data-hover-drop
+                                        :style="{ '--o': occFloor(f) }"
+                                        :title="`${f}. kat · %${occFloor(f)} dolu`"
+                                        @click="floorSel = f"
+                                    >
+                                        <span>{{ f }}</span
+                                        ><i />
                                     </div>
-                                    <div class="text-xs text-muted-foreground">
-                                        {{ p.group_name ?? 'Grupsuz' }}
-                                        <template v-if="p.elsewhere">
-                                            · {{ p.elsewhere }} otelinde
+                                    <div v-else class="fl" :title="`${f}. kat`">
+                                        <span>{{ f }}</span
+                                        ><i />
+                                    </div>
+                                </template>
+                                <div
+                                    v-if="hasNoFloor"
+                                    class="fl ours"
+                                    :class="{ on: floorSel === NO_FLOOR }"
+                                    :data-floor="NO_FLOOR"
+                                    data-hover-drop
+                                    :style="{ '--o': occFloor(NO_FLOOR) }"
+                                    title="Katı yazılmamış odalar"
+                                    @click="floorSel = NO_FLOOR"
+                                >
+                                    <span>–</span><i />
+                                </div>
+                            </div>
+                            <div class="base" />
+                            <small>Renkli katlar bizim.<br />Kata tıkla.</small>
+                        </div>
+                        <div v-else />
+
+                        <div
+                            style="
+                                display: flex;
+                                flex-direction: column;
+                                gap: 10px;
+                                min-width: 0;
+                            "
+                        >
+                            <div class="floorhd">
+                                <div>
+                                    <b>{{
+                                        floorSel === NO_FLOOR
+                                            ? rooms.length
+                                                ? 'Katsız odalar'
+                                                : 'Oda yok'
+                                            : `${floorSel}. kat`
+                                    }}</b>
+                                    <span class="lbl">
+                                        · {{ floorRooms.length }} oda ·
+                                        {{ capFloor }} yatak · %{{
+                                            occFloor(floorSel)
+                                        }}
+                                        dolu</span
+                                    >
+                                </div>
+                                <button
+                                    v-if="can.update && !editing"
+                                    class="btn ghost sm"
+                                    type="button"
+                                    @click="editing = true"
+                                >
+                                    <Pencil />Oteli tanımla
+                                </button>
+                            </div>
+                            <div class="legend">
+                                <span
+                                    ><span class="tag">Asansör</span> asansöre
+                                    yakın oda</span
+                                >
+                                <span
+                                    ><i style="background: var(--m-warn)" />{{
+                                        issuesAll
+                                            ? `${issuesAll} odada uyarı`
+                                            : 'Uyarı yok'
+                                    }}</span
+                                >
+                            </div>
+                            <div class="rooms">
+                                <div
+                                    v-for="r in floorRooms"
+                                    :key="r.id"
+                                    class="rm"
+                                    :class="{ warnr: roomIssues(r).length }"
+                                >
+                                    <header>
+                                        <b>{{ r.room_no }}</b>
+                                        <span
+                                            v-if="r.near_elevator"
+                                            class="tag"
+                                            title="Asansöre yakın"
+                                            >Asansör</span
+                                        >
+                                        <span v-else class="tag soft"
+                                            >{{ r.capacity }} kişilik</span
+                                        >
+                                    </header>
+                                    <span class="occ" :title="roomLabel(r)">{{
+                                        roomLabel(r)
+                                    }}</span>
+                                    <span
+                                        v-if="roomIssues(r).length"
+                                        class="issue"
+                                        >{{ roomIssues(r).join(' · ') }}</span
+                                    >
+                                    <div class="beds">
+                                        <template
+                                            v-for="(o, i) in slots(r)"
+                                            :key="i"
+                                        >
+                                            <div
+                                                v-if="
+                                                    o &&
+                                                    o.registration_id === null
+                                                "
+                                                class="slot lock"
+                                                title="Başka grup"
+                                            />
+                                            <div
+                                                v-else-if="o"
+                                                class="slot full"
+                                                :class="[
+                                                    g(o.gender).toLowerCase(),
+                                                    { warn: o.warnings.length },
+                                                ]"
+                                                data-drop="slot"
+                                                :data-key="r.id"
+                                                :data-pid="o.registration_id"
+                                                data-from="slot"
+                                                :data-locked="
+                                                    can.update ? undefined : ''
+                                                "
+                                                :title="
+                                                    [
+                                                        o.full_name,
+                                                        ...(o.needs ?? []),
+                                                        ...o.warnings,
+                                                    ].join(' · ')
+                                                "
+                                            >
+                                                {{ ini(o.full_name) }}
+                                            </div>
+                                            <div
+                                                v-else
+                                                class="slot free"
+                                                data-drop="slot"
+                                                :data-key="r.id"
+                                                title="Boş yatak"
+                                                @click="clickBed(r)"
+                                            />
                                         </template>
                                     </div>
-                                </button>
-                            </li>
-                        </ul>
-                    </template>
-                </CardContent>
-            </Card>
-
-            <!-- Odalar -->
-            <div class="min-w-0">
-                <div
-                    v-if="rooms.length === 0"
-                    class="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-sm text-muted-foreground"
-                >
-                    <BedDouble class="size-8" />
-                    Bu otel için henüz oda eklenmedi.
-                    <Button v-if="can.update" size="sm" @click="addOpen = true">
-                        <Plus /> Oda ekle
-                    </Button>
-                </div>
-                <div
-                    v-else
-                    class="flex flex-col gap-3 md:flex-row md:items-start"
-                >
-                    <HotelTower
-                        v-if="stay.floors_count"
-                        :floors-count="stay.floors_count"
-                        :used-floors="stay.used_floors"
-                        :occupancy="floorOccupancy"
-                        :selected="selectedFloor"
-                        @select="selectedFloor = $event"
-                    />
-                    <div class="min-w-0 flex-1">
-                        <p
-                            v-if="selectedFloor !== null"
-                            class="mb-2 flex items-center gap-2 text-sm"
-                        >
-                            <b>{{ selectedFloor }}. kat</b>
-                            <span class="text-muted-foreground">
-                                {{ visibleRooms.length }} oda
-                            </span>
-                            <button
-                                type="button"
-                                class="text-xs underline"
-                                @click="selectedFloor = null"
-                            >
-                                Bütün katlar
-                            </button>
-                        </p>
-                        <p
-                            v-else-if="!stay.floors_count && can.update"
-                            class="mb-2 text-xs text-muted-foreground"
-                        >
-                            Kat planını görmek için Oteli tanımla düğmesinden
-                            binanın kat sayısını ve bize verilen katları girin.
-                        </p>
-                        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                            <RoomCard
-                                v-for="room in visibleRooms"
-                                :key="room.id"
-                                :room="room"
-                                :kind-label="kindLabel(room.kind)"
-                                :can-update="can.update"
-                                :selecting="selected !== null"
-                                :selected-id="selected?.registration_id ?? null"
-                                @place="place"
-                                @pick="select"
-                                @remove="remove"
-                                @edit="editRoom"
-                            />
+                                </div>
+                                <div
+                                    v-if="!floorRooms.length"
+                                    class="empty-pool"
+                                >
+                                    Bu katta oda yok. "Oteli tanımla"dan oda
+                                    ekle.
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <StayFloorsDialog
-        v-if="can.update"
-        v-model:open="floorsOpen"
-        :stay-id="stay.id"
-        :hotel-name="stay.hotel_name"
-        :floors-count="stay.floors_count"
-        :used-floors="stay.used_floors"
-        :room-floors="roomFloors"
-    />
-
-    <RoomDialogs
-        v-if="can.update"
-        v-model:add-open="addOpen"
-        v-model:edit-open="editOpen"
-        :stay-id="stay.id"
-        :kinds="options.kinds"
-        :editing="editingRoom"
-    />
-
-    <CopyPlanDialog
-        v-if="can.update && copySources.length"
-        v-model:open="copyOpen"
-        :stay-id="stay.id"
-        :sources="copySources"
-    />
-
-    <Dialog v-model:open="autoOpen">
-        <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-            <DialogHeader>
-                <DialogTitle>Otomatik dağıt</DialogTitle>
-                <DialogDescription>
-                    Aileler birlikte, cinsiyete ve ödenen oda tipine göre
-                    yerleştirilir. Elle yaptığınız yerleşimler değişmez; sonra
-                    istediğiniz gibi düzeltebilirsiniz.
-                </DialogDescription>
-            </DialogHeader>
-
-            <p v-if="loadingPreview" class="text-sm text-muted-foreground">
-                Plan hazırlanıyor…
-            </p>
-            <template v-else-if="preview">
-                <p class="text-sm">
-                    <strong>{{ preview.placed }}</strong> yolcu
-                    {{ preview.placements.length }} odaya yerleşecek.
-                </p>
-                <ul class="divide-y rounded-md border text-sm">
-                    <li
-                        v-for="item in preview.placements"
-                        :key="item.room_no"
-                        class="px-3 py-2"
-                    >
-                        <span class="font-medium">{{ item.room_no }}</span>
-                        <span class="text-xs text-muted-foreground">
-                            ({{ item.kind }})
-                        </span>
-                        — {{ item.names.join(', ') }}
-                    </li>
-                </ul>
-                <div
-                    v-if="preview.unplaced.length"
-                    class="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm text-warning"
-                >
-                    <p class="font-medium">
-                        {{ preview.unplaced.length }} yolcuya yer bulunamadı:
-                    </p>
-                    <ul class="mt-1 list-disc pl-5">
-                        <li v-for="u in preview.unplaced" :key="u.name">
-                            {{ u.name }} — {{ u.reason }}
-                        </li>
-                    </ul>
-                    <p class="mt-1">Oda ekleyip tekrar deneyebilirsiniz.</p>
-                </div>
-            </template>
-            <p v-else class="text-sm text-destructive">
-                Plan hazırlanamadı. Sayfayı yenileyip tekrar deneyin.
-            </p>
-
-            <DialogFooter>
-                <Button variant="ghost" @click="autoOpen = false">
-                    Vazgeç
-                </Button>
-                <Button
-                    :disabled="!preview || preview.placed === 0 || applying"
-                    @click="applyAutoAssign"
-                >
-                    Onayla ve yerleştir
-                </Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
 </template>

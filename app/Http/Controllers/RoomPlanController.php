@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Rooms\AutoAssignRooms;
+use App\Actions\Rooms\ClearRooms;
 use App\Actions\Rooms\CopyRoomPlan;
 use App\Actions\Rooms\DefineStayFloors;
 use App\Actions\Rooms\StayOccupancy;
@@ -17,8 +18,10 @@ use App\Models\Room;
 use App\Models\RoomAssignment;
 use App\Models\TourHotel;
 use App\Models\User;
+use App\Support\FamilyUnits;
 use App\Support\Needs\NeedProfiles;
 use App\Support\TurkishText;
+use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -41,6 +44,8 @@ class RoomPlanController extends Controller
 
     private bool $elevatorKnown = false;
 
+    private ?CarbonInterface $tourStart = null;
+
     public function __construct(
         private readonly StayOccupancy $occupancy,
         private readonly NeedProfiles $needs,
@@ -51,6 +56,7 @@ class RoomPlanController extends Controller
         $guideGroups = $this->authorizeView($request->user(), $stay);
         $canUpdate = $request->user()?->can('update', $stay->tour) ?? false;
         $stay->load(['hotel', 'tour:id,name,start_date,end_date', 'groups:id,name']);
+        $this->tourStart = $stay->tour->start_date;
         /** @var list<string> $stayGroupIds */
         $stayGroupIds = $stay->groups->pluck('id')->values()->all();
 
@@ -111,6 +117,24 @@ class RoomPlanController extends Controller
                         ]),
             ]),
             'unassigned' => $this->withFamily($unassigned, $stay, $roomNoByRegistration),
+            // Yerleşmemişlerin aile kümeleri (havuzda aileler bir arada görünür).
+            'units' => $this->units($unassigned),
+            // Üstteki otel seçimi: turun bütün konaklamaları (Mekke · X, Medine · Y).
+            'stays' => TourHotel::query()
+                ->where('tour_id', $stay->tour_id)
+                ->with('hotel')
+                ->orderBy('check_in')
+                ->get()
+                ->map(fn (TourHotel $s) => [
+                    'id' => $s->id,
+                    'city' => $s->hotel->city->label(),
+                    'hotel_name' => $s->hotel->name,
+                    'check_in' => $s->check_in->toDateString(),
+                    'check_out' => $s->check_out->toDateString(),
+                    'has_rooms' => $s->rooms()->exists(),
+                    'placed' => $s->roomAssignments()->count(),
+                ])
+                ->values(),
             // İstisnalar: grubu bu otelde olmayan ama burada kalmak isteyen yolcular elle eklenebilir.
             'others' => $canUpdate ? $this->others($stay, $expected, $assignedIds) : [],
             'stats' => [
@@ -160,6 +184,20 @@ class RoomPlanController extends Controller
         $define->handle($stay, (int) $data['floors_count'], $data['used_floors'] ?? []);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Otel kat bilgisi kaydedildi.']);
+
+        return back();
+    }
+
+    /**
+     * "Temizle": bu oteldeki bütün yerleşimler kalkar, odalar kalır.
+     */
+    public function clear(TourHotel $stay, ClearRooms $clear): RedirectResponse
+    {
+        Gate::authorize('update', $stay->tour);
+
+        $count = $clear->handle($stay);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => "{$count} yolcu odasından çıkarıldı."]);
 
         return back();
     }
@@ -294,6 +332,10 @@ class RoomPlanController extends Controller
             'room_type' => $registration->room_type?->value,
             'room_type_label' => $registration->room_type?->label(),
             'needs' => $this->needLabels[$registration->person_id] ?? [],
+            'mobility' => isset($this->mobility[$registration->person_id]),
+            'age' => $registration->person->birth_date && $this->tourStart
+                ? (int) $registration->person->birth_date->diffInYears($this->tourStart)
+                : null,
         ];
     }
 
@@ -321,6 +363,22 @@ class RoomPlanController extends Controller
         }
 
         return $warnings;
+    }
+
+    /**
+     * @param  Collection<int, Registration>  $unassigned
+     * @return list<array{label: string|null, ids: list<string>}>
+     */
+    private function units(Collection $unassigned): array
+    {
+        $links = $this->occupancy->familyLinks($unassigned->pluck('person_id'));
+
+        return array_map(fn (array $unit) => [
+            'label' => count($unit) > 1
+                ? collect($unit)->map(fn (Registration $r) => $r->person->last_name)->unique()->join(' / ').' ailesi'
+                : null,
+            'ids' => array_map(fn (Registration $r) => $r->id, $unit),
+        ], FamilyUnits::build(array_values($unassigned->all()), $links));
     }
 
     /**

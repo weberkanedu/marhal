@@ -2574,6 +2574,29 @@
         opacity: 0;
     }
 }
+.mx .dragghost {
+    position: fixed;
+    z-index: 1000;
+    pointer-events: none;
+    padding: 7px 12px 7px 7px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--m-accent);
+    color: var(--m-bg);
+    font: 600 12.5px var(--m-body);
+    box-shadow: 0 14px 30px -8px rgba(0, 0, 0, 0.55);
+    transform: translate(-50%, -50%) rotate(-3deg) scale(1.05);
+}
+.mx .dragghost .av {
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+    background: rgba(0, 0, 0, 0.15);
+    border: 0;
+    color: inherit;
+}
 @property --ang {
     syntax: '<angle>';
     initial-value: 0deg;
@@ -2769,6 +2792,9 @@
     background: rgba(255, 255, 255, 0.6);
     border-color: rgba(255, 255, 255, 0.95);
     box-shadow: 0 30px 60px -30px rgba(19, 38, 31, 0.35);
+}
+[data-theme='safak'] .mx .dragghost {
+    color: #fff;
 }
 [data-theme='safak'] .mx .phone {
     background: #13261f;

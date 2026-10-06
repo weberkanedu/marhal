@@ -104,5 +104,6 @@ const familyLabel = (u: { label: string | null; people: PoolPerson[] }) =>
             </div>
         </div>
         <span class="lbl">{{ hint }}</span>
+        <slot />
     </div>
 </template>

@@ -188,8 +188,8 @@ Yerleşim bilgisi (otel / oda / koltuk) yaka kartı, tur tablosu ve aile ekranı
       Yalnız kısa sabit cümleler için; PDF çıktısı gözle kontrol edildi.
     - QR: bacon/bacon-qr-code (Fortify'dan zaten vardı), içerik: yolcu, acente, acil telefon, kart no (aile ekranı bağlantısı 7. adımda).
       Migration: `create_badge_settings_and_group_colors`. Demo paketi `tasarim-5-yaka-karti`.
-5½. 🔄 **Tasarıma birebir uyum** (kullanıcı isteği 2026-10-06: "bana gösterilenin birebir çalışanı olsun"). 6. adıma
-   geçmeden sekiz ekran tasarımdaki görünümle aynı yapılıyor; her ekran tasarımla yan yana karşılaştırılıp onaylatılır.
+      5½. 🔄 **Tasarıma birebir uyum** (kullanıcı isteği 2026-10-06: "bana gösterilenin birebir çalışanı olsun"). 6. adıma
+      geçmeden sekiz ekran tasarımdaki görünümle aynı yapılıyor; her ekran tasarımla yan yana karşılaştırılıp onaylatılır.
     - Yöntem: tasarım sayfasının CSS'i `resources/css/marhal-mock.css` (`.mx` altında kapsanmış; tasarım dosyasından üretildi,
       elle düzenlenmez — uyarlamalar `app.css`teki `.mx` bloğunda). Ekranlar `<div class="mx"><div class="main">` ile tasarımın
       HTML yapısını birebir kullanır; ortak parçalar `components/mock/` (MockTop, MockPool), sürükle-bırak `usePointerDrag`.
@@ -198,7 +198,13 @@ Yerleşim bilgisi (otel / oda / koltuk) yaka kartı, tur tablosu ve aile ekranı
     - ✅ Yaka kartları: Acente ayarlarındaki ayrı sayfa kalktı; tur → **Yaka kartları** ekranında (boy, önizlenen yolcu, alanlar,
       arka yüz, grup renkleri, basılacaklar; ön/arka yüz + A4 dizilimi). PDF de aynı kart görünümünde (dompdf tablo düzeni,
       yuvarlak fotoğraf GD ile `PersonPhotoStore::circleDataUri`). Kartta kısa adlar: otelin ilk kelimesi, otobüs numarası.
-    - ⏳ Otel planı, sonra Ana Panel, Tur, Araç, Yolcular, Tahsilat ve kabuk (yan menüde Ctrl K arama, alttaki kullanıcı,
+    - ✅ Otel planı: üstte turun otelleri (Mekke · X, Medine · Y), kule (bizim katlar + doluluk; sürüklerken kat üstünde
+      durunca o kata geçer), kattaki oda kartları (aile etiketi, Asansör, uyarı), yerinde **Oteli tanımla** (kat sayısı,
+      bizim katlar, kattaki odalar: kişi, tür, asansöre yakın, sil, oda ekle). **Temizle** yeni (`ClearRooms`,
+      `stays.assignments.clear`). **Medine'ye kopyala**: bu otelden çıkış günü ya da sonra başlayan konaklamaya kopyalar
+      (aynı anda başka grubun oteline değil); sonuncu otelde "Mekke'den kopyala". Otomatik dağıt artık önizlemesiz, sonucu
+      bildirimle söyler. Eski diyaloglar (RoomCard, RoomDialogs, HotelTower, StayFloorsDialog, CopyPlanDialog) kalktı.
+    - ⏳ Ana Panel, Tur, Araç, Yolcular, Tahsilat ve kabuk (yan menüde Ctrl K arama, alttaki kullanıcı,
       "Görüşünü paylaş" düğmesi).
 6. ⏳ Hazırlık takibi (`readiness_items`, `readiness_checks`).
 7. ⏳ Aile ekranı + fotoğrafla ön kayıt (MRZ okuma servisi için önce seçenek / maliyet).

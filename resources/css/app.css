@@ -725,3 +725,10 @@ button.kpi-tile:hover {
 .mx a {
     color: inherit;
 }
+/* Sürüklenen yolcu ve koltuk / yatak: sürüklerken yazı seçilmesin, dokunmatikte sayfa kaymasın. */
+.mx [data-pid],
+.mx [data-drop='slot'] {
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
