@@ -29,6 +29,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property Carbon|null $trial_ends_at
  * @property Carbon|null $subscription_ends_at
  * @property string|null $tursab_no
+ * @property string|null $tax_office
+ * @property string|null $tax_no
+ * @property string|null $diyanet_license_no
  * @property string $default_currency
  * @property string|null $phone
  * @property string|null $email
@@ -170,6 +173,21 @@ class Tenant extends Model
     public function isReadOnly(): bool
     {
         return $this->subscriptionState() === SubscriptionState::ReadOnly;
+    }
+
+    /**
+     * Çıktılarda acente kimliği (10d): "TÜRSAB 1234 · Kadıköy VD 1234567890 · Diyanet yetki 56".
+     * Hesabı başka acenteye veren, o acentenin adıyla çıktı alamaz. Boşsa null.
+     */
+    public function identityLine(): ?string
+    {
+        $parts = array_filter([
+            $this->tursab_no ? "TÜRSAB {$this->tursab_no}" : null,
+            $this->tax_no ? trim(($this->tax_office ? "{$this->tax_office} VD " : 'Vergi no ').$this->tax_no) : null,
+            $this->diyanet_license_no ? "Diyanet yetki {$this->diyanet_license_no}" : null,
+        ]);
+
+        return $parts === [] ? null : implode(' · ', $parts);
     }
 
     public function hasFeature(Feature|string $feature): bool

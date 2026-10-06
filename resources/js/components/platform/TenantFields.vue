@@ -26,6 +26,9 @@ export type TenantValues = {
     email?: string | null;
     tursab_no?: string | null;
     city?: string | null;
+    tax_office?: string | null;
+    tax_no?: string | null;
+    diyanet_license_no?: string | null;
 };
 
 defineProps<{
@@ -123,6 +126,34 @@ const limitText = (n: number | null) => (n === null ? 'sınırsız' : String(n))
                 :default-value="values.city ?? undefined"
             />
             <InputError :message="errors.city" />
+        </div>
+        <div class="grid gap-2">
+            <Label for="t-taxoffice">Vergi dairesi</Label>
+            <Input
+                id="t-taxoffice"
+                name="tax_office"
+                :default-value="values.tax_office ?? undefined"
+            />
+            <InputError :message="errors.tax_office" />
+        </div>
+        <div class="grid gap-2">
+            <Label for="t-taxno">Vergi no</Label>
+            <Input
+                id="t-taxno"
+                name="tax_no"
+                inputmode="numeric"
+                :default-value="values.tax_no ?? undefined"
+            />
+            <InputError :message="errors.tax_no" />
+        </div>
+        <div class="grid gap-2">
+            <Label for="t-diyanet">Diyanet yetki no</Label>
+            <Input
+                id="t-diyanet"
+                name="diyanet_license_no"
+                :default-value="values.diyanet_license_no ?? undefined"
+            />
+            <InputError :message="errors.diyanet_license_no" />
         </div>
         <div class="grid gap-2">
             <Label for="t-tursab">TÜRSAB no</Label>

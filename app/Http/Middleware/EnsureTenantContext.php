@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\UserRole;
 use App\Models\User;
+use App\Support\Security\SecuritySettings;
 use App\Support\Tenancy\CurrentTenant;
 use Closure;
 use Illuminate\Http\Request;
@@ -22,7 +24,10 @@ class EnsureTenantContext
     /** Salt okunurken de yapılabilen değişiklikler (rota adları). */
     public const READ_ONLY_ALLOWED = ['feedback.store', 'agency.plan-request.store', 'agency.plan-request.destroy'];
 
-    public function __construct(private readonly CurrentTenant $currentTenant) {}
+    public function __construct(
+        private readonly CurrentTenant $currentTenant,
+        private readonly SecuritySettings $security,
+    ) {}
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -50,6 +55,16 @@ class EnsureTenantContext
         abort_unless($tenant->isAccessible(), 403, 'Acente hesabı askıda veya deneme süresi dolmuş.');
 
         $this->currentTenant->set($tenant);
+
+        // Platform → Güvenlik: "yöneticiler için iki adımlı doğrulama zorunlu" açıksa, kurmamış yönetici önce kurar.
+        if ($user->hasRole(UserRole::Admin) && $user->two_factor_confirmed_at === null && $this->security->all()['admin_two_factor']) {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => 'Güvenlik için yöneticilerin iki adımlı doğrulamayı açması gerekiyor. Lütfen aşağıdan kurun.',
+            ]);
+
+            return redirect()->route('security.edit');
+        }
 
         if (! $request->isMethodSafe() && ! $request->routeIs(self::READ_ONLY_ALLOWED) && $tenant->isReadOnly()) {
             Inertia::flash('toast', [

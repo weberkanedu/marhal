@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Actions\Security\RecordLogin;
 use App\Models\User;
 use App\Support\Audit\AuditLogger;
 use App\Support\Security\SensitiveData;
@@ -9,7 +10,9 @@ use App\Support\Tenancy\CurrentTenant;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\SessionGuard;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -71,6 +74,18 @@ class AppServiceProvider extends ServiceProvider
     {
         Event::listen(function (Login $event): void {
             if (! $event->user instanceof User) {
+                return;
+            }
+
+            // Hesap paylaşımı koruması (10d): cihaz, tek oturum, şüpheli kullanım.
+            $guard = Auth::guard('web');
+            $viaRemember = $guard instanceof SessionGuard && $guard->viaRemember();
+
+            if (! app(RecordLogin::class)->handle($event->user, request(), $viaRemember)) {
+                // "Beni hatırla" ile başka cihazdan şifresiz giriş: hesap şu an başka cihazda açık, şifre istenir.
+                $guard instanceof SessionGuard && $guard->logoutCurrentDevice();
+                session()->flash('status', 'Hesabınız başka bir cihazda açık. Devam etmek için şifrenizle giriş yapın.');
+
                 return;
             }
 

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Tenant;
 use App\Support\Tenancy\CurrentTenant;
+use Database\Seeders\Demo\AccountSharingDemo;
 use Database\Seeders\Demo\BadgeDemo;
 use Database\Seeders\Demo\BadgeRenewalDemo;
 use Database\Seeders\Demo\BusPlanDemo;
@@ -49,6 +50,7 @@ class UpdateDemoData extends Command
         'tasarim-7b-on-kayit' => OnlineSignupDemo::class,
         'paketler-10b-abonelik' => SubscriptionDemo::class,
         'paketler-10c-geri-bildirim' => FeedbackReplyDemo::class,
+        'paketler-10d-guvenlik' => AccountSharingDemo::class,
     ];
 
     public function handle(CurrentTenant $currentTenant): int

@@ -21,6 +21,7 @@ use App\Http\Controllers\PersonImportController;
 use App\Http\Controllers\PersonNeedController;
 use App\Http\Controllers\PersonRelationController;
 use App\Http\Controllers\Platform\PlanController;
+use App\Http\Controllers\Platform\SecurityController as PlatformSecurityController;
 use App\Http\Controllers\Platform\TenantController;
 use App\Http\Controllers\Platform\TenantSubscriptionController;
 use App\Http\Controllers\PublicFamilyController;
@@ -271,6 +272,9 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::get('feedback', [FeedbackController::class, 'index'])->name('feedback.index');
         Route::post('feedback/{feedback}/reply', [FeedbackController::class, 'reply'])->name('feedback.reply');
         Route::get('plans', [PlanController::class, 'index'])->name('plans.index');
+        Route::get('security', [PlatformSecurityController::class, 'index'])->name('security.index');
+        Route::put('security', [PlatformSecurityController::class, 'update'])->name('security.update');
+        Route::post('security-alerts/{alert}/resolve', [PlatformSecurityController::class, 'resolve'])->name('security-alerts.resolve');
         Route::put('plans/{plan}', [PlanController::class, 'update'])->name('plans.update');
         Route::get('tenants', [TenantController::class, 'index'])->name('tenants.index');
         Route::post('tenants', [TenantController::class, 'store'])->name('tenants.store');

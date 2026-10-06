@@ -26,6 +26,9 @@ const props = defineProps<{
         website: string | null;
         address: string | null;
         city: string | null;
+        tax_office: string | null;
+        tax_no: string | null;
+        diyanet_license_no: string | null;
         tursab_no: string | null;
         default_currency: string;
         logo_url: string | null;
@@ -184,6 +187,36 @@ function onLogo(event: Event): void {
                             name="tursab_no"
                             :default-value="agency.tursab_no ?? undefined"
                         />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="tax_office">Vergi dairesi</Label>
+                        <Input
+                            id="tax_office"
+                            name="tax_office"
+                            :default-value="agency.tax_office ?? undefined"
+                        />
+                        <InputError :message="errors.tax_office" />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="tax_no">Vergi no</Label>
+                        <Input
+                            id="tax_no"
+                            name="tax_no"
+                            inputmode="numeric"
+                            :default-value="agency.tax_no ?? undefined"
+                        />
+                        <InputError :message="errors.tax_no" />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="diyanet_license_no">Diyanet yetki no</Label>
+                        <Input
+                            id="diyanet_license_no"
+                            name="diyanet_license_no"
+                            :default-value="
+                                agency.diyanet_license_no ?? undefined
+                            "
+                        />
+                        <InputError :message="errors.diyanet_license_no" />
                     </div>
                     <div class="grid gap-2 sm:col-span-2">
                         <Label for="address">Adres</Label>

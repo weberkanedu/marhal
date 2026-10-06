@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Http\Requests\Settings\TwoFactorAuthenticationRequest;
+use App\Models\UserDevice;
+use App\Support\Security\SecuritySettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -38,6 +40,15 @@ class SecurityController extends Controller
                     ->all()
                 : [],
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
+            // Cihazlarım (10d): giriş yapılan tarayıcılar; sınır Platform → Güvenlik'te.
+            'devices' => $request->user()->devices()->latest('last_seen_at')->get()
+                ->map(fn (UserDevice $d) => [
+                    'id' => $d->id,
+                    'label' => $d->label,
+                    'last_seen_at' => $d->last_seen_at->toIso8601String(),
+                    'current' => $d->id === $request->session()->get('device_id'),
+                ])->values(),
+            'deviceLimit' => app(SecuritySettings::class)->all()['device_limit'],
         ];
 
         if (Features::canManageTwoFactorAuthentication()) {

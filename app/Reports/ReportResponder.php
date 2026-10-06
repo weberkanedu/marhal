@@ -96,6 +96,7 @@ class ReportResponder
     {
         return array_values(array_filter([
             $tenant?->name,
+            $tenant?->identityLine(),
             $tenant?->phone,
             'Oluşturma: '.now()->format('d.m.Y H:i'),
         ]));

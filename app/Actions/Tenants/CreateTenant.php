@@ -19,7 +19,7 @@ class CreateTenant
     public function __construct(private readonly CreateTenantUser $createUser) {}
 
     /**
-     * @param  array{name: string, plan_id: string, status: string, trial_ends_at?: string|null, subscription_ends_at?: string|null, default_currency: string, phone?: string|null, email?: string|null, tursab_no?: string|null, city?: string|null, admin_name: string, admin_email: string}  $data
+     * @param  array{name: string, plan_id: string, status: string, trial_ends_at?: string|null, subscription_ends_at?: string|null, default_currency: string, phone?: string|null, email?: string|null, tursab_no?: string|null, city?: string|null, tax_office?: string|null, tax_no?: string|null, diyanet_license_no?: string|null, admin_name: string, admin_email: string}  $data
      * @return array{tenant: Tenant, password: string}
      */
     public function handle(array $data): array
@@ -37,6 +37,9 @@ class CreateTenant
                 'email' => $data['email'] ?? null,
                 'tursab_no' => $data['tursab_no'] ?? null,
                 'city' => $data['city'] ?? null,
+                'tax_office' => $data['tax_office'] ?? null,
+                'tax_no' => $data['tax_no'] ?? null,
+                'diyanet_license_no' => $data['diyanet_license_no'] ?? null,
             ]);
 
             // Varsayılan ihtiyaç türleri ve hazırlık maddeleri (acente sonradan değiştirebilir).

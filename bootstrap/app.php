@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnforceSingleSession;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsurePasswordChanged;
 use App\Http\Middleware\EnsureTenantContext;
@@ -43,6 +44,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             EnsurePasswordChanged::class,
+            EnforceSingleSession::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

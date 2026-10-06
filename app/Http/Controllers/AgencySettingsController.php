@@ -27,7 +27,7 @@ class AgencySettingsController extends Controller
 
         return Inertia::render('agency/Edit', [
             'agency' => [
-                ...$tenant->only(['name', 'phone', 'email', 'website', 'address', 'city', 'tursab_no', 'default_currency']),
+                ...$tenant->only(['name', 'phone', 'email', 'website', 'address', 'city', 'tursab_no', 'tax_office', 'tax_no', 'diyanet_license_no', 'default_currency']),
                 'logo_url' => $tenant->logo_path ? route('agency.logo').'?v='.$tenant->updated_at?->timestamp : null,
                 'plan' => $tenant->plan->name,
             ],
@@ -47,11 +47,14 @@ class AgencySettingsController extends Controller
             'website' => ['nullable', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:1000'],
             'city' => ['nullable', 'string', 'max:80'],
+            'tax_office' => ['nullable', 'string', 'max:80'],
+            'tax_no' => ['nullable', 'string', 'regex:/^[0-9]{10,11}$/'],
+            'diyanet_license_no' => ['nullable', 'string', 'max:40'],
             'tursab_no' => ['nullable', 'string', 'max:30'],
             'default_currency' => ['required', Rule::in(config('marhal.currencies'))],
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             'remove_logo' => ['boolean'],
-        ], attributes: ['name' => 'acente adı', 'default_currency' => 'varsayılan para birimi']);
+        ], attributes: ['name' => 'acente adı', 'default_currency' => 'varsayılan para birimi', 'tax_no' => 'vergi no', 'tax_office' => 'vergi dairesi', 'diyanet_license_no' => 'Diyanet yetki no']);
 
         $disk = Storage::disk(config('marhal.media_disk'));
 

@@ -36,6 +36,7 @@ type UserRow = {
 const props = defineProps<{
     users: UserRow[];
     limit: { active: number; max: number | null };
+    alerts: { id: number; user: string; label: string; summary: string }[];
     roles: Role[];
 }>();
 
@@ -98,6 +99,16 @@ const limitReached = () =>
                 <UserPlus /> Kullanıcı ekle
             </Button>
         </div>
+
+        <p
+            v-for="a in alerts"
+            :key="a.id"
+            class="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm text-warning"
+        >
+            <b>{{ a.label }}:</b> {{ a.user }} {{ a.summary }} Hesap başkasıyla
+            paylaşılıyorsa şifresini değiştirmesini isteyin; Marhal ekibi de
+            durumu inceliyor.
+        </p>
 
         <p
             v-if="limitReached()"

@@ -6,6 +6,7 @@ use App\Actions\Users\CreateTenantUser;
 use App\Actions\Users\ResetUserPassword;
 use App\Actions\Users\UpdateTenantUser;
 use App\Enums\UserRole;
+use App\Models\SecurityAlert;
 use App\Models\User;
 use App\Support\Tenancy\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
@@ -49,6 +50,15 @@ class UserController extends Controller
                 'max' => $tenant?->plan->user_limit,
             ],
             'roles' => self::roleOptions(),
+            // Şüpheli kullanım uyarıları (10d): yalnız bu acentenin; platform "Kullanıcıyı doğrula" ile kapatır.
+            'alerts' => $tenant === null ? [] : SecurityAlert::query()->open()->where('tenant_id', $tenant->id)
+                ->with('user:id,name')->latest()->get()
+                ->map(fn (SecurityAlert $a) => [
+                    'id' => $a->id,
+                    'user' => $a->user->name,
+                    'label' => $a->kind->label(),
+                    'summary' => $a->summary(),
+                ])->values(),
         ]);
     }
 

@@ -3,6 +3,7 @@ import { Form, Head, Link, router } from '@inertiajs/vue3';
 import { Building2 } from '@lucide/vue';
 import { ref } from 'vue';
 import TenantController from '@/actions/App/Http/Controllers/Platform/TenantController';
+import SecurityController from '@/actions/App/Http/Controllers/Platform/SecurityController';
 import TenantSubscriptionController from '@/actions/App/Http/Controllers/Platform/TenantSubscriptionController';
 import InputError from '@/components/InputError.vue';
 import MockTop from '@/components/mock/MockTop.vue';
@@ -43,10 +44,21 @@ type TenantRow = {
         billing_cycle_label: string | null;
     } | null;
     billing_cycle: string | null;
+    suspicious: boolean;
+};
+
+type AlertRow = {
+    id: number;
+    tenant: string | null;
+    user: string;
+    email: string;
+    label: string;
+    summary: string;
 };
 
 defineProps<{
     tenants: TenantRow[];
+    alerts: AlertRow[];
     options: TenantOptions;
     paymentOptions: PaymentOptions;
 }>();
@@ -77,6 +89,20 @@ function openPayment(t: TenantRow): void {
     };
 }
 
+function verify(a: AlertRow): void {
+    if (
+        confirm(
+            `${a.user} kullanıcısının bütün oturumları ve cihazları sıfırlansın mı? Şifresiyle yeniden girmesi gerekecek.`,
+        )
+    ) {
+        router.post(
+            SecurityController.resolve.url(a.id),
+            {},
+            { preserveScroll: true },
+        );
+    }
+}
+
 function extend(t: TenantRow): void {
     router.post(
         TenantSubscriptionController.extend.url(t.id),
@@ -98,6 +124,21 @@ const createOpen = ref(false);
                     <Building2 /> Yeni acente
                 </button>
             </MockTop>
+
+            <div v-for="a in alerts" :key="a.id" class="alert" role="status">
+                <span aria-hidden="true">⚠</span>
+                <div>
+                    <b
+                        >{{ a.tenant ?? 'Acente' }}:
+                        {{ a.label.toLocaleLowerCase('tr') }}</b
+                    >
+                    "{{ a.email }}" ({{ a.user }}) {{ a.summary }} Acente
+                    yöneticisi Personel sayfasında görüyor.
+                </div>
+                <button class="btn ghost sm" type="button" @click="verify(a)">
+                    Kullanıcıyı doğrula
+                </button>
+            </div>
 
             <div class="card">
                 <p v-if="tenants.length === 0" class="lbl">Henüz acente yok.</p>
@@ -121,6 +162,11 @@ const createOpen = ref(false);
                                     ><br /><span class="lbl">{{
                                         t.city ?? '—'
                                     }}</span>
+                                    <span
+                                        v-if="t.suspicious"
+                                        class="chip warning"
+                                        >Şüpheli giriş</span
+                                    >
                                     <span v-if="t.request" class="chip acc"
                                         >Talep: {{ t.request.plan }} ·
                                         {{

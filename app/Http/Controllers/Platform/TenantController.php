@@ -10,6 +10,7 @@ use App\Enums\SubscriptionPaymentMethod;
 use App\Enums\TenantStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Plan;
+use App\Models\SecurityAlert;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\Features\FeatureGate;
@@ -30,6 +31,9 @@ class TenantController extends Controller
 {
     public function index(SubscriptionSummary $summary): Response
     {
+        $alerts = SecurityAlert::query()->open()->with(['user:id,name,email', 'tenant:id,name'])->latest()->get();
+        $suspicious = $alerts->pluck('tenant_id')->filter()->unique()->all();
+
         $tenants = Tenant::query()
             ->with(['plan', 'requestedPlan:id,name'])
             ->orderBy('name')
@@ -39,11 +43,21 @@ class TenantController extends Controller
                 'name' => $tenant->name,
                 'city' => $tenant->city,
                 'plan' => ['id' => $tenant->plan->id, 'name' => $tenant->plan->name],
+                'suspicious' => in_array($tenant->id, $suspicious, true),
                 ...$summary->row($tenant),
             ]);
 
         return Inertia::render('platform/Tenants', [
             'tenants' => $tenants,
+            'alerts' => $alerts->map(fn (SecurityAlert $a) => [
+                'id' => $a->id,
+                'tenant' => $a->tenant?->name,
+                'user' => $a->user->name,
+                'email' => $a->user->email,
+                'label' => $a->kind->label(),
+                'summary' => $a->summary(),
+                'created_at' => $a->created_at->toIso8601String(),
+            ])->values(),
             'options' => $this->options(),
             'paymentOptions' => $this->paymentOptions(),
         ]);
@@ -78,7 +92,7 @@ class TenantController extends Controller
         return Inertia::render('platform/TenantShow', [
             // "tenant" adı paylaşılan veriyle (menüdeki acente adı) çakışmasın.
             'agency' => [
-                ...$tenant->only(['id', 'name', 'plan_id', 'default_currency', 'phone', 'email', 'tursab_no', 'city']),
+                ...$tenant->only(['id', 'name', 'plan_id', 'default_currency', 'phone', 'email', 'tursab_no', 'city', 'tax_office', 'tax_no', 'diyanet_license_no']),
                 'status' => $tenant->status->value,
                 'trial_ends_at' => $tenant->trial_ends_at?->toDateString(),
                 'subscription_ends_at' => $tenant->subscription_ends_at?->toDateString(),
@@ -173,6 +187,9 @@ class TenantController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'tursab_no' => ['nullable', 'string', 'max:30'],
             'city' => ['nullable', 'string', 'max:80'],
+            'tax_office' => ['nullable', 'string', 'max:80'],
+            'tax_no' => ['nullable', 'string', 'regex:/^[0-9]{10,11}$/'],
+            'diyanet_license_no' => ['nullable', 'string', 'max:40'],
         ];
     }
 
@@ -198,6 +215,9 @@ class TenantController extends Controller
         return [
             'name' => 'acente adı',
             'plan_id' => 'paket',
+            'tax_no' => 'vergi no',
+            'tax_office' => 'vergi dairesi',
+            'diyanet_license_no' => 'Diyanet yetki no',
             'status' => 'durum',
             'trial_ends_at' => 'deneme bitişi',
             'subscription_ends_at' => 'abonelik bitişi',

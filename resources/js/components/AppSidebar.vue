@@ -8,6 +8,7 @@ import {
     Package,
     Plane,
     Settings,
+    ShieldCheck,
     Users,
     Wallet,
 } from '@lucide/vue';
@@ -34,6 +35,7 @@ import {
 } from '@/routes/persons';
 import { index as feedbackIndex } from '@/routes/platform/feedback';
 import { index as plansIndex } from '@/routes/platform/plans';
+import { index as securityIndex } from '@/routes/platform/security';
 import { index as tenantsIndex } from '@/routes/platform/tenants';
 import { create as createTour, index as toursIndex } from '@/routes/tours';
 import type { NavItem } from '@/types';
@@ -83,6 +85,7 @@ const iconFor = (title: string) =>
         'Acente ayarları': 'settings',
         Acenteler: 'grid',
         Paketler: 'settings',
+        Güvenlik: 'alert',
         'Geri bildirimler': 'chat',
     })[title] ?? 'grid';
 
@@ -129,6 +132,7 @@ const mainNavItems = computed<NavItem[]>(() => {
                 count: page.props.platformCounts?.tenants,
             },
             { title: 'Paketler', href: plansIndex(), icon: Package },
+            { title: 'Güvenlik', href: securityIndex(), icon: ShieldCheck },
             {
                 title: 'Geri bildirimler',
                 href: feedbackIndex(),

@@ -37,6 +37,7 @@
                 @endif
                 @if ($tenant)
                     <div class="agency">{{ $tenant->name }}</div>
+                    @if ($tenant->identityLine())<div class="muted">{{ $tenant->identityLine() }}</div>@endif
                     @if ($tenant->phone)<div class="muted">{{ $tenant->phone }}</div>@endif
                     @if ($tenant->email)<div class="muted">{{ $tenant->email }}</div>@endif
                 @endif

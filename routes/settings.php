@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\DeviceController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use App\Http\Controllers\Settings\ThemeController;
@@ -22,6 +23,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('settings/password', [SecurityController::class, 'update'])
         ->middleware('throttle:6,1')
         ->name('user-password.update');
+
+    Route::delete('settings/devices/{device}', [DeviceController::class, 'destroy'])->whereNumber('device')->name('devices.destroy');
 
     Route::get('settings/appearance', [ThemeController::class, 'edit'])->name('appearance.edit');
     Route::patch('settings/theme', [ThemeController::class, 'update'])->name('theme.update');
