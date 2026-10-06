@@ -1,36 +1,19 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import {
-    AlertTriangle,
-    BedDouble,
-    Bus,
-    CalendarDays,
-    FileDown,
-    IdCard,
-    MessageCircle,
-    Pencil,
-    Plus,
-    Trash2,
-    UserPlus,
-    Users,
-    Wallet,
-} from '@lucide/vue';
+import { IdCard, Pencil, Trash2, Wallet } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import { toast } from 'vue-sonner';
 import GroupController from '@/actions/App/Http/Controllers/GroupController';
 import RegistrationController from '@/actions/App/Http/Controllers/RegistrationController';
-import GroupDialog from '@/components/tours/GroupDialog.vue';
-import RegistrationDialog from '@/components/tours/RegistrationDialog.vue';
+import MockIcon from '@/components/mock/MockIcon.vue';
+import MockRing from '@/components/mock/MockRing.vue';
+import MockTop from '@/components/mock/MockTop.vue';
 import BusesCard from '@/components/tours/BusesCard.vue';
 import FlightsCard from '@/components/tours/FlightsCard.vue';
+import GroupDialog from '@/components/tours/GroupDialog.vue';
+import RegistrationDialog from '@/components/tours/RegistrationDialog.vue';
 import StaysCard from '@/components/tours/StaysCard.vue';
-import ExportMenu from '@/components/ExportMenu.vue';
-import TourExports from '@/components/tours/TourExports.vue';
-import TourJourney from '@/components/tours/TourJourney.vue';
-import TourKpis from '@/components/tours/TourKpis.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatDate, formatMoney } from '@/lib/format';
+import { index as collectionsIndex } from '@/routes/collections';
 import { show as showPerson } from '@/routes/persons';
 import { show as showRegistration } from '@/routes/registrations';
 import {
@@ -39,24 +22,26 @@ import {
     payments as paymentReport,
     program as programReport,
 } from '@/routes/reports/tours';
-import { badgeCards, destroy, edit, index } from '@/routes/tours';
+import { badgeCards, edit, index } from '@/routes/tours';
 import type { TourBus, VehicleTypeOption } from '@/types/bus';
-import type { TourFlight } from '@/types/flight';
-import type { Option } from '@/types/person';
-import type { HotelOption, TourStay } from '@/types/hotel';
-import { toast } from 'vue-sonner';
 import type { ExportItem } from '@/types/export';
-import { tourStatusVariant } from '@/types/tour';
+import type { TourFlight } from '@/types/flight';
+import type { HotelOption, TourStay } from '@/types/hotel';
+import type { Option } from '@/types/person';
 import type {
     JourneyStep,
     RegistrationRow,
     TourGroup,
-    TourShowOptions,
     TourReadinessSummary,
+    TourShowOptions,
     TourStats,
     TourSummary,
 } from '@/types/tour';
 
+/**
+ * Tur detayı — tasarım sayfasındaki "Tur" ekranının birebir hâli (gerçek veriyle): tarih ve durum,
+ * yolculuk çizelgesi, hazırlık halkaları; Yolcular / Konaklama / Ulaşım sekmeleri.
+ */
 const props = defineProps<{
     tour: TourSummary;
     stats: TourStats;
@@ -65,11 +50,9 @@ const props = defineProps<{
     readiness: TourReadinessSummary | null;
     groups: TourGroup[];
     registrations: RegistrationRow[];
-    // Oda planı modülü kapalıysa null.
+    // Modül kapalıysa null.
     stays: TourStay[] | null;
-    // Otobüs planı modülü kapalıysa null.
     buses: TourBus[] | null;
-    // Uçuş listesi modülü kapalıysa null.
     flights: TourFlight[] | null;
     options: TourShowOptions & {
         flightDirections: Option[];
@@ -90,37 +73,41 @@ defineOptions({
     },
 });
 
-const registrationStatusLabels: Record<string, string> = {
-    on_kayit: 'Ön kayıt',
-    kesin_kayit: 'Kesin kayıt',
-    iptal: 'İptal',
-};
-const roomTypeLabels = computed(() =>
-    Object.fromEntries(props.options.roomTypes.map((o) => [o.value, o.label])),
-);
-
 const page = usePage();
-const paymentsEnabled = computed(() =>
-    (page.props.features ?? []).includes('payments'),
-);
-const reportsEnabled = computed(() =>
-    (page.props.features ?? []).includes('basic_reports'),
-);
-// Yaka kartı (Kurumsal paket): personel basar.
+const features = computed(() => page.props.features ?? []);
+const paymentsEnabled = computed(() => features.value.includes('payments'));
+const reportsEnabled = computed(() => features.value.includes('basic_reports'));
 const badgesEnabled = computed(
-    () =>
-        (page.props.features ?? []).includes('badge_generation') &&
-        props.can.update,
+    () => features.value.includes('badge_generation') && props.can.update,
 );
 
-// Tek yolcunun yaka kartı (satırdaki kart simgesi).
-function badgeUrl(registrationId: string): string {
-    return badgeReport.url(props.tour.id, {
-        query: { registration: registrationId },
+// Başlık: "23 Ekim – 6 Kasım 2026 · 15 gün"
+const dateRange = computed(() => {
+    const a = new Date(`${props.tour.start_date}T00:00:00`);
+    const b = new Date(`${props.tour.end_date}T00:00:00`);
+    const sameYear = a.getFullYear() === b.getFullYear();
+    const left = a.toLocaleDateString('tr-TR', {
+        day: 'numeric',
+        month: 'long',
+        ...(sameYear ? {} : { year: 'numeric' }),
     });
-}
+    const right = b.toLocaleDateString('tr-TR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+    });
+    const days = Math.round((b.getTime() - a.getTime()) / 86_400_000) + 1;
 
-// "Çıktı al" menüsü: turun en sık kullanılan listeleri (hepsi "Çıktılar" sekmesinde).
+    return `${left} – ${right} · ${days} gün`;
+});
+const statusChip = computed(
+    () =>
+        ({ satista: 'ok', iptal: 'danger', taslak: 'warning' })[
+            props.tour.status as string
+        ] ?? '',
+);
+
+// "Çıktı al" menüsü
 const exportItems = computed<ExportItem[]>(() => {
     if (!reportsEnabled.value) {
         return [];
@@ -129,15 +116,36 @@ const exportItems = computed<ExportItem[]>(() => {
     const items: ExportItem[] = [
         {
             title: 'Yolcu listesi',
-            description: props.can.update ? 'Tüm tur' : 'Grubunuz',
+            description: props.can.update
+                ? 'Oda ve koltuk sütunlarıyla'
+                : 'Grubunuz',
             url: passengerReport.url(props.tour.id),
         },
-        {
-            title: 'Tur programı',
-            description: 'Tarihler, oteller, uçuşlar',
-            url: programReport.url(props.tour.id),
-        },
+        ...(props.can.update && props.groups.length > 1
+            ? props.groups.map((g) => ({
+                  title: `Yolcu listesi · ${g.name}`,
+                  description: 'Yalnız bu grup',
+                  url: passengerReport.url(props.tour.id, {
+                      query: { group: g.id },
+                  }),
+              }))
+            : []),
     ];
+
+    if (badgesEnabled.value) {
+        items.push({
+            title: 'Yaka kartları',
+            description: 'Fotoğraflı, toplu ya da tek tek',
+            url: badgeReport.url(props.tour.id),
+            pdfOnly: true,
+        });
+    }
+
+    items.push({
+        title: 'Tur programı',
+        description: 'Çizelge, uçuş ve oteller',
+        url: programReport.url(props.tour.id),
+    });
 
     if (paymentsEnabled.value && props.can.viewFinance) {
         items.push({
@@ -147,19 +155,92 @@ const exportItems = computed<ExportItem[]>(() => {
         });
     }
 
-    if (badgesEnabled.value) {
-        items.push({
-            title: 'Yaka kartları',
-            description: 'Tüm tur, A4 sayfaya dizili',
-            url: badgeReport.url(props.tour.id),
-            pdfOnly: true,
-        });
-    }
-
     return items;
 });
 
-// WhatsApp grubu: davet bağlantısını panoya kopyalar (yolcuya iletmek için).
+// Yolculuk çizelgesi (tasarımdaki simgeler).
+const journeyIcon = (step: JourneyStep) =>
+    step.kind === 'prep'
+        ? 'home'
+        : step.kind === 'stay'
+          ? /medine/i.test(step.title)
+              ? 'mosque'
+              : 'kaaba'
+          : 'plane';
+const progress = computed(() => {
+    const last = props.journey.length - 1;
+    const now = props.journey.findIndex((s) => s.state === 'now');
+    const reached =
+        now === -1
+            ? props.journey.every((s) => s.state === 'done')
+                ? last
+                : 0
+            : now;
+
+    return last > 0 ? reached / last : 0;
+});
+const shortDate = (date: string) =>
+    new Date(`${date}T00:00:00`).toLocaleDateString('tr-TR', {
+        day: 'numeric',
+        month: 'short',
+    });
+function stepText(step: JourneyStep): string {
+    if (step.kind === 'prep') {
+        const next = props.journey[1];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const left = next
+            ? Math.round(
+                  (new Date(`${next.start}T00:00:00`).getTime() -
+                      today.getTime()) /
+                      86_400_000,
+              )
+            : 0;
+
+        return step.state === 'done'
+            ? 'Tamamlandı'
+            : left > 0
+              ? `${left} gün kaldı`
+              : 'Bugün yola çıkılıyor';
+    }
+
+    // Tasarımdaki gibi: otelde "Otel · 7 gece", uçuşta "25 Eki · TK 0098".
+    if (step.kind === 'stay') {
+        const nights = Math.round(
+            (new Date(`${step.end}T00:00:00`).getTime() -
+                new Date(`${step.start}T00:00:00`).getTime()) /
+                86_400_000,
+        );
+
+        return [step.detail, nights > 0 ? `${nights} gece` : null]
+            .filter(Boolean)
+            .join(' · ');
+    }
+
+    const rest = (step.detail ?? '')
+        .split(' · ')
+        .filter((part) => part && !part.includes('→'));
+
+    return [shortDate(step.start), ...rest].join(' · ');
+}
+
+// Uçuş adımının başlığı güzergâh ("IST → JED"), yoksa "Gidiş / Dönüş".
+const stepTitle = (step: JourneyStep) =>
+    step.kind === 'outbound' || step.kind === 'return'
+        ? ((step.detail ?? '').split(' · ').find((p) => p.includes('→')) ??
+          step.title)
+        : step.title;
+
+// Hazırlık halkaları
+const compactMoney = (amount: string | number) =>
+    new Intl.NumberFormat('tr-TR', {
+        style: 'currency',
+        currency: props.tour.currency,
+        notation: 'compact',
+        maximumFractionDigits: 2,
+    }).format(Number(amount));
+
+// WhatsApp grubu: davet bağlantısını panoya kopyalar.
 async function copyWhatsappLink(): Promise<void> {
     if (!props.tour.whatsapp_link) {
         toast.info(
@@ -177,75 +258,24 @@ async function copyWhatsappLink(): Promise<void> {
     }
 }
 
-// Grup filtresi: 'all' | 'none' | grup id. Adresten açılabilir: ?grup=yok (grupsuzlar) veya ?grup=<id>
-// (ör. ana paneldeki "Gruba ata" düğmesi).
-const initialGroup = new URL(page.url, 'http://x').searchParams.get('grup');
-const groupFilter = ref<string>(
-    initialGroup === 'yok'
-        ? 'none'
-        : initialGroup && props.groups.some((g) => g.id === initialGroup)
-          ? initialGroup
-          : 'all',
-);
-
-// Sekmeler: hangi sekmede olunduğu adreste (?tab=) tutulur; oda / koltuk / uçuş sayfasından
-// "geri" gelince doğru sekme açılır.
-type TabKey = 'yolcular' | 'konaklama' | 'ulasim' | 'ciktilar';
-const tabs = computed(() => {
-    const list: {
-        key: TabKey;
-        label: string;
-        icon: unknown;
-        count: number | null;
-    }[] = [
-        {
-            key: 'yolcular',
-            label: 'Yolcular',
-            icon: Users,
-            count: props.stats.registered,
-        },
-    ];
-
-    if (props.stays !== null) {
-        list.push({
-            key: 'konaklama',
-            label: 'Konaklama',
-            icon: BedDouble,
-            count: props.stays.length,
-        });
-    }
-
-    if (props.flights !== null || props.buses !== null) {
-        list.push({
-            key: 'ulasim',
-            label: 'Ulaşım',
-            icon: Bus,
-            count: (props.flights?.length ?? 0) + (props.buses?.length ?? 0),
-        });
-    }
-
-    if (reportsEnabled.value) {
-        list.push({
-            key: 'ciktilar',
-            label: 'Çıktılar',
-            icon: FileDown,
-            count: null,
-        });
-    }
-
-    return list;
-});
-
-const initialTab = new URL(page.url, 'http://x').searchParams.get(
-    'tab',
-) as TabKey | null;
+// Sekmeler (adres ?tab= ile açılır; plan ekranlarından geri gelince doğru sekme).
+type TabKey = 'yolcular' | 'konaklama' | 'ulasim';
+const tabs = computed(() => [
+    { key: 'yolcular' as TabKey, label: 'Yolcular' },
+    ...(props.stays !== null
+        ? [{ key: 'konaklama' as TabKey, label: 'Konaklama' }]
+        : []),
+    ...(props.flights !== null || props.buses !== null
+        ? [{ key: 'ulasim' as TabKey, label: 'Ulaşım' }]
+        : []),
+]);
+const query = new URL(page.url, 'http://x').searchParams;
 const tab = ref<TabKey>(
-    tabs.value.some((t) => t.key === initialTab)
-        ? (initialTab as TabKey)
+    tabs.value.some((t) => t.key === query.get('tab'))
+        ? (query.get('tab') as TabKey)
         : 'yolcular',
 );
-
-function selectTab(key: TabKey | string): void {
+function selectTab(key: string): void {
     if (!tabs.value.some((t) => t.key === key)) {
         return;
     }
@@ -261,23 +291,70 @@ function selectTab(key: TabKey | string): void {
 
     window.history.replaceState(window.history.state, '', url);
 }
-const showCancelled = ref(false);
 
-const visibleRegistrations = computed(() =>
+// Yolcular: arama + grup süzgeci (?grup=yok → grupsuzlar, ?grup=<id>).
+const search = ref('');
+const initialGroup = query.get('grup');
+const groupFilter = ref<string>(
+    initialGroup === 'yok'
+        ? 'none'
+        : initialGroup && props.groups.some((g) => g.id === initialGroup)
+          ? initialGroup
+          : 'all',
+);
+const showCancelled = ref(false);
+const norm = (s: string) => s.toLocaleLowerCase('tr');
+const visible = computed(() =>
     props.registrations.filter((r) => {
         if (!showCancelled.value && r.status === 'iptal') {
             return false;
         }
 
-        if (groupFilter.value === 'all') {
-            return true;
+        if (
+            groupFilter.value !== 'all' &&
+            (groupFilter.value === 'none'
+                ? r.group_id !== null
+                : r.group_id !== groupFilter.value)
+        ) {
+            return false;
         }
 
-        return groupFilter.value === 'none'
-            ? r.group_id === null
-            : r.group_id === groupFilter.value;
+        return norm(r.person.full_name).includes(norm(search.value));
     }),
 );
+const selectedGroup = computed(
+    () => props.groups.find((g) => g.id === groupFilter.value) ?? null,
+);
+
+const ini = (name: string) =>
+    name
+        .trim()
+        .split(/\s+/)
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toLocaleUpperCase('tr');
+const paidPct = (r: RegistrationRow) =>
+    Number(r.net_price) > 0
+        ? Math.min(
+              100,
+              Math.round((Number(r.paid) / Number(r.net_price)) * 100),
+          )
+        : 100;
+const seatText = (r: RegistrationRow) => {
+    if (!r.seat) {
+        return null;
+    }
+
+    const no = r.seat.label.match(/^(\d+)/)?.[1];
+
+    return `${no ? `O${no}` : r.seat.label} · ${r.seat.value}`;
+};
+const statusChips: Record<string, [string, string]> = {
+    kesin_kayit: ['ok', 'Kesin kayıt'],
+    on_kayit: ['', 'Ön kayıt'],
+    iptal: ['danger', 'İptal'],
+};
 
 // Diyaloglar
 const groupDialogOpen = ref(false);
@@ -303,6 +380,7 @@ function deleteGroup(group: TourGroup): void {
     ) {
         router.delete(GroupController.destroy.url(group.id), {
             preserveScroll: true,
+            onSuccess: () => (groupFilter.value = 'all'),
         });
     }
 }
@@ -319,727 +397,500 @@ function removeRegistration(registration: RegistrationRow): void {
     }
 }
 
-function deleteTour(): void {
-    if (confirm(`${props.tour.name} silinsin mi?`)) {
-        router.delete(destroy.url(props.tour.id));
-    }
-}
-
-const occupancyText = computed(() =>
-    props.tour.capacity
-        ? `${props.stats.registered} / ${props.tour.capacity}`
-        : String(props.stats.registered),
-);
+const badgeUrl = (id: string) =>
+    badgeReport.url(props.tour.id, { query: { registration: id } });
 </script>
 
 <template>
     <Head :title="tour.name" />
 
-    <div class="flex w-full flex-col gap-4 p-4">
-        <!-- Başlık -->
-        <div class="flex flex-wrap items-start justify-between gap-4">
-            <div>
-                <div class="flex items-center gap-3">
-                    <h1 class="text-2xl font-semibold tracking-tight">
-                        {{ tour.name }}
-                    </h1>
-                    <Badge :variant="tourStatusVariant[tour.status]">
-                        {{ tour.status_label }}
-                    </Badge>
-                </div>
-                <p
-                    class="mt-1 flex items-center gap-2 text-sm text-muted-foreground"
+    <div class="mx">
+        <div class="main">
+            <MockTop
+                :crumbs="[{ label: 'Turlar', href: index.url() }]"
+                :title="tour.name"
+                :exports="exportItems"
+            >
+                <Link
+                    v-if="badgesEnabled"
+                    class="btn ghost"
+                    :href="badgeCards(tour.id)"
+                    >Yaka kartları</Link
                 >
-                    <CalendarDays class="size-4" />
-                    {{ formatDate(tour.start_date) }} –
-                    {{ formatDate(tour.end_date) }}
-                    <template v-if="tour.default_price">
-                        · Kişi başı
-                        {{ formatMoney(tour.default_price, tour.currency) }}
-                    </template>
-                </p>
-            </div>
-            <div class="flex flex-wrap gap-2">
-                <Button v-if="badgesEnabled" variant="outline" as-child>
-                    <Link :href="badgeCards(tour.id)"
-                        ><IdCard /> Yaka kartları</Link
-                    >
-                </Button>
-                <Button
+                <button
                     v-if="tour.whatsapp_link || can.update"
-                    variant="outline"
+                    class="btn ghost"
+                    type="button"
                     @click="copyWhatsappLink"
                 >
-                    <MessageCircle /> WhatsApp grubu
-                </Button>
-                <ExportMenu :items="exportItems" />
-                <Button v-if="can.update" variant="outline" as-child>
-                    <Link :href="edit(tour.id)"><Pencil /> Düzenle</Link>
-                </Button>
-                <Button v-if="can.update" @click="openRegistration(null)">
-                    <UserPlus /> Yolcu kaydet
-                </Button>
-                <Button
-                    v-if="can.delete"
-                    variant="ghost"
-                    class="text-destructive"
-                    @click="deleteTour"
+                    <MockIcon name="chat" />WhatsApp grubu
+                </button>
+                <Link
+                    v-if="can.update"
+                    class="btn ghost"
+                    :href="edit(tour.id)"
+                    title="Tur bilgilerini düzenle"
+                    ><MockIcon name="edit" />Düzenle</Link
                 >
-                    <Trash2 />
-                </Button>
-            </div>
-        </div>
-
-        <!-- Yolculuk çizelgesi -->
-        <Card class="py-5">
-            <CardContent>
-                <TourJourney :steps="journey" />
-            </CardContent>
-        </Card>
-
-        <!-- Gösterge halkaları (personel); rehber yalnız kendi grubunun sayısını görür -->
-        <TourKpis
-            v-if="readiness"
-            :tour="tour"
-            :stats="stats"
-            :readiness="readiness"
-            @select="selectTab"
-        />
-        <p v-else class="text-sm text-muted-foreground">
-            {{ occupancyText }} yolcu
-        </p>
-
-        <!-- Sekmeler -->
-        <nav
-            class="-mb-1 flex gap-1 overflow-x-auto border-b"
-            role="tablist"
-            aria-label="Tur bölümleri"
-        >
-            <button
-                v-for="item in tabs"
-                :key="item.key"
-                type="button"
-                role="tab"
-                :aria-selected="tab === item.key"
-                class="flex shrink-0 items-center gap-1.5 border-b-2 px-2 py-2 text-sm whitespace-nowrap transition-colors sm:px-3"
-                :class="
-                    tab === item.key
-                        ? 'border-primary font-medium text-foreground'
-                        : 'border-transparent text-muted-foreground hover:text-foreground'
-                "
-                @click="selectTab(item.key)"
-            >
-                <component :is="item.icon" class="hidden size-4 sm:block" />
-                {{ item.label }}
-                <span
-                    v-if="item.count !== null"
-                    class="hidden rounded-full bg-muted px-1.5 text-xs text-muted-foreground sm:inline"
+                <button
+                    v-if="can.update"
+                    class="btn"
+                    type="button"
+                    @click="openRegistration(null)"
                 >
-                    {{ item.count }}
-                </span>
-            </button>
-        </nav>
+                    <MockIcon name="plus" />Yolcu kaydet
+                </button>
+            </MockTop>
 
-        <template v-if="tab === 'konaklama' && stays !== null">
-            <StaysCard
-                :tour="tour"
-                :stays="stays"
-                :groups="groups"
-                :hotels="options.hotels"
-                :can-update="can.update"
-            />
-        </template>
-
-        <template v-if="tab === 'ulasim'">
-            <FlightsCard
-                v-if="flights !== null"
-                :tour="tour"
-                :flights="flights"
-                :directions="options.flightDirections"
-                :can-update="can.update"
-            />
-            <BusesCard
-                v-if="buses !== null"
-                :tour="tour"
-                :buses="buses"
-                :groups="groups"
-                :vehicle-types="options.vehicleTypes"
-                :can-update="can.update"
-            />
-        </template>
-
-        <TourExports
-            v-if="tab === 'ciktilar'"
-            :tour="tour"
-            :groups="groups"
-            :stays="stays"
-            :buses="buses"
-            :flights="flights"
-            :can="can"
-        />
-
-        <template v-if="tab === 'yolcular'">
-            <div class="grid min-w-0 gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
-                <!-- Gruplar -->
-                <Card class="h-fit min-w-0">
-                    <CardHeader
-                        class="flex flex-row items-center justify-between"
+            <div class="card glow">
+                <h4>
+                    {{ dateRange }}
+                    <em
+                        ><span class="chip" :class="statusChip">{{
+                            tour.status_label
+                        }}</span></em
                     >
-                        <CardTitle>Gruplar</CardTitle>
-                        <Button
-                            v-if="can.update"
-                            variant="ghost"
-                            size="sm"
-                            @click="openGroup(null)"
-                        >
-                            <Plus /> Ekle
-                        </Button>
-                    </CardHeader>
-                    <CardContent class="flex flex-col gap-1 text-sm">
-                        <button
-                            type="button"
-                            class="flex items-center justify-between rounded-md px-2 py-1.5 text-left hover:bg-muted"
-                            :class="{
-                                'bg-muted font-medium': groupFilter === 'all',
-                            }"
-                            @click="groupFilter = 'all'"
-                        >
-                            Tüm yolcular
-                            <span class="text-muted-foreground">
-                                {{ stats.registered }}
-                            </span>
-                        </button>
-                        <div
-                            v-for="group in groups"
-                            :key="group.id"
-                            class="group/item flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-muted"
-                            :class="{ 'bg-muted': groupFilter === group.id }"
-                        >
-                            <button
-                                type="button"
-                                class="flex-1 text-left"
-                                :class="{
-                                    'font-medium': groupFilter === group.id,
-                                }"
-                                @click="groupFilter = group.id"
+                </h4>
+                <div
+                    class="journey"
+                    :style="{ '--prog': progress, '--steps': journey.length }"
+                >
+                    <div
+                        v-for="step in journey"
+                        :key="step.key"
+                        class="st"
+                        :class="{ now: step.state === 'now' }"
+                    >
+                        <span class="dot"
+                            ><MockIcon :name="journeyIcon(step)"
+                        /></span>
+                        <div>
+                            <b>{{ stepTitle(step) }}</b
+                            ><br /><small>{{ stepText(step) }}</small>
+                        </div>
+                    </div>
+                </div>
+                <div v-if="readiness" class="kpis">
+                    <div
+                        class="kpi"
+                        role="button"
+                        tabindex="0"
+                        @click="selectTab('yolcular')"
+                    >
+                        <MockRing
+                            :done="stats.registered"
+                            :total="tour.capacity ?? stats.registered"
+                        />
+                        <div>
+                            <small>Kayıt</small
+                            ><span
+                                >{{ stats.registered
+                                }}{{
+                                    tour.capacity ? ` / ${tour.capacity}` : ''
+                                }}</span
                             >
-                                <div>{{ group.name }}</div>
-                                <div
-                                    v-if="group.guide_name"
-                                    class="text-xs text-muted-foreground"
-                                >
-                                    Rehber: {{ group.guide_name }}
-                                </div>
-                            </button>
-                            <span class="text-muted-foreground">
-                                {{ group.registrations_count }}
-                            </span>
+                        </div>
+                    </div>
+                    <Link
+                        v-if="readiness.collection && stats.total !== null"
+                        class="kpi"
+                        :href="collectionsIndex()"
+                    >
+                        <MockRing
+                            :done="Number(readiness.collection.paid)"
+                            :total="Number(readiness.collection.total)"
+                        />
+                        <div>
+                            <small>Tahsilat</small
+                            ><span
+                                >{{ compactMoney(readiness.collection.paid) }} /
+                                {{
+                                    compactMoney(readiness.collection.total)
+                                }}</span
+                            >
+                        </div>
+                    </Link>
+                    <div
+                        v-for="check in readiness.checks"
+                        :key="check.key"
+                        class="kpi"
+                        role="button"
+                        tabindex="0"
+                        @click="selectTab(check.tab)"
+                    >
+                        <MockRing :done="check.done" :total="check.total" />
+                        <div>
+                            <small>{{ check.label }}</small
+                            ><span>{{ check.done }} / {{ check.total }}</span>
+                        </div>
+                    </div>
+                </div>
+                <span v-else class="lbl">{{ stats.registered }} yolcu</span>
+            </div>
+
+            <div class="card">
+                <div class="tabs" role="tablist">
+                    <a
+                        v-for="t in tabs"
+                        :key="t.key"
+                        role="tab"
+                        :class="{ on: tab === t.key }"
+                        :aria-selected="tab === t.key"
+                        @click="selectTab(t.key)"
+                        >{{ t.label }}</a
+                    >
+                </div>
+
+                <template v-if="tab === 'yolcular'">
+                    <div class="row">
+                        <div class="search">
+                            <MockIcon name="search" /><input
+                                v-model="search"
+                                placeholder="Yolcu ara: ad soyad"
+                                aria-label="Yolcu ara"
+                            />
+                        </div>
+                        <div class="pills">
                             <span
-                                v-if="can.update"
-                                class="ml-1 hidden gap-0.5 group-hover/item:flex"
+                                class="pill"
+                                :class="{ on: groupFilter === 'all' }"
+                                role="button"
+                                tabindex="0"
+                                @click="groupFilter = 'all'"
+                                >Tümü · {{ stats.registered }}</span
                             >
-                                <button
-                                    type="button"
-                                    class="rounded p-1 hover:bg-background"
-                                    title="Düzenle"
-                                    @click="openGroup(group)"
-                                >
-                                    <Pencil class="size-3" />
-                                </button>
-                                <button
-                                    type="button"
-                                    class="rounded p-1 text-destructive hover:bg-background"
-                                    title="Sil"
-                                    @click="deleteGroup(group)"
-                                >
-                                    <Trash2 class="size-3" />
-                                </button>
-                            </span>
-                        </div>
-                        <button
-                            v-if="stats.unassigned > 0"
-                            type="button"
-                            class="flex items-center justify-between rounded-md px-2 py-1.5 text-left text-warning hover:bg-muted"
-                            :class="{
-                                'bg-muted font-medium': groupFilter === 'none',
-                            }"
-                            @click="groupFilter = 'none'"
-                        >
-                            Grupsuz yolcular
-                            <span>{{ stats.unassigned }}</span>
-                        </button>
-                    </CardContent>
-                </Card>
-
-                <!-- Kayıtlar -->
-                <Card class="min-w-0 py-0">
-                    <CardContent class="overflow-x-auto p-0">
-                        <div
-                            class="flex items-center justify-between border-b px-4 py-3"
-                        >
-                            <span class="text-sm font-medium">
-                                {{ visibleRegistrations.length }} yolcu
-                            </span>
-                            <label
+                            <span
+                                v-for="g in groups"
+                                :key="g.id"
+                                class="pill"
+                                :class="{ on: groupFilter === g.id }"
+                                role="button"
+                                tabindex="0"
+                                :title="
+                                    g.guide_name
+                                        ? `Rehber: ${g.guide_name}`
+                                        : undefined
+                                "
+                                @click="groupFilter = g.id"
+                                >{{ g.name }} ·
+                                {{ g.registrations_count }}</span
+                            >
+                            <span
+                                v-if="stats.unassigned > 0"
+                                class="pill"
+                                :class="{ on: groupFilter === 'none' }"
+                                role="button"
+                                tabindex="0"
+                                style="color: var(--m-warn)"
+                                @click="groupFilter = 'none'"
+                                >Grupsuz · {{ stats.unassigned }}</span
+                            >
+                            <span
                                 v-if="stats.cancelled > 0"
-                                class="flex items-center gap-2 text-sm text-muted-foreground"
+                                class="pill"
+                                :class="{ on: showCancelled }"
+                                role="button"
+                                tabindex="0"
+                                @click="showCancelled = !showCancelled"
+                                >İptaller · {{ stats.cancelled }}</span
                             >
-                                <input
-                                    v-model="showCancelled"
-                                    type="checkbox"
-                                />
-                                İptalleri göster
-                            </label>
                         </div>
-
-                        <div
-                            v-if="visibleRegistrations.length === 0"
-                            class="flex flex-col items-center gap-3 p-10 text-sm text-muted-foreground"
-                        >
-                            <Users class="size-8" />
-                            Bu listede yolcu yok.
-                            <Button
-                                v-if="can.update"
-                                size="sm"
-                                @click="openRegistration(null)"
+                        <template v-if="can.update">
+                            <button
+                                v-if="selectedGroup"
+                                class="btn ghost sm"
+                                type="button"
+                                @click="openGroup(selectedGroup)"
                             >
-                                <UserPlus /> Yolcu ekle
-                            </Button>
-                        </div>
-
-                        <table v-else class="hidden w-full text-sm sm:table">
-                            <thead
-                                class="bg-muted/50 text-left text-muted-foreground"
+                                <MockIcon name="edit" />Grubu düzenle
+                            </button>
+                            <button
+                                v-if="selectedGroup"
+                                class="btn ghost sm"
+                                type="button"
+                                @click="deleteGroup(selectedGroup)"
                             >
+                                Sil
+                            </button>
+                            <button
+                                class="btn ghost sm"
+                                type="button"
+                                @click="openGroup(null)"
+                            >
+                                <MockIcon name="plus" />Grup ekle
+                            </button>
+                        </template>
+                    </div>
+                    <div class="tbl">
+                        <table>
+                            <thead>
                                 <tr>
-                                    <th class="px-4 py-2 font-medium">Yolcu</th>
-                                    <th class="px-4 py-2 font-medium">Grup</th>
-                                    <th class="px-4 py-2 font-medium">Oda</th>
-                                    <th class="px-4 py-2 font-medium">Durum</th>
-                                    <th
-                                        v-if="!can.viewFinance"
-                                        class="px-4 py-2 font-medium"
-                                    >
-                                        Telefon
-                                    </th>
-                                    <th
-                                        v-if="!can.viewFinance"
-                                        class="px-4 py-2 font-medium"
-                                    >
-                                        Acil durum
-                                    </th>
-                                    <th
-                                        v-if="can.viewFinance"
-                                        class="px-4 py-2 text-right font-medium"
-                                    >
-                                        Ücret
-                                    </th>
-                                    <th
-                                        v-if="can.viewFinance"
-                                        class="px-4 py-2 text-right font-medium"
-                                    >
-                                        Kalan
-                                    </th>
-                                    <th class="w-0 px-2 py-2"></th>
+                                    <th>Yolcu</th>
+                                    <th>Grup</th>
+                                    <th class="num">Oda</th>
+                                    <th class="num">Koltuk</th>
+                                    <th v-if="can.viewFinance">Ödeme</th>
+                                    <th v-else>Telefon</th>
+                                    <th>Durum</th>
+                                    <th />
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr
-                                    v-for="registration in visibleRegistrations"
-                                    :key="registration.id"
-                                    class="border-t hover:bg-muted/40"
-                                    :class="{
-                                        'opacity-50':
-                                            registration.status === 'iptal',
-                                    }"
+                                    v-for="r in visible"
+                                    :key="r.id"
+                                    :style="
+                                        r.status === 'iptal'
+                                            ? 'opacity: 0.55'
+                                            : undefined
+                                    "
                                 >
-                                    <td class="px-4 py-2">
-                                        <Link
-                                            v-if="can.viewPersons"
-                                            :href="
-                                                showPerson(
-                                                    registration.person.id,
-                                                )
-                                            "
-                                            class="font-medium hover:underline"
-                                        >
-                                            {{ registration.person.full_name }}
-                                        </Link>
-                                        <span v-else class="font-medium">
-                                            {{ registration.person.full_name }}
-                                        </span>
-                                        <div
-                                            v-if="
-                                                registration.person
-                                                    .passport_missing ||
-                                                registration.person
-                                                    .passport_expiring
-                                            "
-                                            class="flex items-center gap-1 text-xs text-warning"
-                                        >
-                                            <AlertTriangle class="size-3" />
-                                            {{
-                                                registration.person
-                                                    .passport_missing
-                                                    ? 'Pasaport bilgisi yok'
-                                                    : 'Pasaport süresi yetersiz'
-                                            }}
-                                        </div>
-                                        <div
-                                            v-if="registration.needs.length"
-                                            class="mt-0.5 flex flex-wrap gap-1"
-                                        >
+                                    <td>
+                                        <div class="person">
                                             <span
-                                                v-for="need in registration.needs"
-                                                :key="need"
-                                                class="rounded-full bg-accent px-1.5 text-[11px] font-semibold text-accent-foreground"
+                                                class="av"
+                                                :class="
+                                                    r.person.gender === 'kadin'
+                                                        ? 'k'
+                                                        : 'e'
+                                                "
+                                                >{{
+                                                    ini(r.person.full_name)
+                                                }}</span
                                             >
-                                                {{ need }}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-2">
-                                        <span v-if="registration.group_name">
-                                            {{ registration.group_name }}
-                                        </span>
-                                        <span v-else class="text-warning">
-                                            Grupsuz
-                                        </span>
-                                    </td>
-                                    <td class="px-4 py-2">
-                                        {{
-                                            registration.room_type
-                                                ? roomTypeLabels[
-                                                      registration.room_type
-                                                  ]
-                                                : '—'
-                                        }}
-                                        <div
-                                            v-if="
-                                                registration.placements.length
-                                            "
-                                            class="text-xs whitespace-nowrap text-muted-foreground"
-                                        >
-                                            <span
-                                                v-for="(
-                                                    place, i
-                                                ) in registration.placements"
-                                                :key="place.label"
-                                            >
-                                                <template v-if="i > 0">
-                                                    ·
-                                                </template>
-                                                {{ place.label }}
-                                                <strong
-                                                    class="text-foreground"
-                                                    >{{ place.value }}</strong
+                                            <div>
+                                                <Link
+                                                    v-if="can.viewPersons"
+                                                    :href="
+                                                        showPerson(r.person.id)
+                                                    "
+                                                    >{{
+                                                        r.person.full_name
+                                                    }}</Link
+                                                ><template v-else>{{
+                                                    r.person.full_name
+                                                }}</template>
+                                                <small
+                                                    >{{
+                                                        r.person.gender ===
+                                                        'kadin'
+                                                            ? 'Kadın'
+                                                            : 'Erkek'
+                                                    }}<template
+                                                        v-if="
+                                                            r.person.age !==
+                                                            null
+                                                        "
+                                                    >
+                                                        ·
+                                                        {{ r.person.age }}
+                                                        yaş</template
+                                                    ><template
+                                                        v-if="
+                                                            r.person
+                                                                .passport_missing ||
+                                                            r.person
+                                                                .passport_expiring
+                                                        "
+                                                    >
+                                                        ·
+                                                        <span
+                                                            style="
+                                                                color: var(
+                                                                    --m-warn
+                                                                );
+                                                            "
+                                                            >{{
+                                                                r.person
+                                                                    .passport_missing
+                                                                    ? 'Pasaport yok'
+                                                                    : 'Pasaport kısa'
+                                                            }}</span
+                                                        ></template
+                                                    ></small
                                                 >
-                                            </span>
+                                            </div>
                                         </div>
                                     </td>
-                                    <td class="px-4 py-2">
-                                        <Badge
-                                            :variant="
-                                                registration.status ===
-                                                'kesin_kayit'
-                                                    ? 'success'
-                                                    : registration.status ===
-                                                        'iptal'
-                                                      ? 'danger'
-                                                      : 'warning'
-                                            "
+                                    <td>
+                                        <span
+                                            v-if="r.group_name"
+                                            class="chip acc"
+                                            >{{ r.group_name }}</span
                                         >
-                                            {{
-                                                registrationStatusLabels[
-                                                    registration.status
-                                                ]
-                                            }}
-                                        </Badge>
-                                    </td>
-                                    <td
-                                        v-if="!can.viewFinance"
-                                        class="px-4 py-2 tabular-nums"
-                                    >
-                                        <a
-                                            v-if="registration.person.phone"
-                                            :href="`tel:${registration.person.phone}`"
-                                            class="hover:underline"
+                                        <span v-else class="chip warning"
+                                            >Grupsuz</span
                                         >
-                                            {{ registration.person.phone }}
-                                        </a>
-                                        <template v-else>—</template>
+                                        <span
+                                            v-for="need in r.needs"
+                                            :key="need"
+                                            class="tag"
+                                            style="margin-left: 4px"
+                                            >{{ need }}</span
+                                        >
                                     </td>
                                     <td
-                                        v-if="!can.viewFinance"
-                                        class="px-4 py-2"
-                                    >
-                                        {{
-                                            registration.person
-                                                .emergency_contact ?? '—'
-                                        }}
-                                    </td>
-                                    <td
-                                        v-if="can.viewFinance"
-                                        class="px-4 py-2 text-right tabular-nums"
-                                    >
-                                        {{
-                                            formatMoney(
-                                                registration.net_price,
-                                                registration.currency,
-                                            )
-                                        }}
-                                    </td>
-                                    <td
-                                        v-if="can.viewFinance"
-                                        class="px-4 py-2 text-right font-medium tabular-nums"
-                                        :class="
-                                            Number(registration.balance) > 0
-                                                ? 'text-warning'
-                                                : 'text-success'
+                                        class="num"
+                                        :title="
+                                            r.rooms
+                                                .map(
+                                                    (x) =>
+                                                        `${x.label} ${x.value}`,
+                                                )
+                                                .join(' · ')
                                         "
                                     >
-                                        {{
-                                            formatMoney(
-                                                registration.balance,
-                                                registration.currency,
-                                            )
-                                        }}
+                                        <template v-if="r.rooms.length">{{
+                                            r.rooms
+                                                .map((x) => x.value)
+                                                .join(' · ')
+                                        }}</template>
+                                        <span v-else class="chip warning"
+                                            >Yok</span
+                                        >
                                     </td>
-                                    <td class="px-2 py-2 whitespace-nowrap">
-                                        <Button
-                                            v-if="
-                                                badgesEnabled &&
-                                                registration.status !== 'iptal'
-                                            "
-                                            variant="ghost"
-                                            size="icon-sm"
-                                            title="Yaka kartı (PDF)"
-                                            as-child
+                                    <td class="num">
+                                        <template v-if="r.seat">{{
+                                            seatText(r)
+                                        }}</template>
+                                        <span v-else class="chip warning"
+                                            >Yok</span
                                         >
+                                    </td>
+                                    <td v-if="can.viewFinance">
+                                        <div
+                                            style="
+                                                display: flex;
+                                                align-items: center;
+                                                gap: 8px;
+                                            "
+                                        >
+                                            <div
+                                                class="bar"
+                                                style="width: 80px"
+                                            >
+                                                <i
+                                                    :class="{
+                                                        full:
+                                                            paidPct(r) === 100,
+                                                    }"
+                                                    :style="{
+                                                        width: `${paidPct(r)}%`,
+                                                    }"
+                                                />
+                                            </div>
+                                            <small style="color: var(--m-muted)"
+                                                >%{{ paidPct(r) }}</small
+                                            >
+                                        </div>
+                                    </td>
+                                    <td v-else class="num">
+                                        <a
+                                            v-if="r.person.phone"
+                                            :href="`tel:${r.person.phone}`"
+                                            >{{ r.person.phone }}</a
+                                        >
+                                        <template v-else>—</template>
+                                    </td>
+                                    <td>
+                                        <span
+                                            class="chip"
+                                            :class="statusChips[r.status]?.[0]"
+                                            >{{
+                                                statusChips[r.status]?.[1]
+                                            }}</span
+                                        >
+                                    </td>
+                                    <td class="acts-cell">
+                                        <span class="acts">
                                             <a
-                                                :href="
-                                                    badgeUrl(registration.id)
+                                                v-if="
+                                                    badgesEnabled &&
+                                                    r.status !== 'iptal'
                                                 "
-                                            >
-                                                <IdCard />
-                                            </a>
-                                        </Button>
-                                        <Button
-                                            v-if="
-                                                paymentsEnabled &&
-                                                can.viewFinance
-                                            "
-                                            variant="ghost"
-                                            size="icon-sm"
-                                            title="Ödemeler"
-                                            as-child
-                                        >
+                                                :href="badgeUrl(r.id)"
+                                                title="Yaka kartı (PDF)"
+                                                ><IdCard class="size-3.5"
+                                            /></a>
                                             <Link
-                                                :href="
-                                                    showRegistration(
-                                                        registration.id,
-                                                    )
+                                                v-if="
+                                                    paymentsEnabled &&
+                                                    can.viewFinance
                                                 "
-                                            >
-                                                <Wallet />
-                                            </Link>
-                                        </Button>
-                                        <template v-if="can.update">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon-sm"
-                                                title="Düzenle"
-                                                @click="
-                                                    openRegistration(
-                                                        registration,
-                                                    )
-                                                "
-                                            >
-                                                <Pencil />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon-sm"
-                                                class="text-destructive"
-                                                title="Turdan çıkar"
-                                                @click="
-                                                    removeRegistration(
-                                                        registration,
-                                                    )
-                                                "
-                                            >
-                                                <Trash2 />
-                                            </Button>
-                                        </template>
+                                                :href="showRegistration(r.id)"
+                                                title="Ödemeler"
+                                                ><Wallet class="size-3.5"
+                                            /></Link>
+                                            <template v-if="can.update">
+                                                <button
+                                                    type="button"
+                                                    title="Düzenle"
+                                                    @click="openRegistration(r)"
+                                                >
+                                                    <Pencil class="size-3.5" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    title="Turdan çıkar"
+                                                    @click="
+                                                        removeRegistration(r)
+                                                    "
+                                                >
+                                                    <Trash2 class="size-3.5" />
+                                                </button>
+                                            </template>
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr v-if="!visible.length" class="empty-row">
+                                    <td colspan="7">
+                                        {{
+                                            search
+                                                ? 'Aramaya uyan yolcu yok'
+                                                : 'Bu listede yolcu yok'
+                                        }}
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                    <p
+                        v-if="tour.notes"
+                        class="lbl"
+                        style="white-space: pre-line; margin: 0"
+                    >
+                        <b>Notlar:</b> {{ tour.notes }}
+                    </p>
+                </template>
 
-                        <!-- Telefon: tablo yerine kartlar (rehberin sahada kullanımı) -->
-                        <ul
-                            v-if="visibleRegistrations.length > 0"
-                            class="divide-y sm:hidden"
-                        >
-                            <li
-                                v-for="registration in visibleRegistrations"
-                                :key="registration.id"
-                                class="space-y-1.5 px-4 py-3"
-                                :class="{
-                                    'opacity-50':
-                                        registration.status === 'iptal',
-                                }"
-                            >
-                                <div
-                                    class="flex items-start justify-between gap-2"
-                                >
-                                    <span class="font-medium">
-                                        {{ registration.person.full_name }}
-                                    </span>
-                                    <Badge
-                                        :variant="
-                                            registration.status ===
-                                            'kesin_kayit'
-                                                ? 'success'
-                                                : registration.status ===
-                                                    'iptal'
-                                                  ? 'danger'
-                                                  : 'warning'
-                                        "
-                                    >
-                                        {{
-                                            registrationStatusLabels[
-                                                registration.status
-                                            ]
-                                        }}
-                                    </Badge>
-                                </div>
-                                <div class="text-xs text-muted-foreground">
-                                    {{ registration.group_name ?? 'Grupsuz' }}
-                                    <template v-if="registration.room_type">
-                                        ·
-                                        {{
-                                            roomTypeLabels[
-                                                registration.room_type
-                                            ]
-                                        }}
-                                    </template>
-                                </div>
-                                <div
-                                    v-if="registration.placements.length"
-                                    class="flex flex-wrap gap-1.5"
-                                >
-                                    <Badge
-                                        v-for="place in registration.placements"
-                                        :key="place.label"
-                                        variant="secondary"
-                                    >
-                                        {{ place.label }} {{ place.value }}
-                                    </Badge>
-                                </div>
-                                <div
-                                    class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm"
-                                >
-                                    <a
-                                        v-if="registration.person.phone"
-                                        :href="`tel:${registration.person.phone}`"
-                                        class="text-primary underline-offset-4 hover:underline"
-                                    >
-                                        {{ registration.person.phone }}
-                                    </a>
-                                    <span
-                                        v-if="
-                                            !can.viewFinance &&
-                                            registration.person
-                                                .emergency_contact
-                                        "
-                                        class="text-muted-foreground"
-                                    >
-                                        Acil:
-                                        {{
-                                            registration.person
-                                                .emergency_contact
-                                        }}
-                                    </span>
-                                    <span
-                                        v-if="can.viewFinance"
-                                        :class="
-                                            Number(registration.balance) > 0
-                                                ? 'text-warning'
-                                                : 'text-success'
-                                        "
-                                    >
-                                        Kalan:
-                                        {{
-                                            formatMoney(
-                                                registration.balance,
-                                                registration.currency,
-                                            )
-                                        }}
-                                    </span>
-                                </div>
-                                <div
-                                    v-if="
-                                        can.update ||
-                                        (paymentsEnabled && can.viewFinance)
-                                    "
-                                    class="flex gap-2 pt-1"
-                                >
-                                    <Button
-                                        v-if="
-                                            paymentsEnabled && can.viewFinance
-                                        "
-                                        variant="outline"
-                                        size="sm"
-                                        as-child
-                                    >
-                                        <Link
-                                            :href="
-                                                showRegistration(
-                                                    registration.id,
-                                                )
-                                            "
-                                        >
-                                            <Wallet /> Ödemeler
-                                        </Link>
-                                    </Button>
-                                    <Button
-                                        v-if="can.update"
-                                        variant="outline"
-                                        size="sm"
-                                        @click="openRegistration(registration)"
-                                    >
-                                        <Pencil /> Düzenle
-                                    </Button>
-                                    <Button
-                                        v-if="
-                                            badgesEnabled &&
-                                            registration.status !== 'iptal'
-                                        "
-                                        variant="outline"
-                                        size="sm"
-                                        as-child
-                                    >
-                                        <a :href="badgeUrl(registration.id)">
-                                            <IdCard /> Yaka kartı
-                                        </a>
-                                    </Button>
-                                </div>
-                            </li>
-                        </ul>
-                    </CardContent>
-                </Card>
+                <StaysCard
+                    v-if="tab === 'konaklama' && stays !== null"
+                    :tour="tour"
+                    :stays="stays"
+                    :groups="groups"
+                    :hotels="options.hotels"
+                    :can-update="can.update"
+                />
+
+                <div v-if="tab === 'ulasim'" class="g3">
+                    <BusesCard
+                        v-if="buses !== null"
+                        :tour="tour"
+                        :buses="buses"
+                        :groups="groups"
+                        :vehicle-types="options.vehicleTypes"
+                        :can-update="can.update"
+                    />
+                    <FlightsCard
+                        v-if="flights !== null"
+                        :tour="tour"
+                        :flights="flights"
+                        :directions="options.flightDirections"
+                        :can-update="can.update"
+                    />
+                </div>
             </div>
-
-            <Card v-if="tour.notes">
-                <CardHeader>
-                    <CardTitle>Notlar</CardTitle>
-                </CardHeader>
-                <CardContent class="text-sm whitespace-pre-line">
-                    {{ tour.notes }}
-                </CardContent>
-            </Card>
-        </template>
+        </div>
     </div>
 
     <GroupDialog

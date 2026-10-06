@@ -16,7 +16,11 @@ export type FlightSummary = {
     notes: string | null;
 };
 
-export type TourFlight = FlightSummary & { passengers_count: number };
+export type TourFlight = FlightSummary & {
+    passengers_count: number;
+    seated_count: number;
+    aircraft: string | null;
+};
 
 export type FlightPassengerRow = {
     id: string;

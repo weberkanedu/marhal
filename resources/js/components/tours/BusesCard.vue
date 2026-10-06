@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { Form, Link, router } from '@inertiajs/vue3';
-import { Armchair, Bus as BusIcon, Pencil, Plus, Trash2 } from '@lucide/vue';
+import { Pencil, Plus, Trash2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import BusController from '@/actions/App/Http/Controllers/BusController';
 import InputError from '@/components/InputError.vue';
-import { Badge } from '@/components/ui/badge';
+import MockIcon from '@/components/mock/MockIcon.vue';
+import MockRing from '@/components/mock/MockRing.vue';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -68,90 +68,50 @@ function remove(bus: TourBus): void {
 </script>
 
 <template>
-    <Card class="min-w-0">
-        <CardHeader class="flex flex-row items-center justify-between">
-            <CardTitle class="flex items-center gap-2">
-                <BusIcon class="size-4" /> Otobüsler
-            </CardTitle>
-            <Button
-                v-if="canUpdate"
-                variant="ghost"
-                size="sm"
-                @click="openDialog(null)"
+    <!-- Tasarımdaki araç kartları (Tur → Ulaşım; sarmalayan .g3 sayfadadır). -->
+    <div
+        v-for="bus in buses"
+        :key="bus.id"
+        class="vehicle"
+        role="link"
+        tabindex="0"
+        @click="router.visit(seatPlan.url(bus.id))"
+        @keydown.enter="router.visit(seatPlan.url(bus.id))"
+    >
+        <span class="ic"><MockIcon name="bus" /></span>
+        <div>
+            <b>{{ bus.name }} · {{ bus.vehicle_type ?? bus.label }}</b>
+            <small
+                >{{ bus.plate ? `${bus.plate} · ` : '' }}{{ bus.occupied }}/{{
+                    bus.seats
+                }}
+                koltuk<template v-if="bus.groups.length">
+                    · {{ bus.groups.map((g) => g.name).join(', ') }}</template
+                ></small
             >
-                <Plus /> Otobüs ekle
-            </Button>
-        </CardHeader>
-        <CardContent class="text-sm">
-            <p v-if="buses.length === 0" class="text-muted-foreground">
-                Henüz otobüs eklenmedi.
-            </p>
-            <ul v-else class="divide-y">
-                <li
-                    v-for="bus in buses"
-                    :key="bus.id"
-                    class="flex flex-wrap items-center gap-x-4 gap-y-1 py-2"
-                >
-                    <div class="min-w-48 flex-1">
-                        <div class="font-medium">
-                            {{ bus.name }}
-                            <span
-                                v-if="bus.plate"
-                                class="text-xs font-normal text-muted-foreground"
-                            >
-                                · {{ bus.plate }}
-                            </span>
-                        </div>
-                        <div class="text-xs text-muted-foreground">
-                            {{ bus.vehicle_type ?? bus.label }} ·
-                            {{ bus.seats + bus.reserved.length }} koltuk
-                            <template v-if="bus.driver_name">
-                                · Şoför: {{ bus.driver_name }}
-                                {{ bus.driver_phone ?? '' }}
-                            </template>
-                        </div>
-                    </div>
-                    <div class="flex flex-wrap gap-1">
-                        <Badge
-                            v-for="group in bus.groups"
-                            :key="group.id"
-                            variant="outline"
-                        >
-                            {{ group.name }}
-                        </Badge>
-                    </div>
-                    <Button variant="outline" size="sm" as-child>
-                        <Link :href="seatPlan(bus.id)">
-                            <Armchair />
-                            Koltuk planı
-                            <span class="text-xs text-muted-foreground">
-                                {{ bus.occupied }}/{{ bus.seats }}
-                            </span>
-                        </Link>
-                    </Button>
-                    <div v-if="canUpdate" class="flex">
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            title="Düzenle"
-                            @click="openDialog(bus)"
-                        >
-                            <Pencil />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            class="text-destructive"
-                            title="Sil"
-                            @click="remove(bus)"
-                        >
-                            <Trash2 />
-                        </Button>
-                    </div>
-                </li>
-            </ul>
-        </CardContent>
-    </Card>
+            <small v-if="bus.driver_name"
+                >Şoför {{ bus.driver_name }} {{ bus.driver_phone ?? '' }}</small
+            >
+        </div>
+        <MockRing :done="bus.occupied" :total="bus.seats" />
+        <span v-if="canUpdate" class="acts" @click.stop>
+            <button type="button" title="Düzenle" @click="openDialog(bus)">
+                <Pencil class="size-3.5" />
+            </button>
+            <button type="button" title="Sil" @click="remove(bus)">
+                <Trash2 class="size-3.5" />
+            </button>
+        </span>
+    </div>
+    <div
+        v-if="canUpdate"
+        class="vehicle add"
+        role="button"
+        tabindex="0"
+        @click="openDialog(null)"
+    >
+        <Plus class="size-4" /> Araç ekle
+    </div>
 
     <Dialog v-model:open="open">
         <DialogContent class="max-h-[92vh] overflow-y-auto">

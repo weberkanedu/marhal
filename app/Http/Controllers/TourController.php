@@ -10,6 +10,7 @@ use App\Enums\RoomType;
 use App\Enums\TourStatus;
 use App\Enums\TourType;
 use App\Enums\UserRole;
+use App\Actions\Rooms\StayOccupancy;
 use App\Http\Requests\TourRequest;
 use App\Models\Bus;
 use App\Models\Flight;
@@ -102,7 +103,7 @@ class TourController extends Controller
         return to_route('tours.show', $tour);
     }
 
-    public function show(Request $request, Tour $tour, CurrentTenant $currentTenant, TourJourney $journey, TourReadiness $readiness, NeedProfiles $profiles): Response
+    public function show(Request $request, Tour $tour, CurrentTenant $currentTenant, TourJourney $journey, TourReadiness $readiness, NeedProfiles $profiles, StayOccupancy $occupancy): Response
     {
         Gate::authorize('view', $tour);
 
@@ -174,14 +175,25 @@ class TourController extends Controller
                 'rooms_count' => $stay->rooms_count,
                 'beds' => (int) $stay->rooms_sum_capacity,
                 'occupied' => $stay->room_assignments_count,
+                // Kart halkası: bu otelde kalması gereken yolcu sayısı; kat bilgisi kartın alt satırında.
+                'expected' => $occupancy->expected($stay)->count(),
+                'floors_count' => $stay->hotel->floors_count,
+                'used_floors' => array_map('intval', $stay->used_floors ?? []),
             ]) : null;
 
         // Uçuşlar (uçuş listesi modülü açıksa). Rehber uçuş bilgisini görür; yolcu sayısı kendi grubuyla sınırlı.
         $flights = ($currentTenant->get()?->hasFeature(Feature::FlightLists) ?? false) ? $tour->flights()
             ->withCount(['passengers' => fn (Builder $q) => $q->when($guideOf !== null, fn (Builder $p) => $p->whereHas('registration', fn (Builder $r) => $r->whereIn('group_id', $guideOf ?? [])))])
+            ->withCount(['passengers as seated_count' => fn (Builder $q) => $q->whereNotNull('seat_no')])
+            ->with('aircraftType:id,name')
             ->orderBy('departure_at')
             ->get()
-            ->map(fn (Flight $flight) => [...FlightController::summary($flight), 'passengers_count' => $flight->passengers_count]) : null;
+            ->map(fn (Flight $flight) => [
+                ...FlightController::summary($flight),
+                'passengers_count' => $flight->passengers_count,
+                'seated_count' => $flight->getAttribute('seated_count'),
+                'aircraft' => $flight->aircraftType?->name,
+            ]) : null;
 
         // Otobüsler (otobüs planı modülü açıksa): rehber sadece kendi gruplarının otobüslerini görür.
         $buses = $busPlanning ? $tour->buses()
@@ -263,6 +275,7 @@ class TourController extends Controller
         return Inertia::render('tours/Edit', [
             'tour' => [...$this->summary($tour), 'notes' => $tour->notes],
             'options' => $this->formOptions(),
+            'canDelete' => auth()->user()?->can('delete', $tour) ?? false,
         ]);
     }
 
@@ -346,6 +359,7 @@ class TourController extends Controller
                 'id' => $person->id,
                 'full_name' => $person->full_name,
                 'gender' => $person->gender->value,
+                'age' => $person->birth_date ? (int) $person->birth_date->diffInYears($tour->start_date) : null,
                 'phone' => $person->phone,
                 'emergency_contact' => trim(($person->emergency_contact_name ?? '').' '.($person->emergency_contact_phone ?? '')) ?: null,
                 'masked_passport_no' => $finance ? $person->masked_passport_no : null,
@@ -357,6 +371,9 @@ class TourController extends Controller
             'group_name' => $registration->group?->name,
             'room_type' => $registration->room_type?->value,
             'placements' => Placements::all($registration),
+            // Tablodaki ayrı Oda ve Koltuk sütunları için.
+            'rooms' => Placements::rooms($registration),
+            'seat' => Placements::seat($registration),
             'status' => $registration->status->value,
             ...$money,
             'currency' => $registration->currency,

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { Form, Link, router } from '@inertiajs/vue3';
-import { Armchair, Pencil, Plane, Plus, Trash2, Users } from '@lucide/vue';
+import { Pencil, Plus, Trash2, Users } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import FlightController from '@/actions/App/Http/Controllers/FlightController';
 import InputError from '@/components/InputError.vue';
-import { Badge } from '@/components/ui/badge';
+import MockIcon from '@/components/mock/MockIcon.vue';
+import MockRing from '@/components/mock/MockRing.vue';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -76,108 +76,72 @@ function remove(flight: TourFlight): void {
         });
     }
 }
-
-const directionVariant = (d: string) =>
-    d === 'gidis' ? 'default' : d === 'donus' ? 'secondary' : 'outline';
 </script>
 
 <template>
-    <Card class="min-w-0">
-        <CardHeader class="flex flex-row items-center justify-between">
-            <CardTitle class="flex items-center gap-2">
-                <Plane class="size-4" /> Uçuşlar
-            </CardTitle>
-            <Button
-                v-if="canUpdate"
-                variant="ghost"
-                size="sm"
-                @click="openDialog(null)"
+    <!-- Tasarımdaki uçuş kartları (Tur → Ulaşım; sarmalayan .g3 sayfadadır): tıklayınca koltuk planı. -->
+    <div
+        v-for="flight in flights"
+        :key="flight.id"
+        class="vehicle"
+        role="link"
+        tabindex="0"
+        @click="router.visit(seatPlan.url(flight.id))"
+        @keydown.enter="router.visit(seatPlan.url(flight.id))"
+    >
+        <span class="ic"><MockIcon name="plane" /></span>
+        <div>
+            <b
+                >{{ flight.flight_no }} · {{ flight.departure_airport }} →
+                {{ flight.arrival_airport }}</b
             >
-                <Plus /> Uçuş ekle
-            </Button>
-        </CardHeader>
-        <CardContent class="text-sm">
-            <p v-if="flights.length === 0" class="text-muted-foreground">
-                Henüz uçuş eklenmedi.
-            </p>
-            <ul v-else class="divide-y">
-                <li
-                    v-for="flight in flights"
-                    :key="flight.id"
-                    class="flex flex-wrap items-center gap-x-4 gap-y-1 py-2"
+            <small
+                >{{ flight.direction_label }} ·
+                {{ formatFlightTime(flight.departure_at) }}</small
+            >
+            <small
+                >{{ flight.aircraft ?? flight.airline }} ·
+                {{ flight.seated_count }}/{{
+                    flight.passengers_count
+                }}
+                koltuk</small
+            >
+        </div>
+        <MockRing
+            :done="flight.seated_count"
+            :total="flight.passengers_count"
+        />
+        <span class="acts" @click.stop>
+            <button
+                type="button"
+                title="Uçuş yolcuları (PNR, bilet)"
+                @click="router.visit(showFlight.url(flight.id))"
+            >
+                <Users class="size-3.5" />
+            </button>
+            <template v-if="canUpdate">
+                <button
+                    type="button"
+                    title="Düzenle"
+                    @click="openDialog(flight)"
                 >
-                    <Badge
-                        :variant="directionVariant(flight.direction)"
-                        class="w-20 justify-center"
-                    >
-                        {{ flight.direction_label }}
-                    </Badge>
-                    <div class="min-w-48 flex-1">
-                        <div class="font-medium">
-                            {{ flight.flight_no }} ·
-                            {{ flight.departure_airport }} →
-                            {{ flight.arrival_airport }}
-                            <span
-                                class="text-xs font-normal text-muted-foreground"
-                            >
-                                {{ flight.airline }}
-                            </span>
-                        </div>
-                        <div class="text-xs text-muted-foreground">
-                            {{ formatFlightTime(flight.departure_at) }} →
-                            {{ formatFlightTime(flight.arrival_at) }}
-                            <template v-if="flight.pnr">
-                                · PNR {{ flight.pnr }}
-                            </template>
-                        </div>
-                    </div>
-                    <Button variant="outline" size="sm" as-child>
-                        <Link :href="showFlight(flight.id)">
-                            <Users />
-                            Yolcular
-                            <span class="text-xs text-muted-foreground">
-                                {{ flight.passengers_count }}
-                            </span>
-                        </Link>
-                    </Button>
-                    <Button variant="outline" size="sm" as-child>
-                        <Link :href="seatPlan(flight.id)">
-                            <Armchair /> Koltuk planı
-                        </Link>
-                    </Button>
-                    <div v-if="canUpdate" class="flex">
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            title="Düzenle"
-                            @click="openDialog(flight)"
-                        >
-                            <Pencil />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            class="text-destructive"
-                            title="Sil"
-                            @click="remove(flight)"
-                        >
-                            <Trash2 />
-                        </Button>
-                    </div>
-                </li>
-            </ul>
-        </CardContent>
-    </Card>
-
-    <datalist id="airport-codes">
-        <option
-            v-for="airport in commonAirports"
-            :key="airport.code"
-            :value="airport.code"
-        >
-            {{ airport.name }}
-        </option>
-    </datalist>
+                    <Pencil class="size-3.5" />
+                </button>
+                <button type="button" title="Sil" @click="remove(flight)">
+                    <Trash2 class="size-3.5" />
+                </button>
+            </template>
+        </span>
+    </div>
+    <div
+        v-if="canUpdate"
+        class="vehicle add"
+        role="button"
+        tabindex="0"
+        @click="openDialog(null)"
+    >
+        <Plus class="size-4" /> Uçuş ekle
+    </div>
 
     <Dialog v-model:open="open">
         <DialogContent class="max-h-[92vh] overflow-y-auto">

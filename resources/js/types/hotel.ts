@@ -33,4 +33,7 @@ export type TourStay = {
     rooms_count: number;
     beds: number;
     occupied: number;
+    expected: number;
+    floors_count: number | null;
+    used_floors: number[];
 };

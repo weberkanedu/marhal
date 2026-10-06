@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { Form, Link, router } from '@inertiajs/vue3';
-import { BedDouble, DoorOpen, Pencil, Plus, Trash2 } from '@lucide/vue';
+import { Pencil, Plus, Trash2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import TourHotelController from '@/actions/App/Http/Controllers/TourHotelController';
 import InputError from '@/components/InputError.vue';
-import { Badge } from '@/components/ui/badge';
+import MockIcon from '@/components/mock/MockIcon.vue';
+import MockRing from '@/components/mock/MockRing.vue';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -66,99 +66,66 @@ function remove(stay: TourStay): void {
         });
     }
 }
-
-const cityVariant = (city: string) =>
-    city === 'mekke' ? 'default' : city === 'medine' ? 'secondary' : 'outline';
 </script>
 
 <template>
-    <Card class="min-w-0">
-        <CardHeader class="flex flex-row items-center justify-between">
-            <CardTitle class="flex items-center gap-2">
-                <BedDouble class="size-4" /> Konaklama
-            </CardTitle>
-            <Button
-                v-if="canUpdate"
-                variant="ghost"
-                size="sm"
-                @click="openDialog(null)"
-            >
-                <Plus /> Otel ekle
-            </Button>
-        </CardHeader>
-        <CardContent class="text-sm">
-            <p v-if="stays.length === 0" class="text-muted-foreground">
-                Henüz otel eklenmedi.
-                <template v-if="canUpdate">
-                    Mekke ve Medine otellerini gruplara göre ekleyin.
-                </template>
-            </p>
-            <ul v-else class="divide-y">
-                <li
-                    v-for="stay in stays"
-                    :key="stay.id"
-                    class="flex flex-wrap items-center gap-x-4 gap-y-1 py-2"
+    <!-- Tasarımdaki gibi otel kartları: tıklayınca otel planı; düzenle / kaldır üstüne gelince. -->
+    <div class="g3">
+        <div
+            v-for="stay in stays"
+            :key="stay.id"
+            class="vehicle"
+            role="link"
+            tabindex="0"
+            @click="router.visit(roomPlan.url(stay.id))"
+            @keydown.enter="router.visit(roomPlan.url(stay.id))"
+        >
+            <span class="ic"><MockIcon name="bed" /></span>
+            <div>
+                <b>{{ stay.city_label }} · {{ stay.hotel_name }}</b>
+                <small
+                    >{{ formatDate(stay.check_in) }} –
+                    {{ formatDate(stay.check_out) }} · {{ stay.nights }} gece
+                    <template v-if="stay.floors_count">
+                        · {{ stay.floors_count }} katlı</template
+                    ><template v-if="stay.used_floors.length">
+                        · bizim katlar
+                        {{ stay.used_floors.join(', ') }}</template
+                    >
+                    · {{ stay.occupied }}/{{ stay.expected }} yerleşti</small
                 >
-                    <Badge :variant="cityVariant(stay.city)" class="w-16">
-                        {{ stay.city_label }}
-                    </Badge>
-                    <div class="min-w-48 flex-1">
-                        <div class="font-medium">{{ stay.hotel_name }}</div>
-                        <div class="text-xs text-muted-foreground">
-                            {{ formatDate(stay.check_in) }} –
-                            {{ formatDate(stay.check_out) }} ·
-                            {{ stay.nights }} gece
-                        </div>
-                    </div>
-                    <div class="flex flex-wrap gap-1">
-                        <Badge
-                            v-for="group in stay.groups"
-                            :key="group.id"
-                            variant="outline"
-                        >
-                            {{ group.name }}
-                        </Badge>
-                        <span
-                            v-if="stay.groups.length === 0"
-                            class="text-xs text-warning"
-                        >
-                            Grup seçilmedi (sadece tek tek yerleştirilen
-                            yolcular)
-                        </span>
-                    </div>
-                    <Button variant="outline" size="sm" as-child>
-                        <Link :href="roomPlan(stay.id)">
-                            <DoorOpen />
-                            Oda planı
-                            <span class="text-xs text-muted-foreground">
-                                {{ stay.rooms_count }} oda ·
-                                {{ stay.occupied }}/{{ stay.beds }}
-                            </span>
-                        </Link>
-                    </Button>
-                    <div v-if="canUpdate" class="flex">
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            title="Düzenle"
-                            @click="openDialog(stay)"
-                        >
-                            <Pencil />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            class="text-destructive"
-                            title="Kaldır"
-                            @click="remove(stay)"
-                        >
-                            <Trash2 />
-                        </Button>
-                    </div>
-                </li>
-            </ul>
-        </CardContent>
-    </Card>
+                <small
+                    v-if="stay.groups.length === 0"
+                    style="color: var(--m-warn)"
+                    >Grup seçilmedi</small
+                >
+                <small v-else>{{
+                    stay.groups.map((g) => g.name).join(', ')
+                }}</small>
+            </div>
+            <MockRing :done="stay.occupied" :total="stay.expected" />
+            <span v-if="canUpdate" class="acts" @click.stop>
+                <button type="button" title="Düzenle" @click="openDialog(stay)">
+                    <Pencil class="size-3.5" />
+                </button>
+                <button type="button" title="Kaldır" @click="remove(stay)">
+                    <Trash2 class="size-3.5" />
+                </button>
+            </span>
+        </div>
+        <div
+            v-if="canUpdate"
+            class="vehicle add"
+            role="button"
+            tabindex="0"
+            @click="openDialog(null)"
+        >
+            <Plus class="size-4" /> Otel ekle
+        </div>
+        <p v-if="stays.length === 0 && !canUpdate" class="lbl">
+            Henüz otel eklenmedi.
+        </p>
+    </div>
 
     <Dialog v-model:open="open">
         <DialogContent>

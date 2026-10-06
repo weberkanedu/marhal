@@ -1,16 +1,23 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import TourController from '@/actions/App/Http/Controllers/TourController';
 import Heading from '@/components/Heading.vue';
 import TourForm from '@/components/tours/TourForm.vue';
 import { Button } from '@/components/ui/button';
-import { index, show } from '@/routes/tours';
+import { destroy, index, show } from '@/routes/tours';
 import type { TourFormOptions, TourSummary } from '@/types/tour';
 
 const props = defineProps<{
     tour: TourSummary;
     options: TourFormOptions;
+    canDelete?: boolean;
 }>();
+
+function deleteTour(): void {
+    if (confirm(`${props.tour.name} silinsin mi?`)) {
+        router.delete(destroy.url(props.tour.id));
+    }
+}
 
 defineOptions({
     layout: {
@@ -37,6 +44,15 @@ defineOptions({
             <template #actions>
                 <Button variant="ghost" as-child>
                     <Link :href="show(props.tour.id)">Vazgeç</Link>
+                </Button>
+                <Button
+                    v-if="canDelete"
+                    type="button"
+                    variant="ghost"
+                    class="ml-auto text-destructive"
+                    @click="deleteTour"
+                >
+                    Turu sil
                 </Button>
             </template>
         </TourForm>

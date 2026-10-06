@@ -459,79 +459,6 @@
     background: var(--success);
 }
 
-/* Yolculuk çizelgesi (components/tours/TourJourney.vue) */
-.journey {
-    --line-inset: calc(50% / var(--steps));
-    display: grid;
-    grid-template-columns: repeat(var(--steps), minmax(0, 1fr));
-    position: relative;
-    padding-top: 4px;
-}
-.journey::before,
-.journey::after {
-    content: '';
-    position: absolute;
-    left: var(--line-inset);
-    top: 23px;
-    height: 2px;
-    border-radius: 2px;
-}
-.journey::before {
-    right: var(--line-inset);
-    background: var(--border);
-}
-.journey::after {
-    width: calc((100% - 2 * var(--line-inset)) * var(--prog));
-    background: linear-gradient(
-        90deg,
-        var(--primary),
-        color-mix(in srgb, var(--primary) 30%, transparent)
-    );
-}
-.journey .st {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    padding: 0 4px;
-    text-align: center;
-}
-.journey .dot {
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--background);
-    border: 2px solid var(--border);
-    color: var(--primary);
-}
-[data-theme='safak'] .journey .dot {
-    background: #ffffff;
-}
-.journey .st.done .dot {
-    border-color: color-mix(in srgb, var(--primary) 55%, transparent);
-}
-.journey .st.next {
-    opacity: 0.75;
-}
-.journey .st.now .dot {
-    border-color: var(--primary);
-    animation: journey-pulse 2.4s ease-out infinite;
-}
-.journey .st.now b {
-    color: var(--primary);
-}
-@keyframes journey-pulse {
-    0% {
-        box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 50%, transparent);
-    }
-    100% {
-        box-shadow: 0 0 0 14px transparent;
-    }
-}
 @media (max-width: 640px) {
     .journey {
         grid-template-columns: minmax(0, 1fr);
@@ -731,4 +658,83 @@ button.kpi-tile:hover {
     user-select: none;
     -webkit-user-select: none;
     touch-action: none;
+}
+/* Tur sayfasındaki otel / araç / uçuş kartları: düzenle-sil düğmeleri üstüne gelince görünür; "ekle" kartı kesikli. */
+.mx .vehicle {
+    position: relative;
+}
+.mx .vehicle .ringwrap {
+    flex: none;
+}
+.mx .vehicle .acts {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: none;
+    gap: 2px;
+}
+.mx .vehicle:hover .acts,
+.mx .vehicle:focus-within .acts {
+    display: flex;
+}
+.mx .vehicle .acts button {
+    all: unset;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    color: var(--m-muted);
+    background: var(--m-panel);
+    font-size: 11px;
+    line-height: 1;
+}
+.mx .vehicle .acts button:hover {
+    color: var(--m-ink);
+}
+.mx .vehicle.add {
+    justify-content: center;
+    border-style: dashed;
+    color: var(--m-muted);
+    font-weight: 600;
+    min-height: 66px;
+}
+/* Yolculuk çizelgesi: tasarımda 5 adım sabit; turun adım sayısına göre aynı oranlarla. */
+.mx .journey {
+    grid-template-columns: repeat(var(--steps, 5), minmax(0, 1fr));
+}
+.mx .journey::before,
+.mx .journey::after {
+    left: calc(50% / var(--steps, 5));
+}
+.mx .journey::before {
+    right: calc(50% / var(--steps, 5));
+}
+.mx .journey::after {
+    width: calc((100% - 100% / var(--steps, 5)) * var(--prog));
+}
+/* Tablo satırı işlemleri (düzenle, sil …): satırın üstüne gelince görünür. */
+.mx td.acts-cell {
+    width: 1%;
+    white-space: nowrap;
+}
+.mx td.acts-cell .acts {
+    display: inline-flex;
+    gap: 2px;
+    visibility: hidden;
+}
+.mx tr:hover td.acts-cell .acts,
+.mx td.acts-cell .acts:focus-within {
+    visibility: visible;
+}
+.mx td.acts-cell .acts a,
+.mx td.acts-cell .acts button {
+    all: unset;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    color: var(--m-muted);
+}
+.mx td.acts-cell .acts a:hover,
+.mx td.acts-cell .acts button:hover {
+    color: var(--m-ink);
+    background: var(--m-panel2);
 }

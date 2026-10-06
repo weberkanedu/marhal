@@ -55,6 +55,7 @@ export type RegistrationRow = {
         id: string;
         full_name: string;
         gender: Gender;
+        age: number | null;
         phone: string | null;
         emergency_contact: string | null;
         masked_passport_no: string | null;
@@ -66,6 +67,8 @@ export type RegistrationRow = {
     room_type: string | null;
     // Oda ve koltuk: [{label: "Mekke", value: "501"}, {label: "1. Otobüs", value: "12"}]
     placements: { label: string; value: string }[];
+    rooms: { label: string; value: string }[];
+    seat: { label: string; value: string } | null;
     // İhtiyaç adları (tekerlekli sandalye, diyabet …); notlar yolcu sayfasında.
     needs: string[];
     status: RegistrationStatus;

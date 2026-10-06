@@ -88,7 +88,14 @@ class TourManagementTest extends TestCase
                 ->where('stats.cancelled', 1)
                 ->where('stats.total', '1000.00')
                 ->where('stats.paid', '400.00')
-                ->where('stats.balance', '600.00'));
+                ->where('stats.balance', '600.00')
+                // Tablodaki Oda / Koltuk sütunları ve yaş (tasarımdaki tur ekranı).
+                ->where('registrations.0.rooms', [])
+                ->where('registrations.0.seat', null)
+                ->has('registrations.0.person.age'));
+
+        $this->actingAs($this->staff)->get(route('tours.edit', $tour))
+            ->assertInertia(fn (Assert $page) => $page->component('tours/Edit')->has('canDelete'));
     }
 
     public function test_a_person_can_be_registered_to_a_tour_and_group(): void
