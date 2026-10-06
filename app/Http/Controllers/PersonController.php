@@ -33,7 +33,7 @@ class PersonController extends Controller
         $filter = PersonListFilter::tryFrom((string) $request->query('filtre', ''));
 
         $persons = Person::query()
-            ->when($search !== '', fn (Builder $query) => $this->applySearch($query, $search))
+            ->when($search !== '', fn (Builder $query) => $query->search($search))
             ->when($filter !== null, fn (Builder $query) => $filter?->apply($query))
             ->withCount(['registrations as active_registrations_count' => fn (Builder $q) => PersonListFilter::OnTour->registrationScope($q)])
             ->orderByName()
@@ -227,7 +227,7 @@ class PersonController extends Controller
         }
 
         $persons = Person::query()
-            ->tap(fn (Builder $query) => $this->applySearch($query, $search))
+            ->search($search)
             ->when($tourId, fn (Builder $query) => $query->withExists([
                 'registrations as already_registered' => fn (Builder $q) => $q->where('tour_id', $tourId),
             ]))
@@ -262,39 +262,6 @@ class PersonController extends Controller
         Gate::authorize('view', $person);
 
         return $photos->response($person) ?? abort(404);
-    }
-
-    /**
-     * Ad/soyad (her kelime ayrı), telefon; 11 haneli sayı ise T.C. Kimlik No,
-     * harf+rakam ise pasaport no ile arar.
-     *
-     * @param  Builder<Person>  $query
-     */
-    private function applySearch(Builder $query, string $search): void
-    {
-        $compact = preg_replace('/\s+/', '', $search) ?? '';
-
-        $query->where(function (Builder $query) use ($search, $compact): void {
-            $query->where(function (Builder $query) use ($search): void {
-                foreach (preg_split('/\s+/', $search) ?: [] as $term) {
-                    $query->where(fn (Builder $q) => $q
-                        ->whereLike('first_name', "%{$term}%")
-                        ->orWhereLike('last_name', "%{$term}%"));
-                }
-            });
-
-            if (preg_match('/^\d{3,}$/', $compact)) {
-                $query->orWhereLike('phone', "%{$compact}%");
-            }
-
-            if (preg_match('/^\d{11}$/', $compact)) {
-                $query->orWhere(fn (Builder $q) => $q->whereNationalId($compact));
-            }
-
-            if (preg_match('/^[A-Za-z]+\d+$/', $compact)) {
-                $query->orWhere(fn (Builder $q) => $q->wherePassportNo($compact));
-            }
-        });
     }
 
     /**

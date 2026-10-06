@@ -22,6 +22,7 @@ class FeedbackController extends Controller
             'rating' => ['nullable', 'integer', 'between:1,5'],
             'message' => ['required', 'string', 'min:3', 'max:3000'],
             'screen' => ['nullable', 'string', 'max:255'],
+            'wants_reply' => ['boolean'],
         ], [], ['type' => 'tür', 'rating' => 'puan', 'message' => 'mesaj']);
 
         $feedback = Feedback::create([
@@ -31,10 +32,8 @@ class FeedbackController extends Controller
             'user_id' => $request->user()?->getKey(),
         ]);
 
-        Inertia::flash('toast', [
-            'type' => 'success',
-            'message' => "Teşekkürler! Görüşünüz ürün ekibine iletildi. Takip no: #{$feedback->id}",
-        ]);
+        // "Görüşünü paylaş" paneli teşekkür ekranında takip numarasını gösterir.
+        Inertia::flash('feedback', ['no' => $feedback->id]);
 
         return back();
     }
@@ -58,6 +57,7 @@ class FeedbackController extends Controller
                     'rating' => $f->rating,
                     'message' => $f->message,
                     'screen' => $f->screen,
+                    'wants_reply' => $f->wants_reply,
                     'status' => $f->status,
                     'created_at' => $f->created_at->toIso8601String(),
                 ]),

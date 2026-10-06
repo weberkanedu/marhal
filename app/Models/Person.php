@@ -133,6 +133,40 @@ class Person extends Model
     }
 
     /**
+     * Ad soyad (her kelime), telefon, T.C. Kimlik No veya pasaport no ile arama. Yolcular listesi ve
+     * Ctrl K araması aynı kuralı kullanır.
+     *
+     * @param  Builder<Person>  $query
+     * @return Builder<Person>
+     */
+    public function scopeSearch(Builder $query, string $search): Builder
+    {
+        $compact = preg_replace('/\s+/', '', $search) ?? '';
+
+        return $query->where(function (Builder $query) use ($search, $compact): void {
+            $query->where(function (Builder $query) use ($search): void {
+                foreach (preg_split('/\s+/', trim($search)) ?: [] as $term) {
+                    $query->where(fn (Builder $q) => $q
+                        ->whereLike('first_name', "%{$term}%")
+                        ->orWhereLike('last_name', "%{$term}%"));
+                }
+            });
+
+            if (preg_match('/^\d{3,}$/', $compact)) {
+                $query->orWhereLike('phone', "%{$compact}%");
+            }
+
+            if (preg_match('/^\d{11}$/', $compact)) {
+                $query->orWhere(fn (Builder $q) => $q->whereNationalId($compact));
+            }
+
+            if (preg_match('/^[A-Za-z]+\d+$/', $compact)) {
+                $query->orWhere(fn (Builder $q) => $q->wherePassportNo($compact));
+            }
+        });
+    }
+
+    /**
      * Soyad, ad sırası; PostgreSQL'de Türkçe alfabe (Ç, Ğ, İ, Ö, Ş, Ü doğru yerde).
      *
      * @param  Builder<Person>  $query

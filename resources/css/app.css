@@ -577,19 +577,21 @@
     font-weight: 600;
     min-height: 66px;
 }
-/* Yolculuk çizelgesi: tasarımda 5 adım sabit; turun adım sayısına göre aynı oranlarla. */
-.mx .journey {
-    grid-template-columns: repeat(var(--steps, 5), minmax(0, 1fr));
-}
-.mx .journey::before,
-.mx .journey::after {
-    left: calc(50% / var(--steps, 5));
-}
-.mx .journey::before {
-    right: calc(50% / var(--steps, 5));
-}
-.mx .journey::after {
-    width: calc((100% - 100% / var(--steps, 5)) * var(--prog));
+/* Yolculuk çizelgesi: tasarımda 5 adım sabit; turun adım sayısına göre aynı oranlarla (dar ekranda tasarımın dikey hâli). */
+@container mock (min-width: 601px) {
+    .mx .journey {
+        grid-template-columns: repeat(var(--steps, 5), minmax(0, 1fr));
+    }
+    .mx .journey::before,
+    .mx .journey::after {
+        left: calc(50% / var(--steps, 5));
+    }
+    .mx .journey::before {
+        right: calc(50% / var(--steps, 5));
+    }
+    .mx .journey::after {
+        width: calc((100% - 100% / var(--steps, 5)) * var(--prog));
+    }
 }
 /* Tablo satırı işlemleri (düzenle, sil …): satırın üstüne gelince görünür. */
 .mx td.acts-cell {
@@ -616,5 +618,57 @@
 .mx td.acts-cell .acts a:hover,
 .mx td.acts-cell .acts button:hover {
     color: var(--m-ink);
+    background: var(--m-panel2);
+}
+/* "Görüşünü paylaş" (components/FeedbackPanel.vue): sağ altta sabit; düğme ve panel tasarımdaki konumda. */
+.mx.fb-host {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    width: min(420px, 100vw);
+    height: 0;
+    container-type: normal;
+    overflow: visible;
+}
+.mx.fb-host .fbbtn {
+    bottom: 24px;
+}
+.mx.fb-host .fbpanel {
+    bottom: 84px;
+    width: min(380px, calc(100vw - 36px));
+}
+/* Ctrl K arama penceresi (components/CommandPalette.vue): bütün ekranı kaplar. */
+.mx.pal-host {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    container-type: normal;
+}
+/* Yan menü (components/AppSidebar.vue): tasarımdaki .side içeriği, shadcn Sidebar kabuğunun içinde. */
+.mx.mx-side {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+    padding: 18px 12px;
+    container-type: normal;
+}
+.mx.mx-side .brand {
+    color: inherit;
+    text-decoration: none;
+}
+.mx.mx-side .me {
+    width: 100%;
+    border: 0;
+    border-radius: 9px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.mx.mx-side .me:hover,
+.mx.mx-side .me[data-state='open'] {
     background: var(--m-panel2);
 }

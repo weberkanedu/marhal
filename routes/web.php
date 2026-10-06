@@ -27,6 +27,7 @@ use App\Http\Controllers\RoomAssignmentController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\RoomPlanController;
 use App\Http\Controllers\SeatAssignmentController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SeatPlanController;
 use App\Http\Controllers\TourBadgeController;
 use App\Http\Controllers\TourController;
@@ -44,6 +45,9 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
 
     // "Görüşünü paylaş" (her kullanıcı)
     Route::post('feedback', [FeedbackController::class, 'store'])->middleware('throttle:10,1')->name('feedback.store');
+
+    // Yan menüdeki "Ara" (Ctrl K): yolcu ve tur
+    Route::get('search', SearchController::class)->middleware('throttle:60,1')->name('search');
 
     // Yolcular
     Route::middleware('feature:passengers')->group(function () {

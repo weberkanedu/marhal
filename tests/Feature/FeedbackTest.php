@@ -38,12 +38,20 @@ class FeedbackTest extends TestCase
             'rating' => 4,
             'message' => 'Oda planında uyarı çıkmadı',
             'screen' => '/tours/abc?q=Ahmet',
-        ])->assertSessionHasNoErrors()->assertRedirect();
+            'wants_reply' => true,
+        ])->assertSessionHasNoErrors()->assertRedirect()
+            // Panel teşekkür ekranında takip numarasını gösterir.
+            ->assertInertiaFlash('feedback.no', Feedback::sole()->id);
 
         $feedback = Feedback::sole();
-        $this->assertSame([$this->tenant->id, $guide->id, '/tours/abc', 4, 'yeni'], [
-            $feedback->tenant_id, $feedback->user_id, $feedback->screen, $feedback->rating, $feedback->status,
+        $this->assertSame([$this->tenant->id, $guide->id, '/tours/abc', 4, 'yeni', true], [
+            $feedback->tenant_id, $feedback->user_id, $feedback->screen, $feedback->rating, $feedback->status, $feedback->wants_reply,
         ]);
+
+        // "Soru" türü ve ekran eklenmeden gönderim
+        $this->actingAs($guide)->post(route('feedback.store'), ['type' => 'soru', 'message' => 'Bu nasıl yapılır?', 'screen' => null])
+            ->assertSessionHasNoErrors();
+        $this->assertNull(Feedback::query()->latest('id')->first()?->screen);
     }
 
     public function test_feedback_is_validated_and_status_cannot_be_forged(): void
@@ -74,6 +82,6 @@ class FeedbackTest extends TestCase
                 ->component('platform/Feedback')
                 ->has('items.data', 1)
                 ->where('items.data.0.tenant', $this->tenant->name)
-                ->where('items.data.0.type_label', 'Beğendim'));
+                ->where('items.data.0.type_label', 'Teşekkür'));
     }
 }

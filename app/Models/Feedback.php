@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $rating
  * @property string $message
  * @property string|null $screen
+ * @property bool $wants_reply
  * @property string $status
  * @property string|null $reply
  * @property Carbon|null $replied_at
@@ -39,6 +40,7 @@ class Feedback extends Model
         return [
             'type' => FeedbackType::class,
             'rating' => 'integer',
+            'wants_reply' => 'boolean',
             'replied_at' => 'datetime',
         ];
     }

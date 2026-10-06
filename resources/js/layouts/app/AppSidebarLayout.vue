@@ -3,7 +3,7 @@ import AppBackdrop from '@/components/AppBackdrop.vue';
 import AppContent from '@/components/AppContent.vue';
 import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
-import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/sonner';
 import type { BreadcrumbItem } from '@/types';
 
@@ -21,7 +21,10 @@ withDefaults(defineProps<Props>(), {
     <AppShell variant="sidebar">
         <AppSidebar />
         <AppContent variant="sidebar" class="min-w-0 overflow-x-clip">
-            <AppSidebarHeader :breadcrumbs="breadcrumbs" />
+            <!-- Tasarımda üst başlık çubuğu yok (kırıntı yolu ekranın başlığında); telefonda yalnız menü düğmesi. -->
+            <div class="flex h-12 items-center px-3 md:hidden">
+                <SidebarTrigger />
+            </div>
             <slot />
         </AppContent>
         <Toaster />

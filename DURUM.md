@@ -204,8 +204,22 @@ Yerleşim bilgisi (otel / oda / koltuk) yaka kartı, tur tablosu ve aile ekranı
       `stays.assignments.clear`). **Medine'ye kopyala**: bu otelden çıkış günü ya da sonra başlayan konaklamaya kopyalar
       (aynı anda başka grubun oteline değil); sonuncu otelde "Mekke'den kopyala". Otomatik dağıt artık önizlemesiz, sonucu
       bildirimle söyler. Eski diyaloglar (RoomCard, RoomDialogs, HotelTower, StayFloorsDialog, CopyPlanDialog) kalktı.
-    - ⏳ Ana Panel, Tur, Araç, Yolcular, Tahsilat ve kabuk (yan menüde Ctrl K arama, alttaki kullanıcı,
-      "Görüşünü paylaş" düğmesi).
+    - ✅ Araç koltuk planı: gövde çizimi (otobüs / midibüs / sprinter / minivan), şoför, kapılar, rehber "R", ön bölge;
+      üstte turun araçları; "Ön" etiketi (hareket güçlüğü). Otomatik yerleştir önizlemesiz.
+    - ✅ Tur detayı: tarih + durum, yolculuk çizelgesi (uçuşta güzergâh, otelde gece), hazırlık halkaları; Yolcular tablosu
+      (oda, koltuk, ödeme çubuğu, durum; grup hapları, satır işlemleri üstüne gelince); Konaklama / Ulaşım kart ızgarası
+      (düzenle / sil kartın üstüne gelince, "ekle" kartı). "Çıktılar" sekmesi "Çıktı al" menüsüne, "Turu sil" Düzenle sayfasına taşındı.
+    - ✅ Yolcular: sayı kartları (+ bu hafta), arama + süzgeç hapları, maskeler "•".
+    - ✅ Tahsilat: özet kartları, sekmeler; borçlularda ilerleme çubuğu ve "Sonraki taksit · N gün gecikti"
+      (`Registration::nextUnpaidInstallment`).
+    - ✅ Ana Panel: tasarımdaki `.dash` yerleşimi; "Aktif tur / paket limiti", aylık tahsilat grafiği (bin).
+    - ✅ Kabuk: yan menü tasarımdaki gibi (logo, **Ara · Ctrl K**, menü, altta kullanıcı + menüsü); üst kırıntı çubuğu kalktı
+      (telefonda yalnız menü düğmesi). **Ctrl K** penceresi: yolcu (oda / koltuğuyla) ve tur `GET /search` (SearchController,
+      rehber yalnız kendi turları, yolcu modülü kapalıysa boş), ekranlar ve işlemler. **Görüşünü paylaş**: sağ altta düğme +
+      panel (Öneri / Sorun / Soru / Teşekkür, yıldız, "ekranı ekle", "bana dönüş yapılsın", takip no GB-yıl-no).
+      Migration: `add_wants_reply_to_feedback`. Arama kuralı tek yerde: `Person::scopeSearch` (liste + Ctrl K).
+    - Not: tasarım CSS'i `scratchpad/mockcss.py` ile üretildi; yeniden üretmek gerekirse aynı SKIP listesiyle
+      (.mock .fx .side .toast .demo .overlay) çalıştırılmalı.
 6. ⏳ Hazırlık takibi (`readiness_items`, `readiness_checks`).
 7. ⏳ Aile ekranı + fotoğrafla ön kayıt (MRZ okuma servisi için önce seçenek / maliyet).
 8. ⏳ WhatsApp tahsilat asistanı (önce sağlayıcı + sanal POS seçenekleri / maliyet).

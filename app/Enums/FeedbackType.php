@@ -10,14 +10,16 @@ enum FeedbackType: string
 
     case Suggestion = 'oneri';
     case Bug = 'hata';
+    case Question = 'soru';
     case Praise = 'begeni';
 
     public function label(): string
     {
         return match ($this) {
             self::Suggestion => 'Öneri',
-            self::Bug => 'Hata bildirimi',
-            self::Praise => 'Beğendim',
+            self::Bug => 'Sorun',
+            self::Question => 'Soru',
+            self::Praise => 'Teşekkür',
         };
     }
 }

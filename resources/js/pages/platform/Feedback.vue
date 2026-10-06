@@ -11,7 +11,7 @@ type FeedbackRow = {
     id: number;
     tenant: string;
     user: string | null;
-    type: 'oneri' | 'hata' | 'begeni';
+    type: 'oneri' | 'hata' | 'soru' | 'begeni';
     type_label: string;
     rating: number | null;
     message: string;
@@ -31,6 +31,7 @@ defineOptions({
 const variant = {
     oneri: 'secondary',
     hata: 'destructive',
+    soru: 'outline',
     begeni: 'default',
 } as const;
 

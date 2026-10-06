@@ -1,38 +1,41 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
+import type { InertiaLinkProps } from '@inertiajs/vue3';
 import {
     Building2,
     Inbox,
     LayoutGrid,
-    MessageSquareHeart,
     Package,
     Plane,
     Settings,
     Users,
     Wallet,
 } from '@lucide/vue';
+import { useEventListener } from '@vueuse/core';
 import { computed, ref } from 'vue';
-import AppLogo from '@/components/AppLogo.vue';
-import FeedbackDialog from '@/components/FeedbackDialog.vue';
-import NavMain from '@/components/NavMain.vue';
-import NavUser from '@/components/NavUser.vue';
+import CommandPalette from '@/components/CommandPalette.vue';
+import FeedbackPanel from '@/components/FeedbackPanel.vue';
+import MockIcon from '@/components/mock/MockIcon.vue';
 import {
-    Sidebar,
-    SidebarContent,
-    SidebarFooter,
-    SidebarHeader,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-} from '@/components/ui/sidebar';
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Sidebar, useSidebar } from '@/components/ui/sidebar';
+import UserMenuContent from '@/components/UserMenuContent.vue';
+import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { agencySettingsPages, agencySettingsTabs } from '@/lib/agencySettings';
 import { dashboard } from '@/routes';
 import { index as collectionsIndex } from '@/routes/collections';
-import { index as personsIndex } from '@/routes/persons';
+import { show as importPage } from '@/routes/person-import';
+import {
+    create as createPerson,
+    index as personsIndex,
+} from '@/routes/persons';
 import { index as feedbackIndex } from '@/routes/platform/feedback';
 import { index as plansIndex } from '@/routes/platform/plans';
 import { index as tenantsIndex } from '@/routes/platform/tenants';
-import { index as toursIndex } from '@/routes/tours';
+import { create as createTour, index as toursIndex } from '@/routes/tours';
 import type { NavItem } from '@/types';
 
 const page = usePage();
@@ -45,7 +48,76 @@ const homeLink = computed(() =>
     isSuperAdmin.value ? tenantsIndex() : dashboard(),
 );
 
-const feedbackOpen = ref(false);
+const { isCurrentUrl } = useCurrentUrl();
+const { isMobile, setOpenMobile } = useSidebar();
+
+// Kullanıcı (alt köşe): baş harfler ve rolün adı.
+const user = computed(() => page.props.auth.user);
+const initials = computed(() =>
+    (user.value?.name ?? '')
+        .trim()
+        .split(/\s+/)
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toLocaleUpperCase('tr'),
+);
+const roleLabel = computed(
+    () =>
+        ({
+            admin: 'Yönetici',
+            operasyon: 'Operasyon',
+            rehber: 'Rehber',
+            super_admin: 'Platform yöneticisi',
+        })[user.value?.role ?? ''] ?? '',
+);
+
+// Menü simgeleri tasarımdakiyle aynı çizgiler.
+const iconFor = (title: string) =>
+    ({
+        'Ana Panel': 'grid',
+        Turlar: 'plane',
+        Gruplarım: 'plane',
+        Yolcular: 'users',
+        Tahsilat: 'wallet',
+        'Acente ayarları': 'settings',
+        Acenteler: 'grid',
+        Paketler: 'settings',
+        'Geri bildirimler': 'chat',
+    })[title] ?? 'grid';
+
+const hrefOf = (href: NonNullable<InertiaLinkProps['href']>) =>
+    typeof href === 'string' ? href : href.url;
+
+// Ctrl K araması
+const paletteOpen = ref(false);
+useEventListener(window, 'keydown', (e: KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        paletteOpen.value = !paletteOpen.value;
+    }
+});
+
+const actions = computed(() => {
+    const role = user.value?.role;
+    const features = page.props.features ?? [];
+    const staff = role === 'admin' || role === 'operasyon';
+    const list: { title: string; href: string }[] = [];
+
+    if (staff && features.includes('passengers')) {
+        list.push(
+            { title: 'Yeni yolcu ekle', href: createPerson.url() },
+            { title: "Excel'den yolcu aktar", href: importPage.url() },
+            { title: 'Yeni tur oluştur', href: createTour.url() },
+        );
+    }
+
+    if (staff && features.includes('payments')) {
+        list.push({ title: 'Ödeme al', href: collectionsIndex.url() });
+    }
+
+    return list;
+});
 
 const mainNavItems = computed<NavItem[]>(() => {
     if (isSuperAdmin.value) {
@@ -123,38 +195,70 @@ const mainNavItems = computed<NavItem[]>(() => {
 </script>
 
 <template>
-    <Sidebar collapsible="icon" variant="inset">
-        <SidebarHeader>
-            <SidebarMenu>
-                <SidebarMenuItem>
-                    <SidebarMenuButton size="lg" as-child>
-                        <Link :href="homeLink">
-                            <AppLogo />
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            </SidebarMenu>
-        </SidebarHeader>
-
-        <SidebarContent>
-            <NavMain :items="mainNavItems" />
-        </SidebarContent>
-
-        <SidebarFooter>
-            <SidebarMenu v-if="!isSuperAdmin">
-                <SidebarMenuItem>
-                    <SidebarMenuButton
-                        tooltip="Görüşünü paylaş"
-                        @click="feedbackOpen = true"
+    <Sidebar collapsible="offcanvas" variant="inset">
+        <!-- Tasarımdaki yan menü: logo, Ara (Ctrl K), menü, altta kullanıcı. -->
+        <div class="mx mx-side">
+            <Link class="brand" :href="homeLink">
+                <span class="logo">M</span>
+                <div>
+                    <b>Marhal</b
+                    ><span>{{
+                        page.props.tenant?.name ??
+                        (isSuperAdmin ? 'Platform' : '')
+                    }}</span>
+                </div>
+            </Link>
+            <button
+                v-if="!isSuperAdmin"
+                class="kbtn"
+                type="button"
+                @click="paletteOpen = true"
+            >
+                <MockIcon name="search" /><span>Ara</span><kbd>Ctrl K</kbd>
+            </button>
+            <nav class="nav">
+                <Link
+                    v-for="item in mainNavItems"
+                    :key="item.title"
+                    :href="item.href"
+                    :class="{ on: item.isActive ?? isCurrentUrl(item.href) }"
+                    @click="isMobile && setOpenMobile(false)"
+                >
+                    <MockIcon :name="iconFor(item.title)" />{{ item.title }}
+                </Link>
+            </nav>
+            <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                    <button
+                        class="me"
+                        type="button"
+                        data-test="sidebar-menu-button"
                     >
-                        <MessageSquareHeart />
-                        <span>Görüşünü paylaş</span>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            </SidebarMenu>
-            <NavUser />
-        </SidebarFooter>
-        <FeedbackDialog v-if="!isSuperAdmin" v-model:open="feedbackOpen" />
+                        <span class="av">{{ initials }}</span>
+                        <div>
+                            {{ user?.name }}<small>{{ roleLabel }}</small>
+                        </div>
+                    </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                    class="min-w-56 rounded-lg"
+                    side="top"
+                    align="start"
+                    :side-offset="4"
+                >
+                    <UserMenuContent v-if="user" :user="user" />
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
     </Sidebar>
+    <CommandPalette
+        v-if="!isSuperAdmin"
+        v-model:open="paletteOpen"
+        :screens="
+            mainNavItems.map((i) => ({ title: i.title, href: hrefOf(i.href) }))
+        "
+        :actions="actions"
+    />
+    <FeedbackPanel v-if="!isSuperAdmin" />
     <slot />
 </template>
