@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Buses\AutoAssignSeats;
 use App\Actions\Buses\BusPassengers;
 use App\Actions\Rooms\StayOccupancy;
+use App\Enums\NeedEffect;
 use App\Enums\RegistrationStatus;
 use App\Enums\UserRole;
 use App\Models\Bus;
@@ -13,6 +14,7 @@ use App\Models\Registration;
 use App\Models\SeatAssignment;
 use App\Models\User;
 use App\Support\FamilyUnits;
+use App\Support\Needs\NeedProfiles;
 use App\Support\TurkishText;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -31,7 +33,11 @@ class SeatPlanController extends Controller
     public function __construct(
         private readonly BusPassengers $passengers,
         private readonly StayOccupancy $occupancy,
+        private readonly NeedProfiles $needs,
     ) {}
+
+    /** @var array<string, true> hareket güçlüğü olan person_id'ler */
+    private array $mobility = [];
 
     public function show(Request $request, Bus $bus): Response
     {
@@ -52,6 +58,9 @@ class SeatPlanController extends Controller
             $unassigned = $unassigned->filter(fn (Registration $r) => in_array($r->group_id, $guideGroups, true));
         }
 
+        $profiles = $this->needs->forPersons($unassigned->pluck('person_id')->merge($seats->map(fn (SeatAssignment $s) => $s->registration->person_id)));
+        $this->mobility = array_map(fn () => true, array_filter($profiles, fn (array $items) => NeedProfiles::has($items, NeedEffect::Mobility)));
+
         $hidden = fn (SeatAssignment $s) => $guideGroups !== null && ! in_array($s->registration->group_id, $guideGroups, true);
         $reservedCount = count($bus->reserved());
 
@@ -68,6 +77,14 @@ class SeatPlanController extends Controller
                 'body' => $bus->body->value,
                 'front_zone' => $layout->frontZone(),
                 'groups' => $bus->groups->pluck('name')->values(),
+                // Tasarımdaki çizim için düzen sayıları.
+                'layout' => [
+                    'left' => $layout->left,
+                    'right' => $layout->right,
+                    'rows' => $layout->rows,
+                    'back' => $layout->backRow,
+                    'front_seats' => $layout->frontSeats,
+                ],
                 'tour' => ['id' => $bus->tour->id, 'name' => $bus->tour->name],
             ],
             'grid' => $layout->grid(),
@@ -82,6 +99,17 @@ class SeatPlanController extends Controller
             // Yolcu havuzu aile kümeleriyle (sürükle-bırakta aileler bir arada görünür).
             'units' => $this->units($unassigned),
             'others' => $canUpdate ? $this->others($bus, $expected, $seatedIds) : [],
+            // Üstteki araç seçimi: turun bütün araçları.
+            'buses' => Bus::query()
+                ->where('tour_id', $bus->tour_id)
+                ->orderBy('name')
+                ->get()
+                ->map(fn (Bus $b) => [
+                    'id' => $b->id,
+                    'name' => $b->name,
+                    'label' => $b->layout()->left.'+'.$b->layout()->right,
+                ])
+                ->values(),
             'stats' => [
                 'seats' => $layout->seatCount() - $reservedCount,
                 'reserved' => $reservedCount,
@@ -158,6 +186,7 @@ class SeatPlanController extends Controller
             'gender' => $person->gender->value,
             'age' => $person->birth_date?->age,
             'group_name' => $registration->group?->name,
+            'mobility' => isset($this->mobility[$registration->person_id]),
         ];
     }
 

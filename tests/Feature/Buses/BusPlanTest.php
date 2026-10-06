@@ -184,7 +184,12 @@ class BusPlanTest extends TestCase
                 ->has('seats.1.warnings', 1)
                 ->has('seats.2.warnings', 1)
                 ->has('seats.3.warnings', 0)
-                ->has('seats.4.warnings', 0));
+                ->has('seats.4.warnings', 0)
+                // Tasarımdaki çizim: düzen sayıları ve üstte turun araçları.
+                ->where('bus.layout.left', $bus->layout()->left)
+                ->where('bus.layout.rows', $bus->layout()->rows)
+                ->has('buses', 1)
+                ->where('buses.0.id', $bus->id));
     }
 
     // --- Otomatik dağıtma ---

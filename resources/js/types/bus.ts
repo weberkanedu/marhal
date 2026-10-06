@@ -47,6 +47,8 @@ export type SeatPassenger = {
     gender: Gender;
     age: number | null;
     group_name: string | null;
+    // Hareket güçlüğü (ön bölge kuralı).
+    mobility?: boolean;
 };
 
 export type SeatOccupant = Omit<
@@ -81,7 +83,16 @@ export type SeatPlanBus = {
     front_zone: number[];
     groups: string[];
     tour: { id: string; name: string };
+    layout: {
+        left: number;
+        right: number;
+        rows: number;
+        back: number;
+        front_seats: number;
+    };
 };
+
+export type SeatPlanBusLink = { id: string; name: string; label: string };
 
 // Koltuğu olmayanların aile kümeleri (havuzda bir arada gösterilir).
 export type SeatPoolUnit = { label: string | null; ids: string[] };
@@ -91,12 +102,6 @@ export type SeatPlanStats = {
     reserved: number;
     occupied: number;
     unassigned: number;
-};
-
-export type SeatAutoPreview = {
-    placed: number;
-    placements: { seat: number; name: string }[];
-    unplaced: { name: string; reason: string }[];
 };
 
 /**

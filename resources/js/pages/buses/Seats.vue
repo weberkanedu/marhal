@@ -1,40 +1,13 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import {
-    AlertTriangle,
-    ArrowLeft,
-    Eraser,
-    GripVertical,
-    Search,
-    Users,
-    Wand2,
-    X,
-} from '@lucide/vue';
+import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import { toast } from 'vue-sonner';
 import SeatAssignmentController from '@/actions/App/Http/Controllers/SeatAssignmentController';
 import SeatPlanController from '@/actions/App/Http/Controllers/SeatPlanController';
-import BusDiagram from '@/components/buses/BusDiagram.vue';
-import ExportMenu from '@/components/ExportMenu.vue';
-import PersonAvatar from '@/components/persons/PersonAvatar.vue';
-import ProgressBar from '@/components/ProgressBar.vue';
-import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import MockPool from '@/components/mock/MockPool.vue';
+import type { PoolPerson } from '@/components/mock/MockPool.vue';
+import MockTop from '@/components/mock/MockTop.vue';
+import { usePointerDrag } from '@/composables/usePointerDrag';
 import {
     passengers as passengerReport,
     seatChart,
@@ -44,15 +17,19 @@ import { index as toursIndex, show as showTour } from '@/routes/tours';
 import type {
     BusCell,
     OtherSeatPassenger,
-    SeatAutoPreview,
     SeatOccupant,
     SeatPlanBus,
+    SeatPlanBusLink,
     SeatPlanStats,
     SeatPoolUnit,
     UnseatedPassenger,
 } from '@/types/bus';
 import type { ExportItem } from '@/types/export';
 
+/**
+ * Araç koltuk planı — tasarım sayfasındaki "Araç planı" ekranının birebir hâli (gerçek veriyle):
+ * araç gövdesi (otobüs / midibüs / sprinter / minivan), şoför, kapılar, rehber koltuğu, ön bölge.
+ */
 const props = defineProps<{
     bus: SeatPlanBus;
     grid: BusCell[][];
@@ -60,6 +37,7 @@ const props = defineProps<{
     unassigned: UnseatedPassenger[];
     units: SeatPoolUnit[];
     others: OtherSeatPassenger[];
+    buses: SeatPlanBusLink[];
     stats: SeatPlanStats;
     can: { update: boolean; reports: boolean };
 }>();
@@ -70,182 +48,141 @@ defineOptions({
     },
 });
 
-const occupant = (seat: number): SeatOccupant | undefined =>
-    props.seats[String(seat)];
-const isReserved = (seat: number) => props.bus.reserved.includes(seat);
-const inFront = (seat: number) => props.bus.front_zone.includes(seat);
+const root = ref<HTMLElement | null>(null);
+const selected = ref<string | null>(null);
+const showOthers = ref(false);
+const showWarnings = ref(false);
 
-type Picked = {
-    registration_id: string;
-    full_name: string;
-    seat_id: string | null;
-    seat_no: number | null;
-};
-
-// Seçim (tıklayarak yerleştirme; telefon ve klavye için) ve sürüklenen yolcu.
-const selected = ref<Picked | null>(null);
-const dragging = ref<Picked | null>(null);
-const overSeat = ref<number | null>(null);
-const overPool = ref(false);
-
-function pick(p: { registration_id: string; full_name: string }): void {
-    if (!props.can.update) {
-        return;
-    }
-
-    selected.value =
-        selected.value?.registration_id === p.registration_id
-            ? null
-            : {
-                  registration_id: p.registration_id,
-                  full_name: p.full_name,
-                  seat_id: null,
-                  seat_no: null,
-              };
-}
+const ini = (name: string) =>
+    name
+        .trim()
+        .split(/\s+/)
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toLocaleUpperCase('tr');
+const g = (gender: string | null): 'E' | 'K' =>
+    gender === 'kadin' ? 'K' : 'E';
 
 function showError(errors: Record<string, string>): void {
     toast.error(Object.values(errors)[0] ?? 'İşlem yapılamadı.');
 }
 
-function assign(who: Picked, seat: number): void {
-    router.post(
-        SeatAssignmentController.store.url(props.bus.id),
-        {
-            registration_id: who.registration_id,
-            seat_no: seat,
-            // Oturan yolcu dolu koltuğa bırakılırsa yer değiştirir.
-            swap: who.seat_id !== null,
-        },
-        {
-            preserveScroll: true,
-            onSuccess: () => (selected.value = null),
-            onError: showError,
-        },
-    );
-}
+const occupant = (seat: number): SeatOccupant | undefined =>
+    props.seats[String(seat)];
+const isReserved = (seat: number) => props.bus.reserved.includes(seat);
+const inFront = (seat: number) => props.bus.front_zone.includes(seat);
 
-function unseat(who: Picked | null): void {
-    if (!who?.seat_id) {
-        return;
-    }
+// Gövde: sunucudaki gövde adları tasarımdaki çizim sınıflarına.
+const body = computed(
+    () =>
+        ({ otobus: 'bus', midibus: 'midi', minibus: 'van', van: 'mini' })[
+            props.bus.body
+        ],
+);
+const columns = computed(
+    () =>
+        `repeat(${props.bus.layout.left}, var(--s)) ${body.value === 'mini' ? '10px' : '18px'} repeat(${props.bus.layout.right}, var(--s))`,
+);
 
-    router.delete(SeatAssignmentController.destroy.url(who.seat_id), {
-        preserveScroll: true,
-        onSuccess: () => (selected.value = null),
-        onError: showError,
-    });
-}
-
-function clickSeat(seat: number): void {
-    if (!props.can.update || isReserved(seat)) {
-        return;
-    }
-
-    const current = occupant(seat);
-
-    if (current && current.registration_id !== null) {
-        // Seçili oturan yolcu başka bir dolu koltuğa tıklarsa yer değiştirir.
-        if (
-            selected.value?.seat_id &&
-            selected.value.registration_id !== current.registration_id
-        ) {
-            assign(selected.value, seat);
-
-            return;
+// Satırlar tasarımdaki hücrelere: koltuk, koridor, şoför, kapı boşluğu (birleşik), arka sıra.
+type Item =
+    | { kind: 'seat'; seat: number }
+    | { kind: 'empty' }
+    | { kind: 'driver' }
+    | { kind: 'door'; span: number };
+const rows = computed(() =>
+    props.grid.map((cells) => {
+        if (!cells.includes('aisle')) {
+            return {
+                back: true,
+                seats: cells.filter((c): c is number => typeof c === 'number'),
+                items: [] as Item[],
+            };
         }
 
-        selected.value =
-            selected.value?.registration_id === current.registration_id
-                ? null
-                : {
-                      registration_id: current.registration_id,
-                      full_name: current.full_name,
-                      seat_id: current.seat_id,
-                      seat_no: seat,
-                  };
+        const items: Item[] = [];
 
-        return;
-    }
+        for (const cell of cells) {
+            const last = items.at(-1);
 
-    if (!current && selected.value) {
-        assign(selected.value, seat);
-    }
-}
+            if (cell === 'door') {
+                if (last?.kind === 'door') {
+                    last.span++;
+                } else {
+                    items.push({ kind: 'door', span: 1 });
+                }
+            } else if (typeof cell === 'number') {
+                items.push({ kind: 'seat', seat: cell });
+            } else if (cell === 'driver') {
+                items.push({ kind: 'driver' });
+            } else {
+                items.push({ kind: 'empty' });
+            }
+        }
 
-// Sürükle-bırak (fare ile)
-function startDrag(event: DragEvent, who: Picked): void {
-    if (!props.can.update) {
-        return;
-    }
-
-    dragging.value = who;
-    event.dataTransfer?.setData('text/plain', who.registration_id);
-
-    if (event.dataTransfer) {
-        event.dataTransfer.effectAllowed = 'move';
-    }
-}
-
-function endDrag(): void {
-    dragging.value = null;
-    overSeat.value = null;
-    overPool.value = false;
-}
-
-function canDropOn(seat: number): boolean {
-    const who = dragging.value;
-
-    if (!who || isReserved(seat) || who.seat_no === seat) {
-        return false;
-    }
-
-    const current = occupant(seat);
-
-    // Boş koltuk ya da (oturan yolcu için) yer değiştirme.
-    return (
-        !current || (who.seat_id !== null && current.registration_id !== null)
-    );
-}
-
-function dropOnSeat(seat: number): void {
-    if (dragging.value && canDropOn(seat)) {
-        assign(dragging.value, seat);
-    }
-
-    endDrag();
-}
-
-function dropOnPool(): void {
-    unseat(dragging.value);
-    endDrag();
-}
-
-// Havuz: aile kümeleri bir arada; arama süzer.
-const search = ref('');
-const normalize = (value: string) => value.toLocaleLowerCase('tr');
-const byId = computed(
-    () => new Map(props.unassigned.map((p) => [p.registration_id, p])),
+        return { back: false, seats: [] as number[], items };
+    }),
 );
-const pool = computed(() =>
-    props.units
-        .map((unit) => ({
-            label: unit.label,
-            people: unit.ids
-                .map((id) => byId.value.get(id))
-                .filter((p): p is UnseatedPassenger => p !== undefined)
-                .filter((p) =>
-                    normalize(p.full_name).includes(normalize(search.value)),
-                ),
+
+// Kapılar (tasarımdaki hesapla aynı ölçüler).
+const S = 34;
+const GAP = 7;
+const hasDriver = computed(() => props.grid[0]?.includes('driver') ?? false);
+const pt = computed(() => (hasDriver.value ? 22 : 60));
+const doorRow = computed(() => props.grid.findIndex((r) => r.includes('door')));
+
+// Havuz: koltuğu olmayanlar aile kümeleriyle (+ istenirse grubu bu araçta olmayanlar).
+const people = computed(
+    () =>
+        new Map(
+            [...props.unassigned, ...props.others].map((p) => [
+                p.registration_id,
+                p,
+            ]),
+        ),
+);
+const toPool = (p: UnseatedPassenger | OtherSeatPassenger): PoolPerson => ({
+    id: p.registration_id,
+    name: p.full_name,
+    g: g(p.gender),
+    age: p.age,
+    tag: p.mobility ? 'Ön' : null,
+    group: p.group_name,
+});
+const units = computed(() => [
+    ...props.units
+        .map((u) => ({
+            label: u.label,
+            people: u.ids
+                .map((id) => people.value.get(id))
+                .filter((p) => !!p)
+                .map(toPool),
         }))
-        .filter((unit) => unit.people.length > 0),
+        .filter((u) => u.people.length),
+    ...(showOthers.value && props.others.length
+        ? [
+              {
+                  label: 'Grubu bu araçta olmayanlar',
+                  people: props.others.map(toPool),
+              },
+          ]
+        : []),
+]);
+
+const seated = computed(
+    () =>
+        new Map(
+            Object.entries(props.seats)
+                .filter(([, o]) => o.registration_id !== null)
+                .map(([seat, o]) => [
+                    o.registration_id as string,
+                    { ...o, seat },
+                ]),
+        ),
 );
-const filteredOthers = computed(() =>
-    props.others.filter((p) =>
-        normalize(p.full_name).includes(normalize(search.value)),
-    ),
-);
-const showOthers = ref(false);
+const nameOf = (id: string) =>
+    people.value.get(id)?.full_name ?? seated.value.get(id)?.full_name;
 
 const warnings = computed(() =>
     Object.entries(props.seats).flatMap(([seat, o]) =>
@@ -253,14 +190,99 @@ const warnings = computed(() =>
     ),
 );
 
-// Kısa isim (koltuk kutusuna sığsın): "Ayşe Y."
-const shortName = (name: string) => {
-    const parts = name.split(' ');
+function place(pid: string, from: string | null, to: string): void {
+    if (!props.can.update) {
+        return;
+    }
 
-    return parts.length > 1
-        ? `${parts.slice(0, -1).join(' ')} ${parts.at(-1)?.charAt(0)}.`
-        : name;
-};
+    if (to === 'list') {
+        const current = seated.value.get(pid);
+
+        if (current) {
+            router.delete(
+                SeatAssignmentController.destroy.url(current.seat_id),
+                {
+                    preserveScroll: true,
+                    onSuccess: () =>
+                        toast(`${current.full_name} listeye döndü`),
+                    onError: showError,
+                },
+            );
+        }
+
+        return;
+    }
+
+    const seat = Number(to);
+
+    if (isReserved(seat) || (occupant(seat) && from === null)) {
+        return;
+    }
+
+    router.post(
+        SeatAssignmentController.store.url(props.bus.id),
+        { registration_id: pid, seat_no: seat, swap: from !== null },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                selected.value = null;
+                const p = people.value.get(pid);
+
+                if (p?.mobility && !inFront(seat)) {
+                    toast(
+                        `Uyarı: ${p.full_name} yürüme güçlüğü var, ön sıralara alın`,
+                    );
+                }
+            },
+            onError: showError,
+        },
+    );
+}
+
+usePointerDrag(root, {
+    label: (pid) => {
+        const name = nameOf(pid);
+
+        return name ? { initials: ini(name), name } : null;
+    },
+    onDrop: place,
+    onClick: (pid, from) => {
+        if (from === null && props.can.update) {
+            selected.value = selected.value === pid ? null : pid;
+
+            if (selected.value) {
+                toast(`${nameOf(pid)} seçildi. Şimdi boş bir koltuğa tıkla`);
+            }
+        }
+    },
+});
+
+function clickSeat(seat: number): void {
+    if (selected.value && !occupant(seat) && !isReserved(seat)) {
+        place(selected.value, null, String(seat));
+    }
+}
+
+function auto(): void {
+    router.post(
+        SeatPlanController.apply.url(props.bus.id),
+        {},
+        { preserveScroll: true, onError: showError },
+    );
+}
+
+function clear(): void {
+    if (
+        confirm(
+            `${props.bus.name} için bütün yolcular koltuktan kaldırılsın mı? Rehber koltukları ayrılmış kalır.`,
+        )
+    ) {
+        router.delete(SeatAssignmentController.clear.url(props.bus.id), {
+            preserveScroll: true,
+            onError: showError,
+        });
+    }
+}
 
 const exportItems = computed<ExportItem[]>(() =>
     props.can.reports
@@ -285,524 +307,384 @@ const exportItems = computed<ExportItem[]>(() =>
         : [],
 );
 
-function clearPlan(): void {
-    if (
-        confirm(
-            `${props.bus.name} için bütün yolcular koltuktan kaldırılsın mı? Rehber koltukları ayrılmış kalır.`,
-        )
-    ) {
-        router.delete(SeatAssignmentController.clear.url(props.bus.id), {
-            preserveScroll: true,
-            onError: showError,
-        });
-    }
-}
+const crumbs = computed(() => [
+    { label: 'Turlar', href: toursIndex.url() },
+    { label: props.bus.tour.name, href: showTour.url(props.bus.tour.id) },
+    {
+        label: 'Ulaşım',
+        href: showTour.url(props.bus.tour.id, { query: { tab: 'ulasim' } }),
+    },
+]);
 
-// Otomatik yerleştir
-const autoOpen = ref(false);
-const preview = ref<SeatAutoPreview | null>(null);
-const loading = ref(false);
-const applying = ref(false);
+const goal = computed(() =>
+    Math.min(props.stats.seats, props.stats.occupied + props.stats.unassigned),
+);
+const pct = computed(() =>
+    goal.value ? Math.round((props.stats.occupied / goal.value) * 100) : 0,
+);
+const seatTitle = (seat: number) => {
+    const o = occupant(seat);
 
-async function openAuto(): Promise<void> {
-    autoOpen.value = true;
-    preview.value = null;
-    loading.value = true;
-
-    try {
-        const response = await fetch(
-            SeatPlanController.preview.url(props.bus.id),
-            { headers: { Accept: 'application/json' } },
-        );
-        preview.value = response.ok ? await response.json() : null;
-    } finally {
-        loading.value = false;
-    }
-}
-
-function applyAuto(): void {
-    applying.value = true;
-    router.post(
-        SeatPlanController.apply.url(props.bus.id),
-        {},
-        {
-            preserveScroll: true,
-            onSuccess: () => (autoOpen.value = false),
-            onError: showError,
-            onFinish: () => (applying.value = false),
-        },
-    );
-}
+    return o
+        ? [o.full_name, ...o.warnings].join(' · ')
+        : `${seat} · boş${inFront(seat) ? ' · ön bölge' : ''}`;
+};
 </script>
 
 <template>
-    <Head :title="`Koltuk planı — ${bus.name}`" />
+    <Head :title="`Araç koltuk planı — ${bus.name}`" />
 
-    <div class="flex w-full flex-col gap-4 p-4">
-        <div class="flex flex-wrap items-start justify-between gap-4">
-            <div>
-                <Link
-                    :href="showTour(bus.tour.id, { query: { tab: 'ulasim' } })"
-                    class="mb-1 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-                >
-                    <ArrowLeft class="size-4" /> {{ bus.tour.name }}
-                </Link>
-                <h1 class="text-2xl font-semibold tracking-tight">
-                    {{ bus.name }}
-                    <span v-if="bus.plate" class="text-muted-foreground">
-                        · {{ bus.plate }}
-                    </span>
-                </h1>
-                <p class="mt-1 text-sm text-muted-foreground">
-                    {{ bus.vehicle_type ?? bus.label }} ·
-                    {{ stats.seats + stats.reserved }} koltuk
-                    <template v-if="bus.groups.length">
-                        · {{ bus.groups.join(', ') }}
-                    </template>
-                    <template v-if="bus.driver_name">
-                        · Şoför: {{ bus.driver_name }}
-                        {{ bus.driver_phone ?? '' }}
-                    </template>
-                </p>
-            </div>
-            <div class="flex flex-wrap gap-2">
-                <ExportMenu :items="exportItems" />
-                <Button
-                    v-if="can.update"
-                    variant="outline"
-                    :disabled="stats.occupied === 0"
-                    @click="clearPlan"
-                >
-                    <Eraser /> Temizle
-                </Button>
-                <Button
-                    v-if="can.update"
-                    :disabled="stats.unassigned === 0"
-                    @click="openAuto"
-                >
-                    <Wand2 /> Otomatik yerleştir
-                </Button>
-            </div>
-        </div>
-
-        <!-- Doluluk -->
-        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-            <div class="flex min-w-60 flex-1 items-center gap-3">
-                <ProgressBar
-                    class="flex-1"
-                    :value="stats.occupied"
-                    :max="stats.occupied + stats.unassigned || stats.seats"
-                />
-                <span class="text-muted-foreground tabular-nums">
-                    {{ stats.occupied }} /
-                    {{ stats.occupied + stats.unassigned }}
-                    yerleşti
-                </span>
-            </div>
-            <span class="text-muted-foreground">
-                Boş koltuk:
-                <b class="text-success">{{ stats.seats - stats.occupied }}</b>
-                <template v-if="stats.reserved">
-                    · Rehber / görevli: {{ stats.reserved }}
-                </template>
-            </span>
-        </div>
-
-        <div
-            v-if="selected"
-            class="sticky top-2 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-popover p-3 text-sm shadow-lg"
-        >
-            <span>
-                <strong>{{ selected.full_name }}</strong> seçildi —
-                {{
-                    selected.seat_id
-                        ? 'boş koltuğa tıklayın ya da yer değiştireceği yolcuya tıklayın.'
-                        : 'boş bir koltuğa tıklayın.'
-                }}
-            </span>
-            <div class="flex gap-2">
-                <Button
-                    v-if="selected.seat_id"
-                    size="sm"
-                    variant="outline"
-                    class="text-destructive"
-                    @click="unseat(selected)"
-                >
-                    Koltuktan kaldır
-                </Button>
-                <Button size="sm" variant="ghost" @click="selected = null">
-                    <X /> Vazgeç
-                </Button>
-            </div>
-        </div>
-
-        <div class="grid min-w-0 gap-4 lg:grid-cols-[20rem_minmax(0,1fr)]">
-            <!-- Yolcu havuzu: oturan yolcu buraya bırakılırsa koltuktan kalkar -->
-            <Card
-                class="h-fit min-w-0 transition-shadow lg:sticky lg:top-2"
-                :class="{
-                    'ring-2 ring-primary': overPool && dragging?.seat_id,
-                }"
-                @dragover.prevent="overPool = dragging?.seat_id !== null"
-                @dragleave="overPool = false"
-                @drop.prevent="dropOnPool"
+    <div ref="root" class="mx">
+        <div class="main">
+            <MockTop
+                :crumbs="crumbs"
+                title="Araç koltuk planı"
+                :exports="exportItems"
             >
-                <CardHeader>
-                    <CardTitle class="flex items-center gap-2">
-                        <Users class="size-4" /> Koltuğu olmayanlar
-                        <span class="text-sm font-normal text-muted-foreground">
-                            {{ unassigned.length }}
-                        </span>
-                    </CardTitle>
-                    <CardDescription v-if="can.update">
-                        Yolcuyu koltuğa sürükleyin ya da önce yolcuya, sonra
-                        koltuğa tıklayın. Aileler bir arada.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent class="flex flex-col gap-2 text-sm">
-                    <div class="relative">
-                        <Search
-                            class="absolute top-2.5 left-2.5 size-4 text-muted-foreground"
-                        />
-                        <Input
-                            v-model="search"
-                            placeholder="İsimle ara"
-                            class="pl-8"
-                        />
-                    </div>
-                    <p
-                        v-if="unassigned.length === 0"
-                        class="rounded-lg border border-dashed p-4 text-center text-muted-foreground"
+                <template v-if="can.update">
+                    <button class="btn ghost" type="button" @click="clear">
+                        Temizle
+                    </button>
+                    <button class="btn" type="button" @click="auto">
+                        Otomatik yerleştir
+                    </button>
+                </template>
+            </MockTop>
+
+            <div class="planner">
+                <MockPool
+                    :units="units"
+                    :selected="selected"
+                    :locked="!can.update"
+                    hint="Aileler yan yana oturtulur. Yürüme güçlüğü olanlar ilk üç sıraya yerleşir."
+                >
+                    <span
+                        v-if="can.update && others.length"
+                        class="lbl"
+                        role="button"
+                        tabindex="0"
+                        style="cursor: pointer; text-decoration: underline"
+                        @click="showOthers = !showOthers"
+                        >{{ showOthers ? 'Gizle' : 'Göster' }}: grubu bu araçta
+                        olmayan yolcular ({{ others.length }})</span
                     >
-                        Herkes yerleşti ✓
-                    </p>
-                    <div
-                        class="flex max-h-[35vh] flex-col gap-2 overflow-y-auto lg:max-h-[60vh]"
-                    >
-                        <div
-                            v-for="(unit, index) in pool"
-                            :key="index"
-                            class="flex flex-col gap-1"
-                            :class="
-                                unit.label
-                                    ? 'rounded-xl border border-dashed border-primary/40 p-1.5'
-                                    : ''
-                            "
-                        >
-                            <small
-                                v-if="unit.label"
-                                class="px-1 pt-1 text-[10.5px] tracking-wider text-muted-foreground uppercase"
-                            >
-                                {{ unit.label }}
-                            </small>
-                            <button
-                                v-for="p in unit.people"
-                                :key="p.registration_id"
-                                type="button"
-                                class="flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition-colors hover:border-primary"
-                                :class="{
-                                    'border-primary ring-2 ring-primary/30':
-                                        selected?.registration_id ===
-                                        p.registration_id,
-                                    'cursor-grab': can.update,
-                                    'opacity-40':
-                                        dragging?.registration_id ===
-                                        p.registration_id,
-                                }"
-                                :draggable="can.update"
-                                :disabled="!can.update"
-                                @click="pick(p)"
-                                @dragstart="
-                                    startDrag($event, {
-                                        registration_id: p.registration_id,
-                                        full_name: p.full_name,
-                                        seat_id: null,
-                                        seat_no: null,
-                                    })
+                </MockPool>
+
+                <div class="card">
+                    <div class="stagebar">
+                        <div class="pills">
+                            <span
+                                v-for="b in buses"
+                                :key="b.id"
+                                class="pill"
+                                :class="{ on: b.id === bus.id }"
+                                role="button"
+                                tabindex="0"
+                                @click="
+                                    b.id !== bus.id &&
+                                    router.visit(
+                                        SeatPlanController.show.url(b.id),
+                                    )
                                 "
-                                @dragend="endDrag"
+                                >{{ b.name }} · {{ b.label }}</span
                             >
-                                <GripVertical
-                                    v-if="can.update"
-                                    class="size-3.5 shrink-0 text-muted-foreground"
+                        </div>
+                        <div class="prog">
+                            <span>{{ stats.occupied }} / {{ goal }}</span>
+                            <div class="bar">
+                                <i
+                                    :class="{ full: pct >= 100 }"
+                                    :style="{ width: `${pct}%` }"
                                 />
-                                <PersonAvatar
-                                    :name="p.full_name"
-                                    :gender="p.gender"
-                                    size="sm"
-                                />
-                                <span class="min-w-0 flex-1">
-                                    <span class="block truncate font-medium">
-                                        {{ p.full_name }}
-                                    </span>
-                                    <span
-                                        class="block truncate text-xs text-muted-foreground"
-                                    >
-                                        {{ p.group_name }}
-                                        <template v-if="p.age">
-                                            · {{ p.age }} yaş
-                                        </template>
-                                        <template
-                                            v-for="f in p.family.filter(
-                                                (f) => f.seat_no,
-                                            )"
-                                            :key="f.name"
-                                        >
-                                            · {{ f.relation }} koltuk
-                                            {{ f.seat_no }}
-                                        </template>
-                                    </span>
-                                </span>
-                            </button>
+                            </div>
                         </div>
                     </div>
-
-                    <template v-if="can.update && others.length > 0">
-                        <button
-                            type="button"
-                            class="mt-2 text-left text-xs text-muted-foreground underline"
-                            @click="showOthers = !showOthers"
+                    <div class="spec">
+                        <span
+                            >Araç tipi
+                            <b>{{ bus.vehicle_type ?? bus.label }}</b></span
                         >
-                            {{ showOthers ? 'Gizle' : 'Göster' }}: grubu bu
-                            araçta olmayan yolcular ({{ others.length }})
-                        </button>
-                        <ul v-if="showOthers" class="flex flex-col gap-0.5">
-                            <li
-                                v-for="p in filteredOthers"
-                                :key="p.registration_id"
+                        <span
+                            >Düzen
+                            <b
+                                >{{ bus.layout.left }}+{{ bus.layout.right }}</b
+                            ></span
+                        >
+                        <span
+                            >Sıra
+                            <b
+                                >{{ bus.layout.rows
+                                }}{{
+                                    bus.layout.back
+                                        ? ` + arka ${bus.layout.back}`
+                                        : ''
+                                }}</b
+                            ></span
+                        >
+                        <span
+                            >Koltuk
+                            <b
+                                >{{ stats.seats
+                                }}{{
+                                    stats.reserved
+                                        ? `+${stats.reserved} rehber`
+                                        : ''
+                                }}</b
+                            ></span
+                        >
+                        <span v-if="bus.plate"
+                            >Plaka <b>{{ bus.plate }}</b></span
+                        >
+                        <span v-if="bus.driver_name"
+                            >Şoför
+                            <b
+                                >{{ bus.driver_name }}
+                                {{ bus.driver_phone ?? '' }}</b
+                            ></span
+                        >
+                    </div>
+                    <div class="legend">
+                        <span><i style="background: var(--m-ok)" />Rehber</span>
+                        <span
+                            ><i
+                                style="
+                                    background: linear-gradient(
+                                        160deg,
+                                        var(--m-accent),
+                                        var(--m-k)
+                                    );
+                                "
+                            />Kadın</span
+                        >
+                        <span
+                            ><i
+                                style="
+                                    background: linear-gradient(
+                                        160deg,
+                                        var(--m-accent),
+                                        var(--m-e)
+                                    );
+                                "
+                            />Erkek</span
+                        >
+                        <span
+                            ><i style="border: 1.5px dashed var(--m-e)" />Ön
+                            sıra</span
+                        >
+                        <span
+                            role="button"
+                            tabindex="0"
+                            @click="showWarnings = !showWarnings"
+                            ><i style="background: var(--m-warn)" />{{
+                                warnings.length ? 'Uyarı var' : 'Uyarı yok'
+                            }}</span
+                        >
+                    </div>
+                    <ul
+                        v-if="showWarnings && warnings.length"
+                        class="lbl"
+                        style="margin: 0; padding-left: 18px"
+                    >
+                        <li v-for="w in warnings" :key="w.seat + w.text">
+                            Koltuk {{ w.seat }} · {{ w.name }}: {{ w.text }}
+                        </li>
+                    </ul>
+
+                    <div class="vbox">
+                        <div
+                            class="veh"
+                            :class="body"
+                            :style="{ '--pt': `${pt}px` }"
+                        >
+                            <span v-if="!hasDriver" class="wheel" />
+                            <span class="mirror" style="left: -8px" />
+                            <span class="mirror" style="right: -8px" />
+                            <span
+                                v-if="!hasDriver"
+                                class="door"
+                                style="top: 30px; height: 38px"
+                            />
+                            <span
+                                v-else
+                                class="door slide"
+                                :style="{
+                                    top: `${pt + S + GAP - 4}px`,
+                                    height: `${S * 2 + GAP + 8}px`,
+                                }"
+                            />
+                            <span
+                                v-if="doorRow >= 0"
+                                class="door"
+                                :style="{
+                                    top: `${pt + doorRow * (S + GAP) - 4}px`,
+                                    height: `${S + 8}px`,
+                                }"
+                            />
+                            <div
+                                class="vgrid"
+                                :style="{ gridTemplateColumns: columns }"
                             >
-                                <button
-                                    type="button"
-                                    class="w-full rounded-md px-2 py-1.5 text-left hover:bg-muted"
-                                    :class="{
-                                        'bg-primary/10 ring-1 ring-primary':
-                                            selected?.registration_id ===
-                                            p.registration_id,
-                                    }"
-                                    draggable="true"
-                                    @click="pick(p)"
-                                    @dragstart="
-                                        startDrag($event, {
-                                            registration_id: p.registration_id,
-                                            full_name: p.full_name,
-                                            seat_id: null,
-                                            seat_no: null,
-                                        })
-                                    "
-                                    @dragend="endDrag"
-                                >
-                                    <div class="truncate">
-                                        {{ p.full_name }}
-                                    </div>
-                                    <div class="text-xs text-muted-foreground">
-                                        {{ p.group_name ?? 'Grupsuz' }}
-                                        <template v-if="p.elsewhere">
-                                            · şu an {{ p.elsewhere }}
-                                            (seçerseniz buraya taşınır)
+                                <template v-for="(row, ri) in rows" :key="ri">
+                                    <div
+                                        v-if="row.back"
+                                        class="back"
+                                        style="grid-column: 1 / -1"
+                                    >
+                                        <template
+                                            v-for="seat in row.seats"
+                                            :key="seat"
+                                        >
+                                            <div
+                                                v-if="isReserved(seat)"
+                                                class="slot guide"
+                                                :title="`${seat} · Rehber`"
+                                            >
+                                                R
+                                            </div>
+                                            <div
+                                                v-else-if="
+                                                    occupant(seat)
+                                                        ?.registration_id ===
+                                                    null
+                                                "
+                                                class="slot lock"
+                                                title="Başka grup"
+                                            />
+                                            <div
+                                                v-else-if="occupant(seat)"
+                                                class="slot full"
+                                                :class="[
+                                                    g(
+                                                        occupant(seat)!.gender,
+                                                    ).toLowerCase(),
+                                                    {
+                                                        warn: occupant(seat)!
+                                                            .warnings.length,
+                                                    },
+                                                ]"
+                                                data-drop="slot"
+                                                :data-key="seat"
+                                                :data-pid="
+                                                    occupant(seat)!
+                                                        .registration_id
+                                                "
+                                                data-from="slot"
+                                                :data-locked="
+                                                    can.update ? undefined : ''
+                                                "
+                                                :title="seatTitle(seat)"
+                                            >
+                                                {{
+                                                    ini(
+                                                        occupant(seat)!
+                                                            .full_name,
+                                                    )
+                                                }}
+                                            </div>
+                                            <div
+                                                v-else
+                                                class="slot free"
+                                                :class="{
+                                                    front: inFront(seat),
+                                                }"
+                                                data-drop="slot"
+                                                :data-key="seat"
+                                                :title="seatTitle(seat)"
+                                                @click="clickSeat(seat)"
+                                            >
+                                                {{ seat }}
+                                            </div>
                                         </template>
                                     </div>
-                                </button>
-                            </li>
-                        </ul>
-                    </template>
-                </CardContent>
-            </Card>
-
-            <div class="flex min-w-0 flex-col gap-3">
-                <div
-                    class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground"
-                >
-                    <span class="flex items-center gap-1.5">
-                        <i
-                            class="seat-front inline-block size-3 rounded border"
-                        />
-                        Ön bölge (yaşlı / hareket güçlüğü olanlar için)
-                    </span>
-                    <span class="flex items-center gap-1.5">
-                        <i class="inline-block size-3 rounded-full bg-women" />
-                        Kadın
-                    </span>
-                    <span class="flex items-center gap-1.5">
-                        <i class="inline-block size-3 rounded-full bg-men" />
-                        Erkek
-                    </span>
-                    <span class="flex items-center gap-1.5">
-                        <i
-                            class="inline-block size-3 rounded border border-dashed"
-                        />
-                        Rehber / görevli
-                    </span>
+                                    <template
+                                        v-for="(item, ii) in row.items"
+                                        :key="`${ri}-${ii}`"
+                                    >
+                                        <div
+                                            v-if="item.kind === 'driver'"
+                                            class="drv"
+                                        >
+                                            <span title="Şoför" />
+                                        </div>
+                                        <div
+                                            v-else-if="item.kind === 'door'"
+                                            class="doorgap"
+                                            :style="{
+                                                gridColumn: `span ${item.span}`,
+                                            }"
+                                        >
+                                            Kapı
+                                        </div>
+                                        <div
+                                            v-else-if="item.kind === 'empty'"
+                                        />
+                                        <div
+                                            v-else-if="isReserved(item.seat)"
+                                            class="slot guide"
+                                            :title="`${item.seat} · Rehber`"
+                                        >
+                                            R
+                                        </div>
+                                        <div
+                                            v-else-if="
+                                                occupant(item.seat)
+                                                    ?.registration_id === null
+                                            "
+                                            class="slot lock"
+                                            title="Başka grup"
+                                        />
+                                        <div
+                                            v-else-if="occupant(item.seat)"
+                                            class="slot full"
+                                            :class="[
+                                                g(
+                                                    occupant(item.seat)!.gender,
+                                                ).toLowerCase(),
+                                                {
+                                                    warn: occupant(item.seat)!
+                                                        .warnings.length,
+                                                    front: inFront(item.seat),
+                                                },
+                                            ]"
+                                            data-drop="slot"
+                                            :data-key="item.seat"
+                                            :data-pid="
+                                                occupant(item.seat)!
+                                                    .registration_id
+                                            "
+                                            data-from="slot"
+                                            :data-locked="
+                                                can.update ? undefined : ''
+                                            "
+                                            :title="seatTitle(item.seat)"
+                                        >
+                                            {{
+                                                ini(
+                                                    occupant(item.seat)!
+                                                        .full_name,
+                                                )
+                                            }}
+                                        </div>
+                                        <div
+                                            v-else
+                                            class="slot free"
+                                            :class="{
+                                                front: inFront(item.seat),
+                                            }"
+                                            data-drop="slot"
+                                            :data-key="item.seat"
+                                            :title="seatTitle(item.seat)"
+                                            @click="clickSeat(item.seat)"
+                                        >
+                                            {{ item.seat }}
+                                        </div>
+                                    </template>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-
-                <div class="overflow-x-auto pb-2">
-                    <BusDiagram :grid="grid" :body="bus.body">
-                        <template #seat="{ seat }">
-                            <button
-                                type="button"
-                                class="flex h-14 w-full flex-col items-start rounded-lg border px-1.5 py-1 text-left text-xs transition"
-                                :class="{
-                                    'seat-front': inFront(seat),
-                                    'border-dashed bg-muted text-muted-foreground':
-                                        isReserved(seat),
-                                    'bg-background/70 hover:bg-muted':
-                                        !isReserved(seat) && !occupant(seat),
-                                    'border-women/60 bg-women/10':
-                                        occupant(seat)?.gender === 'kadin',
-                                    'border-men/60 bg-men/10':
-                                        occupant(seat)?.gender === 'erkek',
-                                    'border-primary ring-2 ring-primary/30':
-                                        (selected &&
-                                            !occupant(seat) &&
-                                            !isReserved(seat)) ||
-                                        overSeat === seat,
-                                    'ring-2 ring-primary':
-                                        occupant(seat)?.registration_id ===
-                                            selected?.registration_id &&
-                                        selected !== null,
-                                    'cursor-grab':
-                                        can.update &&
-                                        occupant(seat)?.registration_id,
-                                    'opacity-40': dragging?.seat_no === seat,
-                                }"
-                                :disabled="!can.update || isReserved(seat)"
-                                :draggable="
-                                    can.update &&
-                                    !!occupant(seat)?.registration_id
-                                "
-                                :aria-label="`Koltuk ${seat}${occupant(seat) ? ': ' + occupant(seat)?.full_name : ''}${inFront(seat) ? ' (ön bölge)' : ''}`"
-                                @click="clickSeat(seat)"
-                                @dragstart="
-                                    startDrag($event, {
-                                        registration_id:
-                                            occupant(seat)?.registration_id ??
-                                            '',
-                                        full_name:
-                                            occupant(seat)?.full_name ?? '',
-                                        seat_id:
-                                            occupant(seat)?.seat_id ?? null,
-                                        seat_no: seat,
-                                    })
-                                "
-                                @dragend="endDrag"
-                                @dragover="
-                                    canDropOn(seat) &&
-                                    ($event.preventDefault(), (overSeat = seat))
-                                "
-                                @dragleave="overSeat = null"
-                                @drop.prevent="dropOnSeat(seat)"
-                            >
-                                <span
-                                    class="flex w-full items-center justify-between font-semibold"
-                                >
-                                    {{ seat }}
-                                    <AlertTriangle
-                                        v-if="occupant(seat)?.warnings.length"
-                                        class="size-3 text-warning"
-                                    />
-                                </span>
-                                <span v-if="isReserved(seat)" class="truncate"
-                                    >Rehber</span
-                                >
-                                <span
-                                    v-else-if="occupant(seat)"
-                                    class="line-clamp-2 leading-tight"
-                                >
-                                    {{
-                                        shortName(
-                                            occupant(seat)?.full_name ?? '',
-                                        )
-                                    }}
-                                </span>
-                                <span v-else class="text-muted-foreground"
-                                    >Boş</span
-                                >
-                            </button>
-                        </template>
-                    </BusDiagram>
-                </div>
-
-                <Card v-if="warnings.length">
-                    <CardHeader>
-                        <CardTitle class="flex items-center gap-2 text-warning">
-                            <AlertTriangle class="size-4" /> Uyarılar
-                        </CardTitle>
-                        <CardDescription>
-                            Engellemez; isterseniz yolcuları sürükleyip yer
-                            değiştirin.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <ul class="list-disc space-y-1 pl-5 text-sm">
-                            <li v-for="w in warnings" :key="w.seat + w.text">
-                                Koltuk {{ w.seat }} — {{ w.name }}: {{ w.text }}
-                            </li>
-                        </ul>
-                    </CardContent>
-                </Card>
             </div>
         </div>
     </div>
-
-    <Dialog v-model:open="autoOpen">
-        <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-            <DialogHeader>
-                <DialogTitle>Otomatik yerleştir</DialogTitle>
-                <DialogDescription>
-                    65 yaş ve üstü yolcular ön bölgeye, aileler yan yana, tek
-                    yolcular karşı cinsten yabancının yanına düşmeyecek şekilde
-                    oturtulur. Elle yaptığınız yerleşimler değişmez.
-                </DialogDescription>
-            </DialogHeader>
-
-            <p v-if="loading" class="text-sm text-muted-foreground">
-                Plan hazırlanıyor…
-            </p>
-            <template v-else-if="preview">
-                <p class="text-sm">
-                    <strong>{{ preview.placed }}</strong> yolcu oturtulacak.
-                </p>
-                <ul
-                    class="max-h-72 divide-y overflow-y-auto rounded-md border text-sm"
-                >
-                    <li
-                        v-for="item in preview.placements"
-                        :key="item.seat"
-                        class="flex gap-3 px-3 py-1.5"
-                    >
-                        <span class="w-8 font-medium">{{ item.seat }}</span>
-                        {{ item.name }}
-                    </li>
-                </ul>
-                <div
-                    v-if="preview.unplaced.length"
-                    class="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm text-warning"
-                >
-                    <p class="font-medium">
-                        {{ preview.unplaced.length }} yolcuya koltuk kalmadı:
-                    </p>
-                    <ul class="mt-1 list-disc pl-5">
-                        <li v-for="u in preview.unplaced" :key="u.name">
-                            {{ u.name }}
-                        </li>
-                    </ul>
-                    <p class="mt-1">Başka bir araç ekleyebilirsiniz.</p>
-                </div>
-            </template>
-            <p v-else class="text-sm text-destructive">
-                Plan hazırlanamadı. Sayfayı yenileyip tekrar deneyin.
-            </p>
-
-            <DialogFooter>
-                <Button variant="ghost" @click="autoOpen = false"
-                    >Vazgeç</Button
-                >
-                <Button
-                    :disabled="!preview || preview.placed === 0 || applying"
-                    @click="applyAuto"
-                >
-                    Onayla ve oturt
-                </Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
 </template>
