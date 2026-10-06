@@ -104,9 +104,10 @@ class BadgeTest extends TestCase
         $badges = $this->badges();
 
         $this->assertCount(1, $badges);
-        $this->assertStringStartsWith('data:image/jpeg;base64,', (string) $badges[0]['photo']);
-        $size = getimagesizefromstring((string) base64_decode(substr((string) $badges[0]['photo'], 23)));
-        $this->assertLessThanOrEqual(320, max($size[0] ?? 0, $size[1] ?? 0));
+        // Yuvarlak kesilmiş (köşeleri saydam) kare PNG.
+        $this->assertStringStartsWith('data:image/png;base64,', (string) $badges[0]['photo']);
+        $size = getimagesizefromstring((string) base64_decode(substr((string) $badges[0]['photo'], 22)));
+        $this->assertSame([240, 240], [$size[0] ?? 0, $size[1] ?? 0]);
     }
 
     public function test_access_rules(): void

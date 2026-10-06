@@ -39,7 +39,7 @@ import {
     payments as paymentReport,
     program as programReport,
 } from '@/routes/reports/tours';
-import { destroy, edit, index } from '@/routes/tours';
+import { badgeCards, destroy, edit, index } from '@/routes/tours';
 import type { TourBus, VehicleTypeOption } from '@/types/bus';
 import type { TourFlight } from '@/types/flight';
 import type { Option } from '@/types/person';
@@ -361,8 +361,8 @@ const occupancyText = computed(() =>
             </div>
             <div class="flex flex-wrap gap-2">
                 <Button v-if="badgesEnabled" variant="outline" as-child>
-                    <a :href="badgeReport.url(tour.id)"
-                        ><IdCard /> Yaka kartları</a
+                    <Link :href="badgeCards(tour.id)"
+                        ><IdCard /> Yaka kartları</Link
                     >
                 </Button>
                 <Button

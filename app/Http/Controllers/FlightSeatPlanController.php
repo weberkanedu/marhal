@@ -137,6 +137,20 @@ class FlightSeatPlanController extends Controller
         return back();
     }
 
+    public function auto(Flight $flight): RedirectResponse
+    {
+        Gate::authorize('update', $flight->tour);
+
+        $result = $this->seats->autoAssign($flight);
+
+        Inertia::flash('toast', [
+            'type' => $result['unplaced'] ? 'warning' : 'success',
+            'message' => "{$result['placed']} yolcu yerleştirildi.".($result['unplaced'] ? " {$result['unplaced']} yolcuya uygun koltuk kalmadı." : ''),
+        ]);
+
+        return back();
+    }
+
     public function clear(Flight $flight): RedirectResponse
     {
         Gate::authorize('update', $flight->tour);

@@ -7,6 +7,7 @@ use App\Enums\NeedEffect;
 use App\Models\AircraftType;
 use App\Models\Flight;
 use App\Models\FlightPassenger;
+use App\Support\FamilyUnits;
 use App\Support\Flights\AircraftLayout;
 use App\Support\Needs\NeedProfiles;
 use Illuminate\Support\Collection;
@@ -87,6 +88,89 @@ class FlightSeats
     public function unassign(FlightPassenger $passenger): void
     {
         $passenger->update(['seat_no' => null]);
+    }
+
+    /**
+     * "Otomatik yerleştir": koltuğu olmayan yolcuları önden arkaya yerleştirir. Aileler aynı sırada
+     * yan yana (aynı koridor bölümünde, sığmazsa aynı sırada); 15 yaş altı, 65 yaş ve üstü ve hareket
+     * güçlüğü olanlar acil çıkış sırasına konmaz; gri (başka yolcuya ait) koltuklar atlanır.
+     *
+     * @return array{placed: int, unplaced: int}
+     */
+    public function autoAssign(Flight $flight): array
+    {
+        $layout = $this->layout($flight);
+
+        return DB::transaction(function () use ($flight, $layout): array {
+            $passengers = $flight->passengers()->with('registration.person')->get();
+            $taken = array_flip([...$flight->blocked(), ...$passengers->pluck('seat_no')->filter()->all()]);
+            $pending = $passengers->filter(fn (FlightPassenger $p) => $p->seat_no === null)->values();
+            $profiles = $this->needs->forPersons($pending->map(fn (FlightPassenger $p) => $p->registration->person_id));
+            $links = $this->occupancy->familyLinks($pending->map(fn (FlightPassenger $p) => $p->registration->person_id));
+            $byRegistration = $pending->keyBy('registration_id');
+
+            $exitBanned = function (FlightPassenger $p) use ($flight, $profiles): bool {
+                $person = $p->registration->person;
+                $age = $person->birth_date?->diffInYears($flight->departure_at);
+
+                return ($age !== null && ($age < AircraftLayout::EXIT_MIN_AGE || $age >= AircraftLayout::EXIT_MAX_AGE))
+                    || NeedProfiles::has($profiles[$person->id] ?? [], NeedEffect::Mobility);
+            };
+
+            // Bloklar: her sıranın her koridor bölümü (yan yana oturulan koltuklar).
+            $blocks = [];
+            foreach ($layout->rows() as $row) {
+                foreach ($layout->groups() as $group) {
+                    $blocks[] = ['row' => $row, 'seats' => array_map(fn (string $l) => $row.$l, $group)];
+                }
+            }
+
+            $units = FamilyUnits::build(array_values($pending->map(fn (FlightPassenger $p) => $p->registration)->all()), $links);
+            usort($units, fn (array $a, array $b) => count($b) <=> count($a));
+            $placed = 0;
+            $unplaced = 0;
+
+            foreach ($units as $unit) {
+                /** @var list<FlightPassenger> $members */
+                $members = array_values(array_filter(array_map(fn ($r) => $byRegistration->get($r->id), $unit)));
+                $banned = array_filter($members, $exitBanned) !== [];
+                $free = fn (array $block) => array_values(array_filter($block['seats'], fn (string $s) => ! isset($taken[$s])));
+                $usable = fn (array $block) => ! ($banned && $layout->isExitRow($block['row']));
+
+                // Önce kümenin tamamına yetecek tek blok, yoksa aynı sıradaki bloklar, yoksa tek tek.
+                $target = collect($blocks)->first(fn (array $b) => $usable($b) && count($free($b)) >= count($members));
+                $seats = $target ? array_slice($free($target), 0, count($members)) : null;
+
+                if ($seats === null) {
+                    foreach ($layout->rows() as $row) {
+                        $rowSeats = collect($blocks)->where('row', $row)->filter($usable)->flatMap($free)->values()->all();
+                        if (count($rowSeats) >= count($members)) {
+                            $seats = array_slice($rowSeats, 0, count($members));
+                            break;
+                        }
+                    }
+                }
+
+                foreach ($members as $i => $member) {
+                    $seat = $seats[$i] ?? collect($blocks)
+                        ->filter(fn (array $b) => ! ($exitBanned($member) && $layout->isExitRow($b['row'])))
+                        ->flatMap($free)
+                        ->first();
+
+                    if ($seat === null) {
+                        $unplaced++;
+
+                        continue;
+                    }
+
+                    $member->update(['seat_no' => $seat]);
+                    $taken[$seat] = true;
+                    $placed++;
+                }
+            }
+
+            return ['placed' => $placed, 'unplaced' => $unplaced];
+        });
     }
 
     public function clear(Flight $flight): int

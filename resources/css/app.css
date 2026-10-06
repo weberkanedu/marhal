@@ -2,6 +2,9 @@
 
 @import 'tw-animate-css';
 
+/* Tasarım sayfasının ekran stilleri (birebir; .mx içinde) */
+@import './marhal-mock.css';
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
@@ -699,4 +702,26 @@ button.kpi-tile:hover {
     h2 {
         font-family: var(--font-display);
     }
+}
+
+/*
+ * .mx uyarlaması: tasarım sayfasındaki .mock kendi pencere / menü kabuğunu çiziyordu; uygulamada kabuk
+ * (menü, arka plan) zaten var, ekran içeriği bu sarmalayıcıda tasarımdaki gibi akar.
+ */
+.mx {
+    --f-display: 'Fraunces', Georgia, serif;
+    display: block;
+    min-height: 0;
+    overflow: visible;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    user-select: auto;
+    -webkit-user-select: auto;
+}
+.mx .main {
+    padding: 20px 24px 28px;
+}
+.mx a {
+    color: inherit;
 }

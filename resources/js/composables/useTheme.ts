@@ -56,7 +56,9 @@ export function initializeCardGlow(): void {
         }
 
         const target = last.target instanceof Element ? last.target : null;
-        const card = target?.closest<HTMLElement>('[data-slot="card"]') ?? null;
+        const card =
+            target?.closest<HTMLElement>('[data-slot="card"], .mx .card') ??
+            null;
 
         if (active && active !== card) {
             active.style.removeProperty('--cx');

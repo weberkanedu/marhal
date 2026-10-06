@@ -45,3 +45,4 @@ yarn-error.log
 # Ortam sırları (asla commit edilmez)
 .env.staging
 .env.production
+public/_tasarim.html

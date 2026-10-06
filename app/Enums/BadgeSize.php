@@ -32,9 +32,22 @@ enum BadgeSize: string
     public function geometry(): array
     {
         return match ($this) {
-            self::Portrait => ['width' => 102, 'height' => 140, 'columns' => 2, 'rows' => 2],
-            self::Landscape => ['width' => 90, 'height' => 64, 'columns' => 2, 'rows' => 4],
+            self::Portrait => ['width' => 100, 'height' => 141, 'columns' => 2, 'rows' => 2],
+            self::Landscape => ['width' => 90, 'height' => 65, 'columns' => 2, 'rows' => 4],
             self::Card => ['width' => 86, 'height' => 54, 'columns' => 2, 'rows' => 5],
+        };
+    }
+
+    /**
+     * Tasarım sayfasındaki kart çiziminin piksel genişliği (dikey 210, yatay 270, plastik 258);
+     * PDF'te ölçüler bu oranla milimetreye çevrilir.
+     */
+    public function designWidth(): int
+    {
+        return match ($this) {
+            self::Portrait => 210,
+            self::Landscape => 270,
+            self::Card => 258,
         };
     }
 

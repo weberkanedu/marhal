@@ -121,6 +121,25 @@ class FlightSeatPlanTest extends TestCase
         $this->assertStringContainsString('YAŞLI / HASAN', $text);
     }
 
+    public function test_auto_assign_seats_everyone_and_keeps_elders_out_of_exit_rows(): void
+    {
+        $this->withCabin('3-3', 1, 3, [1]);
+        [$elder] = $this->passengers(1, ['birth_date' => '1950-01-01']);
+        $adults = $this->passengers(3, ['birth_date' => '1990-01-01']);
+        $this->assign($adults[0], '3F');
+
+        $this->actingAs($this->staff)->post(route('flights.seats.auto', $this->flight))->assertRedirect();
+
+        $seats = $this->flight->passengers()->pluck('seat_no', 'id');
+        $this->assertCount(4, $seats->filter(), 'Herkes oturdu');
+        $this->assertSame('3F', $seats[$adults[0]->id], 'Elle verilen koltuk korunur');
+        $this->assertStringStartsNotWith('1', (string) $seats[$elder->id], '65 yaş üstü acil çıkış sırasına konmaz');
+
+        $guide = User::factory()->forTenant($this->tenant)->role(UserRole::Guide)->create();
+        $this->actingAs($guide)->post(route('flights.seats.auto', $this->flight))->assertForbidden();
+        $this->actingAs($this->staff)->post(route('flights.seats.auto', Flight::factory()->create()))->assertNotFound();
+    }
+
     public function test_changing_aircraft_is_blocked_when_seated_passengers_would_not_fit(): void
     {
         $this->withCabin('3-3', 1, 30);

@@ -1,35 +1,12 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import {
-    AlertTriangle,
-    ArrowLeft,
-    Ban,
-    Eraser,
-    GripVertical,
-    Plane,
-    Search,
-    Users,
-    X,
-} from '@lucide/vue';
+import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import { toast } from 'vue-sonner';
 import FlightSeatPlanController from '@/actions/App/Http/Controllers/FlightSeatPlanController';
-import ExportMenu from '@/components/ExportMenu.vue';
-import PlaneDiagram from '@/components/flights/PlaneDiagram.vue';
-import PersonAvatar from '@/components/persons/PersonAvatar.vue';
-import ProgressBar from '@/components/ProgressBar.vue';
-import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { selectClass } from '@/lib/formClasses';
-import { index as aircraftTypesIndex } from '@/routes/aircraft-types';
-import { show as showFlight } from '@/routes/flights';
+import MockPool from '@/components/mock/MockPool.vue';
+import type { PoolPerson } from '@/components/mock/MockPool.vue';
+import MockTop from '@/components/mock/MockTop.vue';
+import { usePointerDrag } from '@/composables/usePointerDrag';
 import {
     assistance as assistanceReport,
     manifest,
@@ -39,6 +16,10 @@ import { index as toursIndex, show as showTour } from '@/routes/tours';
 import type { ExportItem } from '@/types/export';
 import type { Gender } from '@/types/person';
 
+/**
+ * Uçak koltuk planı — tasarım sayfasındaki "Uçak planı" ekranının birebir hâli (gerçek veriyle).
+ * Havayoluna gönderilen koltuk tercih listesidir; kesin koltuğu havayolu check-in'de verir.
+ */
 type Passenger = {
     id: string;
     full_name: string;
@@ -53,8 +34,9 @@ const props = defineProps<{
     flight: {
         id: string;
         title: string;
-        airline: string;
-        departure_at: string;
+        flight_no: string;
+        departure_airport: string;
+        arrival_airport: string;
         tour: { id: string; name: string };
         aircraft_type_id: string | null;
         aircraft: string | null;
@@ -79,6 +61,22 @@ defineOptions({
     },
 });
 
+const root = ref<HTMLElement | null>(null);
+const selected = ref<string | null>(null);
+const blockMode = ref(false);
+const showWarnings = ref(false);
+
+const ini = (name: string) =>
+    name
+        .trim()
+        .split(/\s+/)
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toLocaleUpperCase('tr');
+const g = (p: Passenger): 'E' | 'K' => (p.gender === 'kadin' ? 'K' : 'E');
+
+const byId = computed(() => new Map(props.passengers.map((p) => [p.id, p])));
 const bySeat = computed(
     () =>
         new Map(
@@ -87,39 +85,27 @@ const bySeat = computed(
                 .map((p) => [p.seat_no as string, p]),
         ),
 );
-const byId = computed(() => new Map(props.passengers.map((p) => [p.id, p])));
-const occupant = (seat: string) => bySeat.value.get(seat);
-const isBlocked = (seat: string) =>
-    props.cabin?.blocked.includes(seat) ?? false;
-const isExit = (row: number) => props.cabin?.exit_rows.includes(row) ?? false;
-
-const seatedCount = computed(() => bySeat.value.size);
-const warnings = computed(() =>
-    props.passengers.flatMap((p) =>
-        p.warnings.map((w) => ({
-            seat: p.seat_no,
-            name: p.full_name,
-            text: w,
-        })),
-    ),
+const seated = computed(() => bySeat.value.size);
+const warnCount = computed(
+    () => props.passengers.filter((p) => p.warnings.length).length,
 );
 
-function showError(errors: Record<string, string>): void {
-    toast.error(Object.values(errors)[0] ?? 'İşlem yapılamadı.');
-}
+// Uçak tipleri: acentenin tipleri + henüz eklenmemiş hazır tipler (tasarımdaki gibi hap düğmeler).
+const short = (name: string) =>
+    name.replace(/^Airbus\s+/i, '').replace(/^Boeing\s+/i, 'B');
+const typePills = computed(() => [
+    ...props.aircraftTypes.map((t) => ({
+        key: `t:${t.id}`,
+        label: short(t.name),
+        on: t.id === props.flight.aircraft_type_id,
+    })),
+    ...props.presets
+        .filter((p) => !props.aircraftTypes.some((t) => t.name === p.name))
+        .map((p) => ({ key: `p:${p.key}`, label: short(p.name), on: false })),
+]);
 
-// Uçak tipi: acentenin tipi ("t:<id>") ya da hazır tip ("p:<key>").
-const aircraftChoice = ref(
-    props.flight.aircraft_type_id ? `t:${props.flight.aircraft_type_id}` : '',
-);
-
-function chooseAircraft(): void {
-    const [kind, value] = aircraftChoice.value.split(':');
-
-    if (!value) {
-        return;
-    }
-
+function chooseAircraft(key: string): void {
+    const [kind, value] = key.split(':');
     router.put(
         FlightSeatPlanController.aircraft.url(props.flight.id),
         kind === 't' ? { aircraft_type_id: value } : { preset: value },
@@ -127,17 +113,86 @@ function chooseAircraft(): void {
     );
 }
 
-// Seçim (tıklayarak), sürükleme ve "gri koltuk" modu.
-const selected = ref<Passenger | null>(null);
-const dragging = ref<Passenger | null>(null);
-const overSeat = ref<string | null>(null);
-const overPool = ref(false);
-const blockMode = ref(false);
+// Kabin çizimi (tasarımdaki hesapla aynı: sütunlar, kanat ve motor konumu).
+const wide = computed(() => (props.cabin?.groups.length ?? 0) > 2);
+const columns = computed(() =>
+    [
+        '20px',
+        ...(props.cabin?.groups ?? []).flatMap((gr) => [
+            ...gr.map(() => 'var(--s)'),
+            '20px',
+        ]),
+    ].join(' '),
+);
+const wingTop = computed(() => {
+    if (!props.cabin) {
+        return 0;
+    }
 
-function assign(who: Passenger, seat: string): void {
+    const size = wide.value ? 26 : 30;
+    const anchor =
+        props.cabin.exit_rows[0] ??
+        props.cabin.rows[Math.floor(props.cabin.rows.length / 3)];
+    const index = Math.max(0, props.cabin.rows.indexOf(anchor));
+
+    return (wide.value ? 120 : 100) + 20 + index * (size + 6) - 30;
+});
+const wingStyle = computed(() => ({
+    top: `${wingTop.value}px`,
+    ...(wide.value ? { width: '160px', height: '150px' } : {}),
+}));
+const exitStarts = (row: number) =>
+    !!props.cabin?.exit_rows.includes(row) &&
+    !props.cabin.exit_rows.includes(row - 1);
+const isBlocked = (seat: string) =>
+    props.cabin?.blocked.includes(seat) ?? false;
+
+const units = computed(() =>
+    props.units
+        .map((u) => ({
+            label: u.label,
+            people: u.ids
+                .map((id) => byId.value.get(id))
+                .filter((p): p is Passenger => !!p)
+                .map((p): PoolPerson => ({
+                    id: p.id,
+                    name: p.full_name,
+                    g: g(p),
+                    age: p.age,
+                    group: p.group_name,
+                })),
+        }))
+        .filter((u) => u.people.length),
+);
+
+function showError(errors: Record<string, string>): void {
+    toast.error(Object.values(errors)[0] ?? 'İşlem yapılamadı.');
+}
+
+function place(pid: string, from: string | null, to: string): void {
+    const who = byId.value.get(pid);
+
+    if (!who || !props.can.update) {
+        return;
+    }
+
+    if (to === 'list') {
+        router.delete(FlightSeatPlanController.unassign.url(pid), {
+            preserveScroll: true,
+            onSuccess: () => toast(`${who.full_name} listeye döndü`),
+            onError: showError,
+        });
+
+        return;
+    }
+
+    if (isBlocked(to)) {
+        return;
+    }
+
     router.post(
         FlightSeatPlanController.assign.url(props.flight.id),
-        { passenger_id: who.id, seat, swap: who.seat_no !== null },
+        { passenger_id: pid, seat: to, swap: from !== null },
         {
             preserveScroll: true,
             onSuccess: () => (selected.value = null),
@@ -146,17 +201,25 @@ function assign(who: Passenger, seat: string): void {
     );
 }
 
-function unseat(who: Passenger | null): void {
-    if (!who?.seat_no) {
-        return;
-    }
+usePointerDrag(root, {
+    label: (pid) => {
+        const p = byId.value.get(pid);
 
-    router.delete(FlightSeatPlanController.unassign.url(who.id), {
-        preserveScroll: true,
-        onSuccess: () => (selected.value = null),
-        onError: showError,
-    });
-}
+        return p ? { initials: ini(p.full_name), name: p.full_name } : null;
+    },
+    onDrop: place,
+    onClick: (pid, from) => {
+        if (from === null && props.can.update) {
+            selected.value = selected.value === pid ? null : pid;
+
+            if (selected.value) {
+                toast(
+                    `${byId.value.get(pid)?.full_name} seçildi. Şimdi boş bir yere tıkla`,
+                );
+            }
+        }
+    },
+});
 
 function clickSeat(seat: string): void {
     if (!props.can.update) {
@@ -173,69 +236,21 @@ function clickSeat(seat: string): void {
         return;
     }
 
-    if (isBlocked(seat)) {
-        return;
-    }
-
-    const current = occupant(seat);
-
-    if (current) {
-        if (selected.value?.seat_no && selected.value.id !== current.id) {
-            assign(selected.value, seat);
-
-            return;
-        }
-
-        selected.value = selected.value?.id === current.id ? null : current;
-
-        return;
-    }
-
-    if (selected.value) {
-        assign(selected.value, seat);
+    if (selected.value && !bySeat.value.has(seat) && !isBlocked(seat)) {
+        place(selected.value, null, seat);
     }
 }
 
-function canDropOn(seat: string): boolean {
-    const who = dragging.value;
-
-    if (!who || isBlocked(seat) || who.seat_no === seat) {
-        return false;
-    }
-
-    return !occupant(seat) || who.seat_no !== null;
+function auto(): void {
+    router.post(
+        FlightSeatPlanController.auto.url(props.flight.id),
+        {},
+        { preserveScroll: true, onError: showError },
+    );
 }
 
-function startDrag(event: DragEvent, who: Passenger): void {
-    if (!props.can.update || blockMode.value) {
-        return;
-    }
-
-    dragging.value = who;
-    event.dataTransfer?.setData('text/plain', who.id);
-}
-
-function endDrag(): void {
-    dragging.value = null;
-    overSeat.value = null;
-    overPool.value = false;
-}
-
-function dropOnSeat(seat: string): void {
-    if (dragging.value && canDropOn(seat)) {
-        assign(dragging.value, seat);
-    }
-
-    endDrag();
-}
-
-function dropOnPool(): void {
-    unseat(dragging.value);
-    endDrag();
-}
-
-function clearPlan(): void {
-    if (confirm('Bu uçuştaki bütün yolcuların koltuk seçimi kaldırılsın mı?')) {
+function clear(): void {
+    if (confirm('Bu uçuştaki bütün koltuk seçimleri kaldırılsın mı?')) {
         router.delete(FlightSeatPlanController.clear.url(props.flight.id), {
             preserveScroll: true,
             onError: showError,
@@ -243,452 +258,361 @@ function clearPlan(): void {
     }
 }
 
-// Havuz (koltuğu olmayanlar), aileler bir arada.
-const search = ref('');
-const normalize = (value: string) => value.toLocaleLowerCase('tr');
-const pool = computed(() =>
-    props.units
-        .map((unit) => ({
-            label: unit.label,
-            people: unit.ids
-                .map((id) => byId.value.get(id))
-                .filter((p): p is Passenger => p !== undefined)
-                .filter((p) =>
-                    normalize(p.full_name).includes(normalize(search.value)),
-                ),
-        }))
-        .filter((unit) => unit.people.length > 0),
-);
-
 const exportItems = computed<ExportItem[]>(() =>
     props.can.update
         ? [
               {
+                  title: 'Havayolu listesi',
+                  description: 'Pasaporttaki gibi BÜYÜK harf',
+                  url: manifest.url(props.flight.id),
+              },
+              {
                   title: 'Koltuk tercih listesi',
-                  description: 'Havayoluna gönderilecek, koltuk sırasıyla',
+                  description: 'Havayoluna gönderilecek',
                   url: seatReport.url(props.flight.id),
               },
               {
                   title: 'Özel yardım listesi',
-                  description: 'Tekerlekli sandalye, engel, özel yemek',
+                  description: 'Tekerlekli sandalye talepleri',
                   url: assistanceReport.url(props.flight.id),
-              },
-              {
-                  title: 'Havayolu listesi',
-                  description: 'Yolcu, pasaport, PNR',
-                  url: manifest.url(props.flight.id),
               },
           ]
         : [],
 );
 
-const shortName = (name: string) => {
-    const parts = name.split(' ');
+const crumbs = computed(() => [
+    { label: 'Turlar', href: toursIndex.url() },
+    { label: props.flight.tour.name, href: showTour.url(props.flight.tour.id) },
+    {
+        label: 'Ulaşım',
+        href: showTour.url(props.flight.tour.id, { query: { tab: 'ulasim' } }),
+    },
+]);
 
-    return parts.length > 1 ? `${parts[0]} ${parts.at(-1)?.charAt(0)}.` : name;
-};
+const seatPassenger = (row: number, letter: string) =>
+    bySeat.value.get(`${row}${letter}`);
+const pct = computed(() =>
+    props.passengers.length
+        ? Math.round((seated.value / props.passengers.length) * 100)
+        : 0,
+);
 </script>
 
 <template>
-    <Head :title="`Koltuk planı — ${flight.title}`" />
+    <Head :title="`Uçak koltuk planı — ${flight.title}`" />
 
-    <div class="flex w-full flex-col gap-4 p-4">
-        <div class="flex flex-wrap items-start justify-between gap-4">
-            <div>
-                <Link
-                    :href="showFlight(flight.id)"
-                    class="mb-1 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-                >
-                    <ArrowLeft class="size-4" /> {{ flight.title }}
-                </Link>
-                <h1 class="text-2xl font-semibold tracking-tight">
-                    Uçak koltuk planı
-                </h1>
-                <p class="mt-1 text-sm text-muted-foreground">
-                    <Link
-                        :href="
-                            showTour(flight.tour.id, {
-                                query: { tab: 'ulasim' },
-                            })
-                        "
-                        class="hover:text-foreground"
-                        >{{ flight.tour.name }}</Link
-                    >
-                    · {{ flight.airline }}
-                    <template v-if="cabin">
-                        · {{ flight.aircraft }} · {{ cabin.label }}
-                    </template>
-                </p>
-                <p class="mt-1 text-xs text-muted-foreground">
-                    Bu plan havayoluna gönderilen koltuk tercih listesidir;
-                    kesin koltuğu havayolu verir.
-                </p>
-            </div>
-            <div class="flex flex-wrap gap-2">
-                <ExportMenu :items="exportItems" />
-                <Button
-                    v-if="can.update && cabin"
-                    variant="outline"
-                    :disabled="seatedCount === 0"
-                    @click="clearPlan"
-                >
-                    <Eraser /> Temizle
-                </Button>
-            </div>
-        </div>
-
-        <!-- Uçak tipi -->
-        <Card v-if="can.update" class="py-4">
-            <CardContent class="flex flex-wrap items-end gap-3">
-                <div class="grid gap-1">
-                    <label for="aircraft" class="text-xs text-muted-foreground"
-                        >Uçak tipi</label
-                    >
-                    <select
-                        id="aircraft"
-                        v-model="aircraftChoice"
-                        :class="selectClass"
-                        class="w-72"
-                        @change="chooseAircraft"
-                    >
-                        <option value="" disabled>Seçin…</option>
-                        <optgroup
-                            v-if="aircraftTypes.length"
-                            label="Acentenin uçak tipleri"
-                        >
-                            <option
-                                v-for="t in aircraftTypes"
-                                :key="t.id"
-                                :value="`t:${t.id}`"
-                            >
-                                {{ t.name }} ({{ t.label }})
-                            </option>
-                        </optgroup>
-                        <optgroup label="Hazır tipler">
-                            <option
-                                v-for="p in presets.filter(
-                                    (p) =>
-                                        !aircraftTypes.some(
-                                            (t) => t.name === p.name,
-                                        ),
-                                )"
-                                :key="p.key"
-                                :value="`p:${p.key}`"
-                            >
-                                {{ p.name }} ({{ p.cabin }})
-                            </option>
-                        </optgroup>
-                    </select>
-                </div>
-                <p class="text-xs text-muted-foreground">
-                    Sıra aralığı ve acil çıkışlar
-                    <Link :href="aircraftTypesIndex()" class="underline"
-                        >Acente ayarları → Uçak tipleri</Link
-                    >'nden değiştirilebilir.
-                </p>
-                <Button
-                    v-if="cabin"
-                    class="ml-auto"
-                    :variant="blockMode ? 'default' : 'outline'"
-                    @click="blockMode = !blockMode"
-                >
-                    <Ban />
-                    {{
-                        blockMode
-                            ? 'Bitti'
-                            : 'Başkasına ait koltukları işaretle'
-                    }}
-                </Button>
-            </CardContent>
-        </Card>
-
-        <div
-            v-if="!cabin"
-            class="flex flex-col items-center gap-2 rounded-2xl border border-dashed p-10 text-center text-sm text-muted-foreground"
-        >
-            <Plane class="size-8" />
-            Koltuk planı için önce uçak tipini seçin.
-        </div>
-
-        <template v-else>
-            <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-                <div class="flex min-w-60 flex-1 items-center gap-3">
-                    <ProgressBar
-                        class="flex-1"
-                        :value="seatedCount"
-                        :max="passengers.length"
-                    />
-                    <span class="text-muted-foreground tabular-nums">
-                        {{ seatedCount }} / {{ passengers.length }} koltuk
-                        seçildi
-                    </span>
-                </div>
-                <div
-                    class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground"
-                >
-                    <span class="flex items-center gap-1.5"
-                        ><i class="inline-block size-3 rounded-full bg-women" />
-                        Kadın</span
-                    >
-                    <span class="flex items-center gap-1.5"
-                        ><i class="inline-block size-3 rounded-full bg-men" />
-                        Erkek</span
-                    >
-                    <span class="flex items-center gap-1.5"
-                        ><i
-                            class="inline-block size-3 rounded bg-muted-foreground/40"
-                        />
-                        Başka yolcu</span
-                    >
-                    <span class="flex items-center gap-1.5 text-danger"
-                        >Acil çıkış: 15 yaş altı ve 65 yaş üstü oturamaz</span
-                    >
-                </div>
-            </div>
-
-            <div
-                v-if="selected"
-                class="sticky top-2 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-popover p-3 text-sm shadow-lg"
+    <div ref="root" class="mx">
+        <div class="main">
+            <MockTop
+                :crumbs="crumbs"
+                title="Uçak koltuk planı"
+                :exports="exportItems"
             >
-                <span>
-                    <strong>{{ selected.full_name }}</strong> seçildi — boş bir
-                    koltuğa tıklayın.
-                </span>
-                <div class="flex gap-2">
-                    <Button
-                        v-if="selected.seat_no"
-                        size="sm"
-                        variant="outline"
-                        class="text-destructive"
-                        @click="unseat(selected)"
-                    >
-                        Koltuğu kaldır
-                    </Button>
-                    <Button size="sm" variant="ghost" @click="selected = null">
-                        <X /> Vazgeç
-                    </Button>
-                </div>
-            </div>
+                <template v-if="can.update && cabin">
+                    <button class="btn ghost" type="button" @click="clear">
+                        Temizle
+                    </button>
+                    <button class="btn" type="button" @click="auto">
+                        Otomatik yerleştir
+                    </button>
+                </template>
+            </MockTop>
 
-            <div class="grid min-w-0 gap-4 lg:grid-cols-[20rem_minmax(0,1fr)]">
-                <Card
-                    class="h-fit min-w-0 lg:sticky lg:top-2"
-                    :class="{ 'ring-2 ring-primary': overPool }"
-                    @dragover.prevent="overPool = dragging?.seat_no !== null"
-                    @dragleave="overPool = false"
-                    @drop.prevent="dropOnPool"
-                >
-                    <CardHeader>
-                        <CardTitle class="flex items-center gap-2">
-                            <Users class="size-4" /> Koltuğu seçilmeyenler
+            <div class="planner">
+                <MockPool
+                    :units="units"
+                    :selected="selected"
+                    :locked="!can.update"
+                    hint="Acil çıkış sırasına 65 yaş üstü ve 15 yaş altı yolcu oturtulursa uyarı çıkar."
+                />
+
+                <div class="card">
+                    <div class="stagebar">
+                        <div class="pills">
                             <span
-                                class="text-sm font-normal text-muted-foreground"
-                                >{{ passengers.length - seatedCount }}</span
-                            >
-                        </CardTitle>
-                        <CardDescription v-if="can.update">
-                            Yolcuyu koltuğa sürükleyin ya da önce yolcuya, sonra
-                            koltuğa tıklayın.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent class="flex flex-col gap-2 text-sm">
-                        <div class="relative">
-                            <Search
-                                class="absolute top-2.5 left-2.5 size-4 text-muted-foreground"
-                            />
-                            <Input
-                                v-model="search"
-                                placeholder="İsimle ara"
-                                class="pl-8"
-                            />
-                        </div>
-                        <p
-                            v-if="passengers.length === 0"
-                            class="rounded-lg border border-dashed p-4 text-center text-muted-foreground"
-                        >
-                            Uçuşta yolcu yok.
-                            <Link
-                                :href="showFlight(flight.id)"
-                                class="underline"
-                                >Yolcu ekleyin</Link
-                            >.
-                        </p>
-                        <p
-                            v-else-if="pool.length === 0 && !search"
-                            class="rounded-lg border border-dashed p-4 text-center text-muted-foreground"
-                        >
-                            Herkesin koltuğu seçildi ✓
-                        </p>
-                        <div
-                            class="flex max-h-[35vh] flex-col gap-2 overflow-y-auto lg:max-h-[60vh]"
-                        >
-                            <div
-                                v-for="(unit, index) in pool"
-                                :key="index"
-                                class="flex flex-col gap-1"
-                                :class="
-                                    unit.label
-                                        ? 'rounded-xl border border-dashed border-primary/40 p-1.5'
-                                        : ''
+                                v-for="pill in typePills"
+                                :key="pill.key"
+                                class="pill"
+                                :class="{ on: pill.on }"
+                                role="button"
+                                tabindex="0"
+                                @click="
+                                    can.update &&
+                                    !pill.on &&
+                                    chooseAircraft(pill.key)
                                 "
+                                >{{ pill.label }}</span
                             >
-                                <small
-                                    v-if="unit.label"
-                                    class="px-1 pt-1 text-[10.5px] tracking-wider text-muted-foreground uppercase"
-                                    >{{ unit.label }}</small
-                                >
-                                <button
-                                    v-for="p in unit.people"
-                                    :key="p.id"
-                                    type="button"
-                                    class="flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 text-left hover:border-primary"
-                                    :class="{
-                                        'border-primary ring-2 ring-primary/30':
-                                            selected?.id === p.id,
-                                        'cursor-grab': can.update,
-                                    }"
-                                    :draggable="can.update"
-                                    :disabled="!can.update"
-                                    @click="
-                                        selected =
-                                            selected?.id === p.id ? null : p
-                                    "
-                                    @dragstart="startDrag($event, p)"
-                                    @dragend="endDrag"
-                                >
-                                    <GripVertical
-                                        v-if="can.update"
-                                        class="size-3.5 shrink-0 text-muted-foreground"
-                                    />
-                                    <PersonAvatar
-                                        :name="p.full_name"
-                                        :gender="p.gender"
-                                        size="sm"
-                                    />
-                                    <span class="min-w-0 flex-1">
-                                        <span
-                                            class="block truncate font-medium"
-                                            >{{ p.full_name }}</span
-                                        >
-                                        <span
-                                            class="block truncate text-xs text-muted-foreground"
-                                        >
-                                            {{ p.group_name }}
-                                            <template v-if="p.age !== null"
-                                                >· {{ p.age }} yaş</template
-                                            >
-                                        </span>
-                                    </span>
-                                </button>
+                        </div>
+                        <div v-if="cabin" class="prog">
+                            <span>{{ seated }} / {{ passengers.length }}</span>
+                            <div class="bar">
+                                <i
+                                    :class="{ full: pct >= 100 }"
+                                    :style="{ width: `${pct}%` }"
+                                />
                             </div>
                         </div>
-                    </CardContent>
-                </Card>
-
-                <div class="flex min-w-0 flex-col gap-3">
-                    <div class="overflow-x-auto pb-2">
-                        <PlaneDiagram
-                            :groups="cabin.groups"
-                            :rows="cabin.rows"
-                            :exit-rows="cabin.exit_rows"
-                        >
-                            <template #seat="{ seat, row }">
-                                <button
-                                    type="button"
-                                    class="flex h-9 w-full flex-col items-center justify-center rounded-t-lg rounded-b-sm border text-[10px] leading-tight transition"
-                                    :class="{
-                                        'cursor-not-allowed border-transparent bg-muted-foreground/25 text-muted-foreground':
-                                            isBlocked(seat),
-                                        'border-danger/50': isExit(row),
-                                        'bg-background/70 hover:bg-muted':
-                                            !isBlocked(seat) && !occupant(seat),
-                                        'border-women/60 bg-women/15':
-                                            occupant(seat)?.gender === 'kadin',
-                                        'border-men/60 bg-men/15':
-                                            occupant(seat)?.gender === 'erkek',
-                                        'ring-2 ring-primary':
-                                            overSeat === seat ||
-                                            (selected !== null &&
-                                                occupant(seat)?.id ===
-                                                    selected.id),
-                                        'cursor-pointer': blockMode,
-                                    }"
-                                    :disabled="!can.update"
-                                    :draggable="
-                                        can.update &&
-                                        !blockMode &&
-                                        !!occupant(seat)
-                                    "
-                                    :aria-label="`Koltuk ${seat}${occupant(seat) ? ': ' + occupant(seat)?.full_name : isBlocked(seat) ? ' (başka yolcu)' : ''}${isExit(row) ? ' (acil çıkış)' : ''}`"
-                                    :title="
-                                        occupant(seat)?.full_name ??
-                                        (isBlocked(seat) ? 'Başka yolcu' : seat)
-                                    "
-                                    @click="clickSeat(seat)"
-                                    @dragstart="
-                                        occupant(seat) &&
-                                        startDrag(
-                                            $event,
-                                            occupant(seat) as Passenger,
-                                        )
-                                    "
-                                    @dragend="endDrag"
-                                    @dragover="
-                                        canDropOn(seat) &&
-                                        ($event.preventDefault(),
-                                        (overSeat = seat))
-                                    "
-                                    @dragleave="overSeat = null"
-                                    @drop.prevent="dropOnSeat(seat)"
-                                >
-                                    <span class="font-semibold">
-                                        {{ seat }}
-                                        <AlertTriangle
-                                            v-if="
-                                                occupant(seat)?.warnings.length
-                                            "
-                                            class="inline size-2.5 text-warning"
-                                        />
-                                    </span>
-                                    <span
-                                        v-if="occupant(seat)"
-                                        class="w-full truncate px-0.5 text-center"
-                                        >{{
-                                            shortName(
-                                                occupant(seat)?.full_name ?? '',
-                                            )
-                                        }}</span
-                                    >
-                                </button>
-                            </template>
-                        </PlaneDiagram>
                     </div>
 
-                    <Card v-if="warnings.length">
-                        <CardHeader>
-                            <CardTitle
-                                class="flex items-center gap-2 text-warning"
+                    <template v-if="cabin">
+                        <div class="spec">
+                            <span
+                                >Uçuş
+                                <b
+                                    >{{ flight.flight_no }} ·
+                                    {{ flight.departure_airport }} →
+                                    {{ flight.arrival_airport }}</b
+                                ></span
                             >
-                                <AlertTriangle class="size-4" /> Uyarılar
-                            </CardTitle>
-                            <CardDescription>
-                                Engellemez; havayolu acil çıkış kuralına uymayan
-                                yolcuyu kabul etmez.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <ul class="list-disc space-y-1 pl-5 text-sm">
-                                <li
-                                    v-for="w in warnings"
-                                    :key="`${w.seat}${w.text}`"
-                                >
-                                    {{ w.seat }} — {{ w.name }}: {{ w.text }}
+                            <span
+                                >Uçak <b>{{ flight.aircraft }}</b></span
+                            >
+                            <span
+                                >Kabin
+                                <b>{{
+                                    cabin.groups.map((x) => x.length).join('-')
+                                }}</b>
+                                ·
+                                {{
+                                    wide
+                                        ? 'geniş gövde, iki koridor'
+                                        : 'dar gövde, tek koridor'
+                                }}</span
+                            >
+                            <span v-if="cabin.exit_rows.length"
+                                >Acil çıkış sırası
+                                <b>{{ cabin.exit_rows.join(', ') }}</b></span
+                            >
+                        </div>
+                        <div class="legend">
+                            <span
+                                ><i style="background: var(--m-line)" />Başka
+                                yolcu</span
+                            >
+                            <span
+                                role="button"
+                                tabindex="0"
+                                @click="showWarnings = !showWarnings"
+                                ><i style="background: var(--m-warn)" />{{
+                                    warnCount
+                                        ? `${warnCount} uyarı`
+                                        : 'Uyarı yok'
+                                }}</span
+                            >
+                            <button
+                                v-if="can.update"
+                                class="btn ghost sm"
+                                type="button"
+                                :aria-pressed="blockMode"
+                                @click="blockMode = !blockMode"
+                            >
+                                {{
+                                    blockMode
+                                        ? 'Bitti'
+                                        : 'Başka yolcuya ait koltuk işaretle'
+                                }}
+                            </button>
+                        </div>
+                        <ul
+                            v-if="showWarnings && warnCount"
+                            class="lbl"
+                            style="margin: 0; padding-left: 18px"
+                        >
+                            <template v-for="p in passengers" :key="p.id">
+                                <li v-for="w in p.warnings" :key="w">
+                                    {{ p.seat_no }} · {{ p.full_name }}:
+                                    {{ w }}
                                 </li>
-                            </ul>
-                        </CardContent>
-                    </Card>
+                            </template>
+                        </ul>
+
+                        <div class="pbox">
+                            <div class="pwrap">
+                                <span class="wing l" :style="wingStyle" />
+                                <span class="wing r" :style="wingStyle" />
+                                <template v-if="wide">
+                                    <span
+                                        class="engine"
+                                        :style="{
+                                            left: '58px',
+                                            top: `${wingTop + 56}px`,
+                                        }"
+                                    />
+                                    <span
+                                        class="engine"
+                                        :style="{
+                                            right: '58px',
+                                            top: `${wingTop + 56}px`,
+                                        }"
+                                    />
+                                </template>
+                                <template v-else>
+                                    <span
+                                        class="engine"
+                                        :style="{
+                                            left: '74px',
+                                            top: `${wingTop + 48}px`,
+                                            height: '38px',
+                                        }"
+                                    />
+                                    <span
+                                        class="engine"
+                                        :style="{
+                                            right: '74px',
+                                            top: `${wingTop + 48}px`,
+                                            height: '38px',
+                                        }"
+                                    />
+                                </template>
+                                <div class="plane" :class="{ wide }">
+                                    <div
+                                        class="pgrid"
+                                        :style="{
+                                            gridTemplateColumns: columns,
+                                        }"
+                                    >
+                                        <span />
+                                        <template
+                                            v-for="(gr, gi) in cabin.groups"
+                                            :key="`h${gi}`"
+                                        >
+                                            <span
+                                                v-for="l in gr"
+                                                :key="l"
+                                                class="hd"
+                                                >{{ l }}</span
+                                            >
+                                            <span />
+                                        </template>
+                                        <template
+                                            v-for="row in cabin.rows"
+                                            :key="row"
+                                        >
+                                            <div
+                                                v-if="exitStarts(row)"
+                                                class="exit"
+                                            >
+                                                <span>◂ Acil çıkış</span
+                                                ><span>Acil çıkış ▸</span>
+                                            </div>
+                                            <span class="rn">{{ row }}</span>
+                                            <template
+                                                v-for="(gr, gi) in cabin.groups"
+                                                :key="`${row}-${gi}`"
+                                            >
+                                                <template
+                                                    v-for="l in gr"
+                                                    :key="`${row}${l}`"
+                                                >
+                                                    <div
+                                                        v-if="
+                                                            isBlocked(
+                                                                `${row}${l}`,
+                                                            )
+                                                        "
+                                                        class="slot lock"
+                                                        :title="`${row}${l} · başka yolcu`"
+                                                        @click="
+                                                            blockMode &&
+                                                            clickSeat(
+                                                                `${row}${l}`,
+                                                            )
+                                                        "
+                                                    />
+                                                    <div
+                                                        v-else-if="
+                                                            seatPassenger(
+                                                                row,
+                                                                l,
+                                                            )
+                                                        "
+                                                        class="slot full"
+                                                        :class="[
+                                                            g(
+                                                                seatPassenger(
+                                                                    row,
+                                                                    l,
+                                                                )!,
+                                                            ).toLowerCase(),
+                                                            {
+                                                                warn: seatPassenger(
+                                                                    row,
+                                                                    l,
+                                                                )!.warnings
+                                                                    .length,
+                                                            },
+                                                        ]"
+                                                        data-drop="slot"
+                                                        :data-key="`${row}${l}`"
+                                                        :data-pid="
+                                                            seatPassenger(
+                                                                row,
+                                                                l,
+                                                            )!.id
+                                                        "
+                                                        data-from="slot"
+                                                        :data-locked="
+                                                            can.update
+                                                                ? undefined
+                                                                : ''
+                                                        "
+                                                        :title="
+                                                            [
+                                                                seatPassenger(
+                                                                    row,
+                                                                    l,
+                                                                )!.full_name,
+                                                                ...seatPassenger(
+                                                                    row,
+                                                                    l,
+                                                                )!.warnings,
+                                                            ].join(' · ')
+                                                        "
+                                                    >
+                                                        {{
+                                                            ini(
+                                                                seatPassenger(
+                                                                    row,
+                                                                    l,
+                                                                )!.full_name,
+                                                            )
+                                                        }}
+                                                    </div>
+                                                    <div
+                                                        v-else
+                                                        class="slot free"
+                                                        data-drop="slot"
+                                                        :data-key="`${row}${l}`"
+                                                        :title="`${row}${l} · boş`"
+                                                        @click="
+                                                            clickSeat(
+                                                                `${row}${l}`,
+                                                            )
+                                                        "
+                                                    >
+                                                        {{ row }}{{ l }}
+                                                    </div>
+                                                </template>
+                                                <span class="rn">{{
+                                                    row
+                                                }}</span>
+                                            </template>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <div v-else class="empty-pool">
+                        Koltuk planı için yukarıdan uçak tipini seçin.
+                    </div>
+                    <span class="lbl"
+                        >Kesin koltuğu havayolu check-in'de verir. Bu plan
+                        havayoluna gönderilecek koltuk tercih listesidir.</span
+                    >
                 </div>
             </div>
-        </template>
+        </div>
     </div>
 </template>

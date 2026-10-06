@@ -180,14 +180,26 @@ Yerleşim bilgisi (otel / oda / koltuk) yaka kartı, tur tablosu ve aile ekranı
    otobüs+koltuk, rehber, QR), arka yüz (Türkçe / İngilizce / Arapça "Kaybolursanız", acil telefon, otel adresleri — dikeyde),
    sağlık notu (yalnız acente açtıysa **ve** yolcunun sağlık rızası varsa). Seri no = kayıt id'sinin son 6 hanesi.
    Çift taraflı baskı: arka sayfada sütunlar ters (uzun kenardan çevirince doğru karta denk gelir).
-   - **Tek kaynak**: otel / oda / koltuk artık `Placements::hotels()` ve `Placements::seat()`ten (eskiden kartın kendi hesabı vardı);
-     aile ekranı da bunu kullanacak.
-   - **Grup rengi** `groups.color` (palet `GroupColors::PALETTE`, seçilmezse turdaki sıraya göre); kart bandı ve otobüs tabelası
-     (koltuk planı PDF'inin üstündeki renkli grup şeridi).
-   - **Arapça**: dompdf harf birleştirmez / sağdan sola dizmez → `App\Support\ArabicText` (Presentation Forms-B, DejaVu Sans).
-     Yalnız kısa sabit cümleler için; PDF çıktısı gözle kontrol edildi.
-   - QR: bacon/bacon-qr-code (Fortify'dan zaten vardı), içerik: yolcu, acente, acil telefon, kart no (aile ekranı bağlantısı 7. adımda).
-   Migration: `create_badge_settings_and_group_colors`. Demo paketi `tasarim-5-yaka-karti`.
+    - **Tek kaynak**: otel / oda / koltuk artık `Placements::hotels()` ve `Placements::seat()`ten (eskiden kartın kendi hesabı vardı);
+      aile ekranı da bunu kullanacak.
+    - **Grup rengi** `groups.color` (palet `GroupColors::PALETTE`, seçilmezse turdaki sıraya göre); kart bandı ve otobüs tabelası
+      (koltuk planı PDF'inin üstündeki renkli grup şeridi).
+    - **Arapça**: dompdf harf birleştirmez / sağdan sola dizmez → `App\Support\ArabicText` (Presentation Forms-B, DejaVu Sans).
+      Yalnız kısa sabit cümleler için; PDF çıktısı gözle kontrol edildi.
+    - QR: bacon/bacon-qr-code (Fortify'dan zaten vardı), içerik: yolcu, acente, acil telefon, kart no (aile ekranı bağlantısı 7. adımda).
+      Migration: `create_badge_settings_and_group_colors`. Demo paketi `tasarim-5-yaka-karti`.
+5½. 🔄 **Tasarıma birebir uyum** (kullanıcı isteği 2026-10-06: "bana gösterilenin birebir çalışanı olsun"). 6. adıma
+   geçmeden sekiz ekran tasarımdaki görünümle aynı yapılıyor; her ekran tasarımla yan yana karşılaştırılıp onaylatılır.
+    - Yöntem: tasarım sayfasının CSS'i `resources/css/marhal-mock.css` (`.mx` altında kapsanmış; tasarım dosyasından üretildi,
+      elle düzenlenmez — uyarlamalar `app.css`teki `.mx` bloğunda). Ekranlar `<div class="mx"><div class="main">` ile tasarımın
+      HTML yapısını birebir kullanır; ortak parçalar `components/mock/` (MockTop, MockPool), sürükle-bırak `usePointerDrag`.
+    - ✅ Uçak koltuk planı (kanatlar, motorlar, uçak tipi seçimi, **Otomatik yerleştir**: aileler yan yana, 15 yaş altı /
+      65 üstü / hareket güçlüğü acil çıkışa konmaz, elle verilen koltuk korunur).
+    - ✅ Yaka kartları: Acente ayarlarındaki ayrı sayfa kalktı; tur → **Yaka kartları** ekranında (boy, önizlenen yolcu, alanlar,
+      arka yüz, grup renkleri, basılacaklar; ön/arka yüz + A4 dizilimi). PDF de aynı kart görünümünde (dompdf tablo düzeni,
+      yuvarlak fotoğraf GD ile `PersonPhotoStore::circleDataUri`). Kartta kısa adlar: otelin ilk kelimesi, otobüs numarası.
+    - ⏳ Otel planı, sonra Ana Panel, Tur, Araç, Yolcular, Tahsilat ve kabuk (yan menüde Ctrl K arama, alttaki kullanıcı,
+      "Görüşünü paylaş" düğmesi).
 6. ⏳ Hazırlık takibi (`readiness_items`, `readiness_checks`).
 7. ⏳ Aile ekranı + fotoğrafla ön kayıt (MRZ okuma servisi için önce seçenek / maliyet).
 8. ⏳ WhatsApp tahsilat asistanı (önce sağlayıcı + sanal POS seçenekleri / maliyet).

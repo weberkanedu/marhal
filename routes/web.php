@@ -28,6 +28,7 @@ use App\Http\Controllers\RoomController;
 use App\Http\Controllers\RoomPlanController;
 use App\Http\Controllers\SeatAssignmentController;
 use App\Http\Controllers\SeatPlanController;
+use App\Http\Controllers\TourBadgeController;
 use App\Http\Controllers\TourController;
 use App\Http\Controllers\TourHotelController;
 use App\Http\Controllers\UserController;
@@ -66,8 +67,9 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::post('need-types', [NeedTypeController::class, 'store'])->name('need-types.store');
         Route::put('need-types/{needType}', [NeedTypeController::class, 'update'])->name('need-types.update');
         Route::middleware('feature:badge_generation')->group(function () {
-            Route::get('badge-settings', [BadgeSettingController::class, 'edit'])->name('badge-settings.edit');
             Route::put('badge-settings', [BadgeSettingController::class, 'update'])->name('badge-settings.update');
+            Route::get('tours/{tour}/badge-cards', [TourBadgeController::class, 'show'])->name('tours.badge-cards');
+            Route::put('groups/{group}/color', [TourBadgeController::class, 'color'])->name('groups.color');
         });
         Route::delete('person-relations/{relation}', [PersonRelationController::class, 'destroy'])->name('person-relations.destroy');
 
@@ -139,6 +141,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::put('flights/{flight}/aircraft', [FlightSeatPlanController::class, 'aircraft'])->name('flights.aircraft');
         Route::post('flights/{flight}/seats', [FlightSeatPlanController::class, 'assign'])->name('flights.seats.store');
         Route::delete('flights/{flight}/seats', [FlightSeatPlanController::class, 'clear'])->name('flights.seats.clear');
+        Route::post('flights/{flight}/auto-seats', [FlightSeatPlanController::class, 'auto'])->name('flights.seats.auto');
         Route::post('flights/{flight}/blocked-seats', [FlightSeatPlanController::class, 'block'])->name('flights.blocked-seats');
         Route::delete('flight-passengers/{passenger}/seat', [FlightSeatPlanController::class, 'unassign'])->name('flight-passengers.seat.destroy');
         Route::get('aircraft-types', [AircraftTypeController::class, 'index'])->name('aircraft-types.index');

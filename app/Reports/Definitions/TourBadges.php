@@ -2,6 +2,7 @@
 
 namespace App\Reports\Definitions;
 
+use App\Enums\BadgeSize;
 use App\Enums\RegistrationStatus;
 use App\Models\BadgeSetting;
 use App\Models\Group;
@@ -31,14 +32,9 @@ class TourBadges
     ) {}
 
     /**
-     * @return list<array{
-     *     name: string, first_name: string, last_name: string, group: string|null, color: string,
-     *     guide: string|null, photo: string|null, initials: string,
-     *     hotels: list<array{city: string, hotel: string, room: string|null, address: string|null}>,
-     *     bus: array{label: string, value: string}|null, serial: string, qr: string|null, health: string|null,
-     * }>
+     * @return list<array<string, mixed>> kart başına: ad, grup ve rengi, rehber, fotoğraf, oteller, otobüs, seri no, QR, sağlık notu
      */
-    public function build(Tour $tour, ?Group $group = null, ?Registration $only = null, ?BadgeSetting $settings = null): array
+    public function build(Tour $tour, ?Group $group = null, ?Registration $only = null, ?BadgeSetting $settings = null, bool $forScreen = false): array
     {
         $settings ??= BadgeSetting::current();
 
@@ -59,12 +55,18 @@ class TourBadges
             : [];
         $agency = $tour->tenant()->first();
 
-        return array_values($registrations->map(function (Registration $r) use ($groupStays, $colors, $health, $settings, $agency): array {
+        return array_values($registrations->map(function (Registration $r) use ($groupStays, $colors, $health, $settings, $agency, $forScreen): array {
             $person = $r->person;
             $group = $r->group;
             $serial = strtoupper(substr(str_replace('-', '', $r->id), -6));
 
             return [
+                'registration_id' => $r->id,
+                'group_id' => $group?->id,
+                'guide_name' => $group?->guide_name,
+                'guide_phone' => $group?->guide_phone,
+                // Ekran önizlemesi fotoğrafı adresinden yükler; PDF gömülü (daire kesilmiş) resim kullanır.
+                'photo_url' => $person->photo_path ? route('persons.photo', $person) : null,
                 'name' => TurkishText::upper($person->first_name.' '.$person->last_name),
                 'first_name' => TurkishText::upper($person->first_name),
                 'last_name' => TurkishText::upper($person->last_name),
@@ -73,12 +75,15 @@ class TourBadges
                 'guide' => $group && ($group->guide_name || $group->guide_phone)
                     ? trim(($group->guide_name ?? '').' '.($group->guide_phone ?? ''))
                     : null,
-                'photo' => $settings->shows('photo') ? $this->photos->dataUri($person) : null,
+                'photo' => ! $forScreen && $settings->shows('photo')
+                    ? ($settings->size === BadgeSize::Card ? $this->photos->dataUri($person) : $this->photos->circleDataUri($person))
+                    : null,
                 'initials' => TurkishText::upper(mb_substr($person->first_name, 0, 1).mb_substr($person->last_name, 0, 1)),
-                'hotels' => $settings->shows('hotels') ? Placements::hotels($r, $groupStays) : [],
+                // Arka yüz otelleri her zaman yazar; ön yüzde ayara göre (görünümde).
+                'hotels' => Placements::hotels($r, $groupStays),
                 'bus' => $settings->shows('bus') ? Placements::seat($r) : null,
                 'serial' => $serial,
-                'qr' => $settings->shows('qr') ? $this->qr($person->full_name, $agency?->name, $agency?->phone, $serial) : null,
+                'qr' => ! $forScreen && $settings->shows('qr') ? $this->qr($person->full_name, $agency?->name, $agency?->phone, $serial) : null,
                 'health' => isset($health[$person->id])
                     ? implode(' · ', array_map(fn (array $i) => $i['name'].($i['note'] ? " ({$i['note']})" : ''), $health[$person->id]))
                     : null,

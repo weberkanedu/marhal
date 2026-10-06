@@ -47,15 +47,23 @@ class BadgeSettingsTest extends TestCase
         $this->tour = Tour::factory()->create(['tenant_id' => $this->tenant->id]);
     }
 
-    public function test_settings_default_and_can_be_saved(): void
+    public function test_badge_screen_shows_settings_and_cards_and_saves_changes(): void
     {
-        $this->actingAs($this->staff)->get(route('badge-settings.edit'))
+        $group = Group::factory()->create(['tour_id' => $this->tour->id, 'name' => 'A Grubu']);
+        $this->registration($group, 'Ali');
+
+        $this->actingAs($this->staff)->get(route('tours.badge-cards', $this->tour))
             ->assertInertia(fn (Assert $page) => $page
-                ->component('badge-settings/Edit')
+                ->component('tours/Badges')
                 ->where('settings.size', 'yatay')
                 ->where('settings.fields', ['photo', 'hotels', 'bus', 'guide', 'qr'])
                 ->where('settings.health_note', false)
-                ->has('sizes', 3));
+                ->has('badges', 1)
+                ->where('badges.0.first_name', 'ALİ')
+                ->where('badges.0.qr', null)
+                ->has('groups', 1)
+                ->where('groups.0.color', GroupColors::PALETTE[0])
+                ->has('palette', count(GroupColors::PALETTE)));
 
         $this->actingAs($this->staff)->put(route('badge-settings.update'), [
             'size' => 'dikey', 'fields' => ['qr', 'hotels'], 'back_languages' => ['ar', 'tr'],
@@ -72,15 +80,40 @@ class BadgeSettingsTest extends TestCase
         ])->assertSessionHasErrors(['size', 'fields.0', 'back_languages']);
     }
 
-    public function test_guides_and_agencies_without_the_module_cannot_open_settings(): void
+    public function test_group_color_is_picked_from_the_palette_on_the_badge_screen(): void
+    {
+        $group = Group::factory()->create(['tour_id' => $this->tour->id]);
+
+        $this->actingAs($this->staff)->put(route('groups.color', $group), ['color' => '#123456'])
+            ->assertSessionHasErrors('color');
+        $this->actingAs($this->staff)->put(route('groups.color', $group), ['color' => '#1d4f91'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('#1d4f91', $group->fresh()?->color);
+    }
+
+    public function test_guides_and_agencies_without_the_module_cannot_open_the_badge_screen(): void
     {
         $guide = User::factory()->forTenant($this->tenant)->role(UserRole::Guide)->create();
-        $this->actingAs($guide)->get(route('badge-settings.edit'))->assertForbidden();
+        $this->actingAs($guide)->get(route('tours.badge-cards', $this->tour))->assertForbidden();
+        $this->actingAs($guide)->put(route('badge-settings.update'), [
+            'size' => 'dikey', 'fields' => [], 'back_languages' => ['tr'], 'back_side' => true, 'health_note' => false,
+        ])->assertForbidden();
 
         $plain = User::factory()->forTenant(Tenant::factory()->create([
             'plan_id' => Plan::factory()->withFeatures([Feature::Passengers])->create()->id,
         ]))->role(UserRole::Admin)->create();
-        $this->actingAs($plain)->get(route('badge-settings.edit'))->assertForbidden();
+        $this->actingAs($plain)->put(route('badge-settings.update'), [])->assertForbidden();
+    }
+
+    public function test_another_agencys_tour_and_group_are_not_found(): void
+    {
+        $other = Tenant::factory()->create(['plan_id' => $this->tenant->plan_id]);
+        $tour = Tour::factory()->create(['tenant_id' => $other->id]);
+        $group = Group::factory()->create(['tour_id' => $tour->id]);
+
+        $this->actingAs($this->staff)->get(route('tours.badge-cards', $tour))->assertNotFound();
+        $this->actingAs($this->staff)->put(route('groups.color', $group), ['color' => '#1d4f91'])->assertNotFound();
+        $this->assertNull($group->fresh()?->color);
     }
 
     public function test_badge_follows_settings_and_prints_health_only_with_consent(): void

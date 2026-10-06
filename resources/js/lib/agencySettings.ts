@@ -2,7 +2,6 @@ import {
     Building2,
     BusFront,
     HeartPulse,
-    IdCard,
     Hotel,
     Plane,
     ScrollText,
@@ -11,7 +10,6 @@ import {
 import { index as aircraftTypesIndex } from '@/routes/aircraft-types';
 import { edit as agencyEdit } from '@/routes/agency';
 import { index as auditIndex } from '@/routes/audit';
-import { edit as badgeSettingsEdit } from '@/routes/badge-settings';
 import { index as hotelsIndex } from '@/routes/hotels';
 import { index as needTypesIndex } from '@/routes/need-types';
 import { index as usersIndex } from '@/routes/users';
@@ -67,14 +65,6 @@ export function agencySettingsTabs(
         });
     }
 
-    if (staff && features.includes('badge_generation')) {
-        tabs.push({
-            title: 'Yaka kartı',
-            href: badgeSettingsEdit(),
-            icon: IdCard,
-        });
-    }
-
     if (admin) {
         tabs.push({
             title: 'Erişim kayıtları',
@@ -96,6 +86,5 @@ export const agencySettingsPages = [
     'vehicle-types/',
     'aircraft-types/',
     'need-types/',
-    'badge-settings/',
     'audit/',
 ];
