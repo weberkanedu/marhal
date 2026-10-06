@@ -1,34 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import {
-    CalendarDays,
-    ChevronDown,
-    HandCoins,
-    Plane,
-    Plus,
-    UserPlus,
-    Users,
-    Wallet,
-} from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import ActivityList from '@/components/dashboard/ActivityList.vue';
 import AttentionPanel from '@/components/dashboard/AttentionPanel.vue';
 import CollectionChart from '@/components/dashboard/CollectionChart.vue';
 import NextTourCard from '@/components/dashboard/NextTourCard.vue';
 import ToursStatus from '@/components/dashboard/ToursStatus.vue';
-import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import MockIcon from '@/components/mock/MockIcon.vue';
+import MockTop from '@/components/mock/MockTop.vue';
 import { formatMoney } from '@/lib/format';
 import { dashboard } from '@/routes';
 import { index as collectionsIndex } from '@/routes/collections';
@@ -41,13 +20,16 @@ import type {
 } from '@/types/dashboard';
 
 /**
- * Ana panel: özet, dikkat edilmesi gerekenler (düğmeli), son hareketler, turların durumu, aylık tahsilat.
+ * Ana Panel — tasarım sayfasındaki "Ana Panel" ekranının birebir hâli (gerçek veriyle): sayı kartları,
+ * sıradaki tur, dikkat edilmesi gerekenler, son hareketler, turların durumu, aylık tahsilat.
  */
 const props = defineProps<{
     stats: {
         persons: number;
+        personsWeek: number;
         activeTours: number;
         activeTourLimit: number | null;
+        plan: string | null;
         outstanding: Record<string, string>;
     };
     // Ödeme modülü kapalıysa null.
@@ -85,9 +67,9 @@ const greeting = computed(() => {
 });
 
 const today = new Date().toLocaleDateString('tr-TR', {
-    weekday: 'long',
     day: 'numeric',
     month: 'long',
+    year: 'numeric',
 });
 
 const passengers = computed(() =>
@@ -96,108 +78,130 @@ const passengers = computed(() =>
 
 // Sıradaki tur: henüz bitmemiş, en erken başlayan (liste başlangıç tarihine göre sıralı gelir).
 const nextTour = computed(() => props.tours[0] ?? null);
+
+const outstanding = computed(() => Object.entries(props.stats.outstanding));
+
+// "Yeni kayıt" menüsü
+const newOpen = ref(false);
+const newMenu = ref<HTMLElement | null>(null);
+
+function outside(e: MouseEvent): void {
+    if (newOpen.value && !newMenu.value?.contains(e.target as Node)) {
+        newOpen.value = false;
+    }
+}
+
+onMounted(() => document.addEventListener('click', outside));
+onBeforeUnmount(() => document.removeEventListener('click', outside));
 </script>
 
 <template>
     <Head title="Ana Panel" />
 
-    <div class="flex h-full flex-1 flex-col gap-4 p-4">
-        <div class="flex flex-wrap items-end justify-between gap-3">
-            <div>
-                <h1 class="text-2xl font-semibold tracking-tight">
-                    {{ greeting }}
-                </h1>
-                <p class="text-sm text-muted-foreground first-letter:uppercase">
-                    {{ today }}
-                </p>
-            </div>
-            <DropdownMenu v-if="passengers">
-                <DropdownMenuTrigger as-child>
-                    <Button>
-                        <Plus /> Yeni kayıt <ChevronDown class="-mr-1" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" class="w-52">
-                    <DropdownMenuItem as-child>
-                        <Link :href="createPerson()"><UserPlus /> Yolcu</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem as-child>
-                        <Link :href="createTour()"><Plane /> Tur</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem v-if="payments" as-child>
-                        <Link :href="collectionsIndex()"
-                            ><HandCoins /> Ödeme</Link
+    <div class="mx">
+        <div class="main">
+            <MockTop
+                :crumbs="[{ label: `Ana Panel · ${today}` }]"
+                :title="greeting"
+            >
+                <div v-if="passengers" ref="newMenu" class="exp">
+                    <button
+                        class="btn"
+                        type="button"
+                        :aria-expanded="newOpen"
+                        aria-haspopup="menu"
+                        @click="newOpen = !newOpen"
+                    >
+                        <MockIcon name="plus" />Yeni kayıt
+                    </button>
+                    <div v-if="newOpen" class="menu" role="menu">
+                        <Link class="mi" role="menuitem" :href="createPerson()">
+                            <div>
+                                <b>Yolcu</b
+                                ><small>Kimlik, pasaport, iletişim</small>
+                            </div>
+                        </Link>
+                        <Link class="mi" role="menuitem" :href="createTour()">
+                            <div>
+                                <b>Tur</b
+                                ><small>Tarihler, fiyat, kontenjan</small>
+                            </div>
+                        </Link>
+                        <Link
+                            v-if="payments"
+                            class="mi"
+                            role="menuitem"
+                            :href="collectionsIndex()"
                         >
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-        </div>
+                            <div>
+                                <b>Ödeme</b><small>Tahsilat ekranından</small>
+                            </div>
+                        </Link>
+                    </div>
+                </div>
+            </MockTop>
 
-        <NextTourCard v-if="nextTour" :tour="nextTour" />
-
-        <!-- Özet -->
-        <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-            <Card>
-                <CardHeader>
-                    <CardDescription class="flex items-center gap-2">
-                        <Users class="size-4" /> Kayıtlı kişi
-                    </CardDescription>
-                    <CardTitle class="text-2xl sm:text-3xl">{{
-                        stats.persons
-                    }}</CardTitle>
-                </CardHeader>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardDescription class="flex items-center gap-2">
-                        <CalendarDays class="size-4" /> Aktif tur
-                    </CardDescription>
-                    <CardTitle class="text-2xl sm:text-3xl">
+            <div class="dash">
+                <div class="card a-s1">
+                    <span class="lbl">Kayıtlı kişi</span>
+                    <div class="big">{{ stats.persons }}</div>
+                    <span class="lbl"
+                        ><span class="chip ok">+{{ stats.personsWeek }}</span>
+                        bu hafta</span
+                    >
+                </div>
+                <div class="card a-s2">
+                    <span class="lbl">Aktif tur</span>
+                    <div class="big">
                         {{ stats.activeTours }}
-                        <span
-                            v-if="stats.activeTourLimit !== null"
-                            class="text-base font-normal text-muted-foreground"
+                        <small v-if="stats.activeTourLimit !== null" class="lbl"
+                            >/ {{ stats.activeTourLimit }} paket limiti</small
                         >
-                            / {{ stats.activeTourLimit }}
-                        </span>
-                    </CardTitle>
-                </CardHeader>
-            </Card>
-            <Card v-if="payments" class="col-span-2 lg:col-span-1">
-                <CardHeader>
-                    <CardDescription class="flex items-center gap-2">
-                        <Wallet class="size-4" /> Kalan alacak
-                    </CardDescription>
-                    <CardTitle
-                        v-if="Object.keys(stats.outstanding).length === 0"
-                        class="text-2xl sm:text-3xl"
-                    >
-                        —
-                    </CardTitle>
-                    <CardTitle
-                        v-for="(amount, currency) in stats.outstanding"
-                        :key="currency"
-                        class="text-2xl"
-                    >
-                        {{ formatMoney(amount, String(currency)) }}
-                    </CardTitle>
-                </CardHeader>
-            </Card>
-        </div>
+                    </div>
+                    <span class="lbl">{{
+                        stats.plan ? `${stats.plan} paket` : ''
+                    }}</span>
+                </div>
+                <div class="card a-s3">
+                    <span class="lbl">Kalan alacak</span>
+                    <div class="big">
+                        {{
+                            outstanding.length
+                                ? formatMoney(
+                                      outstanding[0][1],
+                                      outstanding[0][0],
+                                  )
+                                : '—'
+                        }}
+                    </div>
+                    <span class="lbl">{{
+                        outstanding.length > 1
+                            ? outstanding
+                                  .slice(1)
+                                  .map(([c, a]) => formatMoney(a, c))
+                                  .join(' · ')
+                            : 'Bütün turların toplamı'
+                    }}</span>
+                </div>
 
-        <div class="grid gap-4 lg:grid-cols-3">
-            <div class="lg:col-span-2">
+                <NextTourCard v-if="nextTour" :tour="nextTour" />
+                <div v-else class="card glow a-hero">
+                    <h4>Sıradaki tur</h4>
+                    <span class="lbl">Yaklaşan tur yok.</span>
+                    <Link class="btn ghost sm" :href="createTour()"
+                        >Yeni tur oluştur</Link
+                    >
+                </div>
+
                 <AttentionPanel :payments="payments" :tours="tours" />
+                <ActivityList :items="activity" />
+                <ToursStatus :tours="tours" />
+                <CollectionChart
+                    v-if="trend"
+                    :months="trend.months"
+                    :series="trend.series"
+                />
             </div>
-            <ActivityList :items="activity" />
         </div>
-
-        <ToursStatus :tours="tours" />
-
-        <CollectionChart
-            v-if="trend"
-            :months="trend.months"
-            :series="trend.series"
-        />
     </div>
 </template>

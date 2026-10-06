@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { ArrowRight, CalendarDays } from '@lucide/vue';
 import { computed } from 'vue';
-import ProgressBar from '@/components/ProgressBar.vue';
-import ProgressRing from '@/components/ProgressRing.vue';
-import { Card, CardContent } from '@/components/ui/card';
-import { formatDate, formatMoney } from '@/lib/format';
+import MockRing from '@/components/mock/MockRing.vue';
 import { show as showTour } from '@/routes/tours';
 import { percent } from '@/types/dashboard';
 import type { DashboardTour } from '@/types/dashboard';
@@ -42,104 +38,56 @@ const countdown = computed(() =>
           : { value: 'Yolda', unit: 'tur devam ediyor' },
 );
 
+const labels: Record<string, string> = {
+    rooms: 'Oda',
+    seats: 'Koltuk',
+    flights: 'Uçuş',
+};
+
+// "23 Eki – 6 Kas"
+const short = (date: string) =>
+    new Date(`${date}T00:00:00`).toLocaleDateString('tr-TR', {
+        day: 'numeric',
+        month: 'short',
+    });
+const range = computed(
+    () => `${short(props.tour.start_date)} – ${short(props.tour.end_date)}`,
+);
+
 const tabUrl = (tab: string) => showTour.url(props.tour.id, { query: { tab } });
 </script>
 
 <template>
-    <Card class="card-glow">
-        <CardContent class="grid gap-5 md:grid-cols-[auto_minmax(0,1fr)]">
-            <div class="flex items-center gap-5">
-                <div>
-                    <p
-                        class="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
-                    >
-                        Sıradaki tur
-                    </p>
-                    <p
-                        class="num mt-1 text-5xl leading-none font-bold tracking-tight"
-                    >
-                        {{ countdown.value }}
-                    </p>
-                    <p class="text-sm text-muted-foreground">
-                        {{ countdown.unit }}
-                    </p>
-                </div>
-                <div class="flex flex-col items-center gap-1">
-                    <ProgressRing :done="readiness" :total="100" :size="76" />
-                    <span class="text-xs text-muted-foreground">Hazırlık</span>
-                </div>
+    <div class="card glow a-hero">
+        <h4>
+            Sıradaki tur <em>{{ range }}</em>
+        </h4>
+        <Link
+            :href="showTour(tour.id)"
+            style="font: 600 17px var(--m-display)"
+            >{{ tour.name }}</Link
+        >
+        <div class="row" style="justify-content: space-between">
+            <div class="count">
+                <b>{{ countdown.value }}</b
+                ><span class="lbl">{{ countdown.unit }}</span>
             </div>
-
-            <div class="flex min-w-0 flex-col gap-3">
-                <Link
-                    :href="showTour(tour.id)"
-                    class="group flex flex-wrap items-baseline justify-between gap-2"
-                >
-                    <span class="font-heading text-xl font-semibold">
-                        {{ tour.name }}
-                    </span>
-                    <span
-                        class="flex items-center gap-1.5 text-sm text-muted-foreground"
-                    >
-                        <CalendarDays class="size-4" />
-                        {{ formatDate(tour.start_date) }} –
-                        {{ formatDate(tour.end_date) }}
-                        <ArrowRight
-                            class="size-4 transition-transform group-hover:translate-x-0.5"
-                        />
-                    </span>
-                </Link>
-
-                <div class="grid gap-2.5 sm:grid-cols-2">
-                    <Link
-                        v-for="check in tour.checks"
-                        :key="check.key"
-                        :href="tabUrl(check.tab)"
-                        class="rounded-lg p-1 hover:bg-muted"
-                    >
-                        <span
-                            class="mb-1 flex justify-between text-xs text-muted-foreground"
-                        >
-                            <span>{{ check.label }}</span>
-                            <span class="tabular-nums">
-                                {{ check.done }} / {{ check.total }}
-                            </span>
-                        </span>
-                        <ProgressBar :value="check.done" :max="check.total" />
-                    </Link>
-                    <Link
-                        v-if="tour.collection"
-                        :href="tabUrl('yolcular')"
-                        class="rounded-lg p-1 hover:bg-muted"
-                    >
-                        <span
-                            class="mb-1 flex justify-between text-xs text-muted-foreground"
-                        >
-                            <span>Tahsilat</span>
-                            <span class="tabular-nums">
-                                {{
-                                    formatMoney(
-                                        tour.collection.paid,
-                                        tour.collection.currency,
-                                    )
-                                }}
-                            </span>
-                        </span>
-                        <ProgressBar
-                            :value="Number(tour.collection.paid)"
-                            :max="Number(tour.collection.total)"
-                        />
-                    </Link>
-                </div>
-
-                <p
-                    v-if="tour.checks.length === 0"
-                    class="text-sm text-muted-foreground"
-                >
-                    Otel, otobüs ve uçuş eklendikçe yerleşim durumu burada
-                    görünür.
-                </p>
+            <MockRing :done="readiness" :total="100" />
+        </div>
+        <Link
+            v-for="check in tour.checks"
+            :key="check.key"
+            class="chk"
+            :href="tabUrl(check.tab)"
+        >
+            <span>{{ labels[check.key] ?? check.label }}</span>
+            <div class="bar">
+                <i
+                    :class="{ full: percent(check.done, check.total) >= 100 }"
+                    :style="{ width: `${percent(check.done, check.total)}%` }"
+                />
             </div>
-        </CardContent>
-    </Card>
+            <span>{{ check.done }}/{{ check.total }}</span>
+        </Link>
+    </div>
 </template>

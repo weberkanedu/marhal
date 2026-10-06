@@ -440,81 +440,6 @@
     background: var(--destructive);
 }
 
-/* Gösterge halkası (components/ProgressRing.vue) */
-.m-ring {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    background: conic-gradient(
-        var(--primary) calc(var(--p) * 1%),
-        var(--border) 0
-    );
-    mask: radial-gradient(
-        farthest-side,
-        transparent calc(100% - 5px),
-        #000 calc(100% - 4px)
-    );
-}
-.m-ring.full {
-    background: var(--success);
-}
-
-@media (max-width: 640px) {
-    .journey {
-        grid-template-columns: minmax(0, 1fr);
-        row-gap: 10px;
-    }
-    .journey::before,
-    .journey::after {
-        display: none;
-    }
-    .journey .st {
-        flex-direction: row;
-        text-align: left;
-    }
-    .journey .dot {
-        flex: none;
-    }
-}
-
-/* Gösterge kutusu (halka + yazı): tur sayfası, ana panel */
-.kpi-tile {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px;
-    border-radius: calc(var(--card-radius) - 4px);
-    background: var(--card);
-    border: 1px solid var(--border);
-    backdrop-filter: blur(12px);
-    text-align: left;
-    min-width: 0;
-}
-[data-theme='safak'] .kpi-tile {
-    border-color: rgba(255, 255, 255, 0.75);
-}
-button.kpi-tile {
-    cursor: pointer;
-    transition: border-color 0.15s;
-}
-button.kpi-tile:hover {
-    border-color: var(--primary);
-}
-.kpi-tile small {
-    display: block;
-    font-size: 11.5px;
-    color: var(--muted-foreground);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.kpi-tile .kpi-value {
-    display: block;
-    font-weight: 600;
-    font-size: 1.05rem;
-    line-height: 1.3;
-}
-
 /* Araç çizimi (components/buses/BusDiagram.vue): gövdeye göre burun ve köşeler */
 .veh {
     border-color: var(--border);
@@ -543,51 +468,6 @@ button.kpi-tile:hover {
 .veh-compact {
     border-radius: 1.25rem 1.25rem 0.6rem 0.6rem;
 }
-/* Uçak kabini (components/flights/PlaneDiagram.vue): yuvarlak burun */
-.plane {
-    border-color: var(--border);
-    border-radius: 9rem 9rem 2rem 2rem;
-    background: color-mix(in srgb, var(--muted) 70%, transparent);
-}
-[data-theme='zumrut'] .plane {
-    background: linear-gradient(
-        180deg,
-        rgba(221, 185, 79, 0.08),
-        rgba(22, 48, 38, 0.85)
-    );
-}
-[data-theme='safak'] .plane {
-    background: rgba(255, 255, 255, 0.6);
-    border-color: rgba(255, 255, 255, 0.95);
-    box-shadow: 0 30px 60px -30px rgba(19, 38, 31, 0.35);
-}
-.plane-seat-w {
-    width: 2.6rem;
-}
-@media (min-width: 640px) {
-    .plane-seat-w {
-        width: 3.4rem;
-    }
-}
-
-/* Otel kulesi (components/rooms/HotelTower.vue) */
-.tower > div {
-    border-color: var(--border);
-}
-.tower-roof {
-    background: var(--border);
-}
-.tower-ours {
-    background: color-mix(in srgb, var(--primary) 22%, transparent);
-    color: var(--foreground);
-    box-shadow: inset 3px 0 0 var(--primary);
-}
-
-/* Ön bölge koltuğu (hareket güçlüğü / yaşlı yolcular için önerilen) */
-.seat-front {
-    box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--men) 55%, transparent);
-}
-
 /* Sayılar */
 .num {
     font-family: var(--font-number);

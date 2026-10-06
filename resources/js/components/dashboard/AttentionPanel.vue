@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import type { InertiaLinkProps } from '@inertiajs/vue3';
-import { AlertTriangle, CheckCircle2 } from '@lucide/vue';
 import { computed } from 'vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatMoney } from '@/lib/format';
 import { index as collectionsIndex } from '@/routes/collections';
 import { show as showTour } from '@/routes/tours';
@@ -132,37 +128,21 @@ const items = computed<Item[]>(() => {
 </script>
 
 <template>
-    <Card class="h-full">
-        <CardHeader>
-            <CardTitle class="flex items-center gap-2">
-                <AlertTriangle class="size-4" /> Dikkat edilmesi gerekenler
-                <Badge v-if="items.length" variant="danger">{{
-                    items.length
-                }}</Badge>
-            </CardTitle>
-        </CardHeader>
-        <CardContent>
-            <p
-                v-if="items.length === 0"
-                class="flex items-center gap-2 text-sm text-success"
-            >
-                <CheckCircle2 class="size-4" /> Şu an bekleyen bir sorun yok.
-            </p>
-            <ul v-else class="divide-y">
-                <li
-                    v-for="item in items"
-                    :key="item.key"
-                    class="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2.5 text-sm"
-                >
-                    <Badge :variant="item.tone" class="shrink-0">
-                        <AlertTriangle class="size-3" /> {{ item.chip }}
-                    </Badge>
-                    <span class="min-w-48 flex-1">{{ item.text }}</span>
-                    <Button variant="outline" size="sm" as-child>
-                        <Link :href="item.href">{{ item.action }}</Link>
-                    </Button>
-                </li>
-            </ul>
-        </CardContent>
-    </Card>
+    <div class="card a-att">
+        <h4>
+            Dikkat edilmesi gerekenler <em>{{ items.length }} madde</em>
+        </h4>
+        <div class="alist">
+            <div v-for="item in items" :key="item.key" class="aitem">
+                <span class="chip" :class="item.tone">{{ item.chip }}</span>
+                <p>{{ item.text }}</p>
+                <Link :href="item.href">{{ item.action }} →</Link>
+            </div>
+            <div v-if="items.length === 0" class="aitem">
+                <span class="chip ok">Tamam</span>
+                <p>Şu an bekleyen bir sorun yok.</p>
+                <span />
+            </div>
+        </div>
+    </div>
 </template>

@@ -1,14 +1,9 @@
 <script setup lang="ts">
-import { BarChart3 } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatMoney } from '@/lib/format';
 
 /**
- * Aylık tahsilat (son 6 ay) — tek seri çubuk grafik. Para birimleri toplanmaz; birden fazlaysa
- * üstteki düğmelerle seçilir. Tema rengi (primary) kullanılır; üzerine gelince değer görünür;
- * ekran okuyucular için aynı veri gizli tabloda.
+ * Aylık tahsilat (son 6 ay) — tasarımdaki çubuk grafik: bin cinsinden değerler, beş ızgara çizgisi,
+ * bu ayın çubuğu koyu. Para birimleri toplanmaz; birden fazlaysa başlıktaki haplarla seçilir.
  */
 const props = defineProps<{
     months: { key: string; label: string }[];
@@ -23,168 +18,113 @@ watch(currencies, (list) => {
     }
 });
 
-const values = computed(() =>
-    (props.series[currency.value] ?? []).map((v) => Number(v)),
-);
-const max = computed(() => Math.max(...values.value, 0));
-
-// Grafik geometrisi (viewBox birimleri)
-const width = 600;
-const height = 180;
-const pad = { top: 16, right: 0, bottom: 0, left: 0 };
-const plotH = height - pad.top - pad.bottom;
-const slot = computed(
-    () => (width - pad.left - pad.right) / Math.max(props.months.length, 1),
-);
-const barW = computed(() => Math.min(56, slot.value * 0.55));
-
-function barHeight(value: number): number {
-    return max.value <= 0 ? 0 : (Math.max(value, 0) / max.value) * plotH;
-}
-
-// Üst köşeleri 4px yuvarlak, tabanı düz çubuk (tabana oturur).
-function barPath(index: number): string {
-    const h = barHeight(values.value[index]);
-    const x = pad.left + slot.value * index + (slot.value - barW.value) / 2;
-    const y = pad.top + plotH - h;
-    const r = Math.min(4, h, barW.value / 2);
-
-    if (h <= 0) {
-        return '';
-    }
-
-    return `M${x},${y + h} V${y + r} Q${x},${y} ${x + r},${y} H${x + barW.value - r} Q${x + barW.value},${y} ${x + barW.value},${y + r} V${y + h} Z`;
-}
-
-const gridLines = computed(() =>
-    [0.5, 1].map((f) => pad.top + plotH - plotH * f),
+const symbol = computed(
+    () =>
+        new Intl.NumberFormat('tr-TR', {
+            style: 'currency',
+            currency: currency.value || 'TRY',
+        })
+            .formatToParts(0)
+            .find((p) => p.type === 'currency')?.value ?? currency.value,
 );
 
-const hovered = ref<number | null>(null);
-const total = computed(() => values.value.reduce((a, b) => a + b, 0));
+// Bin cinsinden (tasarımdaki gibi).
+const data = computed(() =>
+    props.months.map((m, i) => ({
+        label: m.label,
+        value: Math.round(
+            Number(props.series[currency.value]?.[i] ?? 0) / 1000,
+        ),
+    })),
+);
+
+// Ölçek: en büyük değeri kapsayan "yuvarlak" üst sınır, dört eşit aralık.
+const top = computed(() => {
+    const max = Math.max(...data.value.map((d) => d.value), 1);
+    const raw = max / 4;
+    const mag = 10 ** Math.floor(Math.log10(raw));
+    const step =
+        [1, 2, 2.5, 5, 10].map((f) => f * mag).find((s) => s >= raw) ?? raw;
+
+    return step * 4;
+});
+
+const W = 560;
+const H = 200;
+const L = 40;
+const R = 8;
+const T = 18;
+const B = 26;
+const ph = H - T - B;
+const slot = computed(() => (W - L - R) / Math.max(data.value.length, 1));
+const bw = computed(() => slot.value * 0.52);
+const y = (v: number) => T + ph - (Math.min(v, top.value) / top.value) * ph;
+const ticks = computed(() => [0, 1, 2, 3, 4].map((i) => (top.value / 4) * i));
 </script>
 
 <template>
-    <Card>
-        <CardHeader
-            class="flex flex-row flex-wrap items-center justify-between gap-2"
-        >
-            <CardTitle class="flex items-center gap-2">
-                <BarChart3 class="size-4" /> Aylık tahsilat
-            </CardTitle>
-            <div v-if="currencies.length > 1" class="flex gap-1">
-                <Button
-                    v-for="c in currencies"
-                    :key="c"
-                    size="sm"
-                    :variant="c === currency ? 'default' : 'outline'"
-                    @click="currency = c"
-                >
-                    {{ c }}
-                </Button>
-            </div>
-        </CardHeader>
-        <CardContent>
-            <p
-                v-if="currencies.length === 0"
-                class="text-sm text-muted-foreground"
+    <div class="card a-chart">
+        <h4>
+            Aylık tahsilat
+            <em
+                >Bin {{ symbol
+                }}<template v-if="currencies.length > 1">
+                    ·
+                    <a
+                        v-for="c in currencies"
+                        :key="c"
+                        role="button"
+                        tabindex="0"
+                        :style="{
+                            fontWeight: c === currency ? 700 : 500,
+                            cursor: 'pointer',
+                            marginLeft: '4px',
+                        }"
+                        @click="currency = c"
+                        >{{ c }}</a
+                    ></template
+                ></em
             >
-                Son 6 ayda tahsilat yok.
-            </p>
-            <template v-else>
-                <p class="mb-2 text-sm text-muted-foreground">
-                    Son 6 ay toplamı:
-                    <span class="font-medium text-foreground">{{
-                        formatMoney(String(total), currency)
-                    }}</span>
-                </p>
-                <div class="relative">
-                    <svg
-                        :viewBox="`0 0 ${width} ${height}`"
-                        preserveAspectRatio="none"
-                        class="h-44 w-full"
-                        role="img"
-                        :aria-label="`Aylık tahsilat, ${currency}`"
-                    >
-                        <line
-                            v-for="(y, i) in gridLines"
-                            :key="i"
-                            :x1="pad.left"
-                            :x2="width - pad.right"
-                            :y1="y"
-                            :y2="y"
-                            class="stroke-border"
-                            stroke-dasharray="3 4"
-                            vector-effect="non-scaling-stroke"
-                        />
-                        <line
-                            :x1="pad.left"
-                            :x2="width - pad.right"
-                            :y1="pad.top + plotH"
-                            :y2="pad.top + plotH"
-                            class="stroke-border"
-                            vector-effect="non-scaling-stroke"
-                        />
-                        <g v-for="(month, i) in months" :key="month.key">
-                            <path
-                                :d="barPath(i)"
-                                class="fill-primary transition-opacity"
-                                :class="{
-                                    'opacity-60':
-                                        hovered !== null && hovered !== i,
-                                }"
-                            />
-                            <!-- Görünmez geniş alan: üzerine gelince değer -->
-                            <rect
-                                :x="pad.left + slot * i"
-                                :y="pad.top"
-                                :width="slot"
-                                :height="plotH"
-                                fill="transparent"
-                                @mouseenter="hovered = i"
-                                @mouseleave="hovered = null"
-                            />
-                        </g>
-                    </svg>
-                    <!-- Ay adları SVG dışında: grafik genişlese de yazı boyutu sabit kalır -->
-                    <div
-                        class="mt-1 grid text-center text-xs text-muted-foreground"
-                        :style="{
-                            gridTemplateColumns: `repeat(${months.length}, minmax(0, 1fr))`,
-                        }"
-                    >
-                        <span v-for="month in months" :key="month.key">{{
-                            month.label
-                        }}</span>
-                    </div>
-                    <div
-                        v-if="hovered !== null"
-                        class="pointer-events-none absolute top-0 rounded-md border bg-popover px-2 py-1 text-xs shadow-sm"
-                        :style="{
-                            left: `${((pad.left + slot * hovered + slot / 2) / width) * 100}%`,
-                            transform: 'translateX(-50%)',
-                        }"
-                    >
-                        <div class="text-muted-foreground">
-                            {{ months[hovered].label }}
-                        </div>
-                        <div class="font-medium">
-                            {{ formatMoney(String(values[hovered]), currency) }}
-                        </div>
-                    </div>
-                </div>
-                <table class="sr-only">
-                    <caption>
-                        Aylık tahsilat ({{
-                            currency
-                        }})
-                    </caption>
-                    <tr v-for="(month, i) in months" :key="month.key">
-                        <th scope="row">{{ month.label }}</th>
-                        <td>{{ formatMoney(String(values[i]), currency) }}</td>
-                    </tr>
-                </table>
+        </h4>
+        <svg
+            class="chartsvg"
+            :viewBox="`0 0 ${W} ${H}`"
+            role="img"
+            :aria-label="`Aylık tahsilat, bin ${symbol}`"
+        >
+            <template v-for="t in ticks" :key="`t${t}`">
+                <line class="gl" :x1="L" :x2="W - R" :y1="y(t)" :y2="y(t)" />
+                <text class="ax" :x="L - 8" :y="y(t) + 3.5" text-anchor="end">
+                    {{ Math.round(t) }}
+                </text>
             </template>
-        </CardContent>
-    </Card>
+            <template v-for="(d, i) in data" :key="d.label">
+                <rect
+                    class="bb"
+                    :class="{ cur: i === data.length - 1 }"
+                    :x="L + i * slot + (slot - bw) / 2"
+                    :y="y(d.value)"
+                    :width="bw"
+                    :height="y(0) - y(d.value)"
+                    rx="5"
+                />
+                <text
+                    class="vl"
+                    :x="L + i * slot + slot / 2"
+                    :y="y(d.value) - 6"
+                    text-anchor="middle"
+                >
+                    {{ d.value }}
+                </text>
+                <text
+                    class="ax"
+                    :x="L + i * slot + slot / 2"
+                    :y="H - 8"
+                    text-anchor="middle"
+                >
+                    {{ d.label }}
+                </text>
+            </template>
+        </svg>
+    </div>
 </template>

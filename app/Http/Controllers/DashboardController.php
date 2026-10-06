@@ -53,6 +53,8 @@ class DashboardController extends Controller
         return Inertia::render('Dashboard', [
             'stats' => [
                 'persons' => Person::count(),
+                'personsWeek' => Person::query()->where('created_at', '>=', now()->subDays(7))->count(),
+                'plan' => $tenant?->plan->name,
                 'activeTours' => $tenant?->activeTourCount() ?? 0,
                 'activeTourLimit' => $tenant?->plan->active_tour_limit,
                 'outstanding' => $payments ? $money->outstanding() : [],
