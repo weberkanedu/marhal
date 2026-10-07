@@ -558,7 +558,15 @@ const progress = computed(() => pct(props.stats.occupied, goal.value));
 
     <div ref="root" class="mx">
         <div class="main">
-            <MockTop :crumbs="crumbs" title="Otel planı" :exports="exportItems">
+            <MockTop
+                :crumbs="crumbs"
+                :back="{
+                    label: `${stay.tour.name} · Konaklama`,
+                    href: crumbs[2].href,
+                }"
+                title="Otel planı"
+                :exports="exportItems"
+            >
                 <template v-if="can.update">
                     <button
                         v-if="copyPlan"

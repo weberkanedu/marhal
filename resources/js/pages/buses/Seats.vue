@@ -338,6 +338,10 @@ const seatTitle = (seat: number) => {
         <div class="main">
             <MockTop
                 :crumbs="crumbs"
+                :back="{
+                    label: `${bus.tour.name} · Ulaşım`,
+                    href: crumbs[2].href,
+                }"
                 title="Araç koltuk planı"
                 :exports="exportItems"
             >

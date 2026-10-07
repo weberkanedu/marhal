@@ -5,7 +5,8 @@
 
 ## Yeni oturum için başlangıç notu (2026-10-07)
 
-**Şu an:** dal `tasarim-yenileme`, son commit "DURUM: 10d-1 kontrolleri tamam"; **10a, 10b, 10c ve 10d-1 staging'e henüz gönderilmedi**. Sıradaki: 10d-2 (e-posta servisi seçimi bekliyor) ya da 10e (iyzico + e-fatura; önce seçenek / maliyet).
+**Şu an:** dal `tasarim-yenileme`, son commit "Logo (Tavaf), favicon, Tura dön düğmesi, yazı tipi düzeltmesi"; **10a–10d-1 ve bu tur staging'e henüz gönderilmedi**. Kullanıcı kararları (2026-10-07): **e-posta şimdilik bekliyor** (kendi sunucumuz önerilmedi: Hetzner 25. port, IP itibarı; öneri Brevo), **iyzico (10e) en son iş**.
+**Bu tur:** logo **Tavaf** (merkezde kare, çevresinde tavaf yönünde küçülen yedi nokta; `AppLogoIcon`, yan menü `.logo`), favicon `public/favicon.svg` + `favicon.ico` + `apple-touch-icon.png` (`php scripts/make-icons.php` ile üretilir); alt sayfalarda **"← Tura dön"** (`MockTop` → `back`: oda planı, otobüs / uçak koltuk, yaka kartı); **yazı tipleri** tasarımla eşitlendi: `latin-ext` (ğ ş İ artık başka yazı tipinden gelmiyor), Fraunces 700, Plus Jakarta 700/800, Noto Naskh Arabic (`vite.config.ts`).
 Tasarım yenilemenin 1–7. adımları ve "tasarıma birebir uyum" turu bitti (aşağıda "Tasarım yenileme" bölümü).
 **Paketler planı (kullanıcı onayladı, 2026-10-07)** — kaynak: paketler tasarım sayfası (claude.ai artifact 5Mxqaa5YmxceQ3qi7xzPCq;
 artifact okuma aracıyla açılır): ✅ 10a paket yapısı + yolcu kotası + Platform → Paketler ·

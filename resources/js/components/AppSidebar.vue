@@ -14,6 +14,7 @@ import {
 } from '@lucide/vue';
 import { useEventListener } from '@vueuse/core';
 import { computed, ref } from 'vue';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import CommandPalette from '@/components/CommandPalette.vue';
 import FeedbackPanel from '@/components/FeedbackPanel.vue';
 import MockIcon from '@/components/mock/MockIcon.vue';
@@ -213,7 +214,7 @@ const mainNavItems = computed<NavItem[]>(() => {
         <!-- Tasarımdaki yan menü: logo, Ara (Ctrl K), menü, altta kullanıcı. -->
         <div class="mx mx-side">
             <Link class="brand" :href="homeLink">
-                <span class="logo">M</span>
+                <span class="logo"><AppLogoIcon class="logo-mark" /></span>
                 <div>
                     <b>Marhal</b
                     ><span>{{

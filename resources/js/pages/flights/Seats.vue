@@ -312,6 +312,10 @@ const pct = computed(() =>
         <div class="main">
             <MockTop
                 :crumbs="crumbs"
+                :back="{
+                    label: `${flight.tour.name} · Ulaşım`,
+                    href: crumbs[2].href,
+                }"
                 title="Uçak koltuk planı"
                 :exports="exportItems"
             >

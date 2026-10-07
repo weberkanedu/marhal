@@ -48,10 +48,25 @@ export default defineConfig({
             input: ['resources/css/app.css', 'resources/js/app.ts'],
             refresh: true,
             fonts: [
-                // Tema yazı tipleri (resources/css/app.css → --font-body / --font-display)
-                bunny('Inter', { weights: [400, 500, 600] }),
-                bunny('Fraunces', { weights: [500, 600] }),
-                bunny('Plus Jakarta Sans', { weights: [400, 500, 600] }),
+                // Tema yazı tipleri (resources/css/app.css → --font-body / --font-display). Tasarım sayfasıyla aynı
+                // ağırlıklar; "latin-ext" olmadan ğ, ş, İ, Ğ, Ş başka yazı tipinden gelir (2026-10-07 düzeltmesi).
+                bunny('Inter', {
+                    weights: [400, 500, 600],
+                    subsets: ['latin', 'latin-ext'],
+                }),
+                bunny('Fraunces', {
+                    weights: [500, 600, 700],
+                    subsets: ['latin', 'latin-ext'],
+                }),
+                bunny('Plus Jakarta Sans', {
+                    weights: [400, 500, 600, 700, 800],
+                    subsets: ['latin', 'latin-ext'],
+                }),
+                // Yaka kartı önizlemesindeki Arapça "Kaybolursanız" (tasarımdaki gibi)
+                bunny('Noto Naskh Arabic', {
+                    weights: [500, 600],
+                    subsets: ['arabic'],
+                }),
             ],
         }),
         inertia(),

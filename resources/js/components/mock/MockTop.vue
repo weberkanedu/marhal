@@ -6,11 +6,14 @@ import type { ExportItem } from '@/types/export';
 
 /**
  * Tasarımdaki ekran başlığı: üstte kırıntı yolu, büyük başlık, sağda "Çıktı al" menüsü ve düğmeler.
+ * `back` verilirse kırıntı yolunun üstünde belirgin "← Tura dön" düğmesi çıkar (alt sayfalar: konaklama,
+ * koltuk planları, yaka kartı; kullanıcı kararı 2026-10-07).
  */
 defineProps<{
     crumbs: { label: string; href?: string }[];
     title: string;
     exports?: ExportItem[];
+    back?: { label: string; href: string };
 }>();
 
 const open = ref(false);
@@ -32,6 +35,10 @@ onBeforeUnmount(() => document.removeEventListener('click', outside));
 <template>
     <div class="top">
         <div>
+            <Link v-if="back" class="back" :href="back.href"
+                ><span aria-hidden="true">←</span> Tura dön
+                <em>{{ back.label }}</em></Link
+            >
             <div class="crumb">
                 <template v-for="(crumb, i) in crumbs" :key="i">
                     <template v-if="i > 0"> · </template>

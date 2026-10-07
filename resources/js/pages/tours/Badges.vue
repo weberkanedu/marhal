@@ -313,7 +313,15 @@ watch([preview, () => form.value.fields, () => form.value.size], () =>
 
     <div class="mx">
         <div class="main">
-            <MockTop :crumbs="crumbs" title="Yaka kartları" :exports="exports">
+            <MockTop
+                :crumbs="crumbs"
+                :back="{
+                    label: tour.name,
+                    href: showTour.url(tour.id),
+                }"
+                title="Yaka kartları"
+                :exports="exports"
+            >
                 <a class="btn" :href="pdfUrl"
                     ><Download /> PDF hazırla · {{ list.length }} kart</a
                 >
